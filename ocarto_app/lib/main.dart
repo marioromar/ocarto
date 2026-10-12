@@ -40,6 +40,7 @@ class _OcartoHomeState extends State<OcartoHome> {
   };
   final elements = <MapElement>[];
   final storage = ProjectStorage();
+  String projectName = 'Mi mapa Ocarto';
   MapTool tool = MapTool.point;
   double opacity = 1;
 
@@ -131,8 +132,34 @@ class _OcartoHomeState extends State<OcartoHome> {
   );
 
   Future<void> _saveProject() async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController(text: projectName);
+        return AlertDialog(
+          title: const Text('Nombre del proyecto'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Nombre'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+    if (name == null || name.isEmpty) return;
+    projectName = name;
     final project = MapProject(
-      name: 'Mi mapa Ocarto',
+      name: projectName,
       layers: layers.entries
           .map(
             (entry) => ProjectLayer(
@@ -172,6 +199,7 @@ class _OcartoHomeState extends State<OcartoHome> {
       return;
     }
     setState(() {
+      projectName = project.name;
       for (final layer in project.layers) {
         if (layers.containsKey(layer.id)) layers[layer.id] = layer.visible;
         if (layer.id == 'Plantilla georreferenciada') opacity = layer.opacity;
