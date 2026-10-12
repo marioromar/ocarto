@@ -97,7 +97,7 @@ class _OcartoHomeState extends State<OcartoHome> {
               _toolButton(MapTool.line, Icons.polyline, 'Línea'),
               _toolButton(MapTool.area, Icons.pentagon_outlined, 'Área'),
               DropdownButtonFormField<String>(
-                value: symbol,
+                initialValue: symbol,
                 decoration: const InputDecoration(labelText: 'Símbolo IOF'),
                 items: symbols
                     .map(
