@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'core/map_project.dart';
+import 'core/project_storage.dart';
+
 void main() => runApp(const OcartoApp());
 
 enum MapTool { point, line, area }
@@ -36,6 +39,7 @@ class _OcartoHomeState extends State<OcartoHome> {
     'Mapa editable': true,
   };
   final elements = <MapElement>[];
+  final storage = ProjectStorage();
   MapTool tool = MapTool.point;
   double opacity = 1;
 
@@ -86,6 +90,16 @@ class _OcartoHomeState extends State<OcartoHome> {
                 icon: const Icon(Icons.delete_outline),
                 label: const Text('Limpiar editables'),
               ),
+              FilledButton.icon(
+                onPressed: _saveProject,
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('Guardar proyecto'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _loadProject,
+                icon: const Icon(Icons.folder_open),
+                label: const Text('Cargar proyecto'),
+              ),
               Text(
                 '${elements.length} elemento(s) editable(s)',
                 style: Theme.of(context).textTheme.bodySmall,
@@ -115,6 +129,70 @@ class _OcartoHomeState extends State<OcartoHome> {
       ],
     ),
   );
+
+  Future<void> _saveProject() async {
+    final project = MapProject(
+      name: 'Mi mapa Ocarto',
+      layers: layers.entries
+          .map(
+            (entry) => ProjectLayer(
+              id: entry.key,
+              name: entry.key,
+              visible: entry.value,
+              opacity: entry.key == 'Plantilla georreferenciada' ? opacity : 1,
+            ),
+          )
+          .toList(),
+      elements: elements
+          .map(
+            (element) => ProjectElement(
+              tool: element.tool.name,
+              x: element.position.dx,
+              y: element.position.dy,
+            ),
+          )
+          .toList(),
+    );
+    await storage.save(project);
+    if (mounted)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Proyecto guardado localmente')),
+      );
+  }
+
+  Future<void> _loadProject() async {
+    final project = await storage.load();
+    if (project == null) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Todavía no hay un proyecto guardado')),
+        );
+      return;
+    }
+    setState(() {
+      for (final layer in project.layers) {
+        if (layers.containsKey(layer.id)) layers[layer.id] = layer.visible;
+        if (layer.id == 'Plantilla georreferenciada') opacity = layer.opacity;
+      }
+      elements
+        ..clear()
+        ..addAll(
+          project.elements.map(
+            (element) => MapElement(
+              MapTool.values.firstWhere(
+                (tool) => tool.name == element.tool,
+                orElse: () => MapTool.point,
+              ),
+              Offset(element.x, element.y),
+            ),
+          ),
+        );
+    });
+    if (mounted)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Proyecto cargado: ${project.name}')),
+      );
+  }
 
   Widget _toolButton(MapTool value, IconData icon, String label) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
