@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 
 void main() => runApp(const OcartoApp());
 
+enum MapTool { point, line, area }
+
+class MapElement {
+  MapElement(this.tool, this.position);
+  final MapTool tool;
+  final Offset position;
+}
+
 class OcartoApp extends StatelessWidget {
   const OcartoApp({super.key});
   @override
@@ -27,7 +35,10 @@ class _OcartoHomeState extends State<OcartoHome> {
     'Ortofoto / vegetación': true,
     'Mapa editable': true,
   };
+  final elements = <MapElement>[];
+  MapTool tool = MapTool.point;
   double opacity = 1;
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -61,21 +72,23 @@ class _OcartoHomeState extends State<OcartoHome> {
                 onChanged: (v) => setState(() => opacity = v),
               ),
               const Divider(),
-              Text('Elementos', style: Theme.of(context).textTheme.titleMedium),
-              FilledButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.place),
-                label: const Text('Añadir punto'),
+              Text(
+                'Herramientas',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
+              _toolButton(MapTool.point, Icons.place, 'Punto'),
+              _toolButton(MapTool.line, Icons.polyline, 'Línea'),
+              _toolButton(MapTool.area, Icons.pentagon_outlined, 'Área'),
               OutlinedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.polyline),
-                label: const Text('Añadir línea'),
+                onPressed: elements.isEmpty
+                    ? null
+                    : () => setState(elements.clear),
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Limpiar editables'),
               ),
-              OutlinedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.pentagon_outlined),
-                label: const Text('Añadir área'),
+              Text(
+                '${elements.length} elemento(s) editable(s)',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),
@@ -83,17 +96,18 @@ class _OcartoHomeState extends State<OcartoHome> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: const Color(0xffedf0e7),
-                border: Border.all(color: Colors.black26),
+            child: GestureDetector(
+              onTapUp: (details) => setState(
+                () => elements.add(MapElement(tool, details.localPosition)),
               ),
-              child: Center(
-                child: Text(
-                  'Lienzo vectorial\n\nPlantillas protegidas · mapa editable\n\nBase preparada para LAS/LAZ',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleLarge,
+              child: CustomPaint(
+                painter: MapPainter(
+                  layers: layers,
+                  opacity: opacity,
+                  elements: elements,
+                  tool: tool,
                 ),
+                child: const SizedBox.expand(),
               ),
             ),
           ),
@@ -101,4 +115,91 @@ class _OcartoHomeState extends State<OcartoHome> {
       ],
     ),
   );
+
+  Widget _toolButton(MapTool value, IconData icon, String label) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: value == tool
+        ? FilledButton.icon(
+            onPressed: () => setState(() => tool = value),
+            icon: Icon(icon),
+            label: Text(label),
+          )
+        : OutlinedButton.icon(
+            onPressed: () => setState(() => tool = value),
+            icon: Icon(icon),
+            label: Text(label),
+          ),
+  );
+}
+
+class MapPainter extends CustomPainter {
+  MapPainter({
+    required this.layers,
+    required this.opacity,
+    required this.elements,
+    required this.tool,
+  });
+  final Map<String, bool> layers;
+  final double opacity;
+  final List<MapElement> elements;
+  final MapTool tool;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0xffedf0e7),
+    );
+    if (layers['Plantilla georreferenciada'] == true) {
+      final p = Paint()
+        ..color = const Color(0xff71866d).withValues(alpha: opacity)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
+      for (var y = 80.0; y < size.height; y += 150) {
+        canvas.drawArc(
+          Rect.fromLTWH(-80, y - 60, size.width + 160, 120),
+          0,
+          3.14,
+          false,
+          p,
+        );
+      }
+    }
+    if (layers['Ortofoto / vegetación'] == true) {
+      final p = Paint()..color = const Color(0xff9db48d).withValues(alpha: .55);
+      canvas.drawCircle(Offset(size.width * .2, size.height * .25), 70, p);
+      canvas.drawCircle(Offset(size.width * .8, size.height * .7), 95, p);
+    }
+    for (final element in elements) {
+      final p = Paint()
+        ..color = const Color(0xff1f6f50)
+        ..style = PaintingStyle.fill;
+      if (element.tool == MapTool.point) {
+        canvas.drawCircle(element.position, 8, p);
+      }
+      if (element.tool == MapTool.line) {
+        canvas.drawRect(
+          Rect.fromCenter(center: element.position, width: 70, height: 8),
+          p,
+        );
+      }
+      if (element.tool == MapTool.area) {
+        canvas.drawRect(
+          Rect.fromCenter(center: element.position, width: 70, height: 45),
+          p,
+        );
+      }
+    }
+    final hint = TextPainter(
+      text: TextSpan(
+        text: 'Clic para añadir ${tool.name}',
+        style: const TextStyle(color: Colors.black54),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    hint.paint(canvas, const Offset(16, 16));
+  }
+
+  @override
+  bool shouldRepaint(covariant MapPainter oldDelegate) => true;
 }
