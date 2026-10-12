@@ -154,19 +154,21 @@ class _OcartoHomeState extends State<OcartoHome> {
           .toList(),
     );
     await storage.save(project);
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Proyecto guardado localmente')),
       );
+    }
   }
 
   Future<void> _loadProject() async {
     final project = await storage.load();
     if (project == null) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Todavía no hay un proyecto guardado')),
         );
+      }
       return;
     }
     setState(() {
@@ -188,10 +190,11 @@ class _OcartoHomeState extends State<OcartoHome> {
           ),
         );
     });
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Proyecto cargado: ${project.name}')),
       );
+    }
   }
 
   Widget _toolButton(MapTool value, IconData icon, String label) => Padding(
