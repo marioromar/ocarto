@@ -1,0 +1,15 @@
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+.idea/
+.vscode/
+node_modules/
+.next/
+*.las
+*.laz
+*.tif
+*.tiff
+*.gpkg
+supabase/.temp/
