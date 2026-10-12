@@ -6,11 +6,12 @@ void main() {
     final source = MapProject(
       name: 'Prueba',
       layers: [ProjectLayer(id: 'editable', name: 'Mapa editable')],
-      elements: [ProjectElement(tool: 'point', x: 12, y: 34)],
+      elements: [ProjectElement(tool: 'point', x: 12, y: 34, symbol: 'Árbol')],
     ).encode();
     final restored = MapProject.decode(source);
     expect(restored.name, 'Prueba');
     expect(restored.layers.single.id, 'editable');
     expect(restored.elements.single.x, 12);
+    expect(restored.elements.single.symbol, 'Árbol');
   });
 }

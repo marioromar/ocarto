@@ -26,15 +26,27 @@ class ProjectLayer {
 }
 
 class ProjectElement {
-  ProjectElement({required this.tool, required this.x, required this.y});
+  ProjectElement({
+    required this.tool,
+    required this.x,
+    required this.y,
+    this.symbol = 'IOF-placeholder',
+  });
   final String tool;
   final double x;
   final double y;
-  Map<String, Object> toJson() => {'tool': tool, 'x': x, 'y': y};
+  final String symbol;
+  Map<String, Object> toJson() => {
+    'tool': tool,
+    'x': x,
+    'y': y,
+    'symbol': symbol,
+  };
   factory ProjectElement.fromJson(Map<String, dynamic> json) => ProjectElement(
     tool: json['tool'] as String,
     x: (json['x'] as num).toDouble(),
     y: (json['y'] as num).toDouble(),
+    symbol: json['symbol'] as String? ?? 'IOF-placeholder',
   );
 }
 

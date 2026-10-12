@@ -11,9 +11,10 @@ void main() => runApp(const OcartoApp());
 enum MapTool { point, line, area }
 
 class MapElement {
-  MapElement(this.tool, this.position);
+  MapElement(this.tool, this.position, this.symbol);
   final MapTool tool;
   final Offset position;
+  final String symbol;
 }
 
 class OcartoApp extends StatelessWidget {
@@ -45,6 +46,14 @@ class _OcartoHomeState extends State<OcartoHome> {
   final storage = ProjectStorage();
   String projectName = 'Mi mapa Ocarto';
   MapTool tool = MapTool.point;
+  String symbol = 'Punto de control';
+  static const symbols = [
+    'Punto de control',
+    'Árbol',
+    'Roca',
+    'Agua',
+    'IOF-placeholder',
+  ];
   double opacity = 1;
 
   @override
@@ -87,6 +96,17 @@ class _OcartoHomeState extends State<OcartoHome> {
               _toolButton(MapTool.point, Icons.place, 'Punto'),
               _toolButton(MapTool.line, Icons.polyline, 'Línea'),
               _toolButton(MapTool.area, Icons.pentagon_outlined, 'Área'),
+              DropdownButtonFormField<String>(
+                value: symbol,
+                decoration: const InputDecoration(labelText: 'Símbolo IOF'),
+                items: symbols
+                    .map(
+                      (item) =>
+                          DropdownMenuItem(value: item, child: Text(item)),
+                    )
+                    .toList(),
+                onChanged: (value) => setState(() => symbol = value ?? symbol),
+              ),
               OutlinedButton.icon(
                 onPressed: elements.isEmpty
                     ? null
@@ -116,7 +136,9 @@ class _OcartoHomeState extends State<OcartoHome> {
             padding: const EdgeInsets.all(16),
             child: GestureDetector(
               onTapUp: (details) => setState(
-                () => elements.add(MapElement(tool, details.localPosition)),
+                () => elements.add(
+                  MapElement(tool, details.localPosition, symbol),
+                ),
               ),
               child: CustomPaint(
                 painter: MapPainter(
@@ -179,6 +201,7 @@ class _OcartoHomeState extends State<OcartoHome> {
               tool: element.tool.name,
               x: element.position.dx,
               y: element.position.dy,
+              symbol: element.symbol,
             ),
           )
           .toList(),
@@ -234,6 +257,7 @@ class _OcartoHomeState extends State<OcartoHome> {
                 orElse: () => MapTool.point,
               ),
               Offset(element.x, element.y),
+              element.symbol,
             ),
           ),
         );
