@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:file_selector/file_selector.dart';
 
 import 'core/map_project.dart';
 import 'core/project_storage.dart';
@@ -180,7 +183,14 @@ class _OcartoHomeState extends State<OcartoHome> {
           )
           .toList(),
     );
-    await storage.save(project);
+    final location = await getSaveLocation(
+      suggestedName: '${projectName.replaceAll(' ', '_')}.ocarto',
+      acceptedTypeGroups: [
+        const XTypeGroup(label: 'Proyecto Ocarto', extensions: ['ocarto']),
+      ],
+    );
+    if (location == null) return;
+    await File(location.path).writeAsString(project.encode());
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Proyecto guardado localmente')),
@@ -189,7 +199,17 @@ class _OcartoHomeState extends State<OcartoHome> {
   }
 
   Future<void> _loadProject() async {
-    final project = await storage.load();
+    final file = await openFile(
+      acceptedTypeGroups: [
+        const XTypeGroup(
+          label: 'Proyecto Ocarto',
+          extensions: ['ocarto', 'json'],
+        ),
+      ],
+    );
+    final project = file == null
+        ? await storage.load()
+        : MapProject.decode(await file.readAsString());
     if (project == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
