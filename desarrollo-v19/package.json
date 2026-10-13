@@ -1,0 +1,12 @@
+{
+  "name": "ocarto-lidar-worker",
+  "private": true,
+  "version": "0.1.9",
+  "scripts": {
+    "vendor:laz-perf": "node scripts/vendor-laz-perf.cjs",
+    "test": "node tests/worker-smoke.cjs && node tests/laz-perf-mock.cjs && node tests/geojson-import.cjs && node tests/geo-crs-math.cjs && node tests/geojson-crs.cjs && node tests/kml-import.cjs && node tests/kmz-import.cjs && node tests/kmz-export.cjs && node tests/dxf-import.cjs && node tests/terrain-grid.cjs && node tests/contours.cjs && node tests/contours-connect.cjs",
+    "test:real": "node tests/laz-perf-real.cjs",
+    "test:terrain-real": "node tests/terrain-real.cjs",
+    "test:terrain-model-real": "node tests/terrain-model-real.cjs"
+  }
+}
