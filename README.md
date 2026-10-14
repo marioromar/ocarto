@@ -1,8 +1,8 @@
-## Lectura espacial de COPC para mosaicos (v49)
+## Lectura espacial de COPC para mosaicos (v50)
 
-Al crear modelos para un área seleccionada, Ocarto detecta archivos COPC por su VLR y consulta su jerarquía espacial. Lee y descomprime solo los bloques que pueden cruzar el área y después aplica el filtro exacto del polígono. Los LAS/LAZ estándar mantienen el flujo anterior. Ver [VERSION-v49.md](VERSION-v49.md) y [README-LAZ.md](README-LAZ.md).
+Al crear modelos para un área seleccionada, Ocarto detecta archivos COPC por su VLR y consulta su jerarquía espacial. Lee y descomprime solo los bloques que pueden cruzar el área y después aplica el filtro exacto del polígono. Los LAS/LAZ estándar mantienen el flujo anterior. Ver [VERSION-v49.md](VERSION-v49.md), [VERSION-v50.md](VERSION-v50.md) y [README-LAZ.md](README-LAZ.md).
 
-COPC es un formato LAZ con índice espacial. Para aprovechar esta ruta con un LAZ estándar, hay que convertirlo previamente a COPC; Ocarto conserva la importación del LAZ original.
+COPC es un formato LAZ con índice espacial. Para aprovechar esta ruta con un LAZ estándar, hay que convertirlo previamente a COPC; Ocarto conserva la importación del LAZ original. El avance se calcula sobre los bloques candidatos al área; una pasada ligera suma sus puntos y la segunda decodifica, sin guardar la lista completa de bloques en memoria. Ver [VERSION-v50.md](VERSION-v50.md).
 
 ## Recorte de modelos LiDAR por área cartográfica (v48)
 

@@ -35,13 +35,14 @@ const file={size:1024,slice(begin,end){return{arrayBuffer:async()=>new ArrayBuff
 const inside=(x,y,rings)=>{let hit=false;for(const ring of rings){let r=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const [xi,yi]=ring[i],[xj,yj]=ring[j];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))r=!r}if(r)hit=!hit}return hit};
 (async()=>{
  const session={aoi:{bounds:{minX:0,maxX:20,minY:0,maxY:20},rings:[[[0,0],[20,0],[0,20]]]}};
- let reads=0;
- const result=await context.OcartoCopcArea.process(file,{session,getDecoder:async()=>({}),cancelled:()=>false,yield:async()=>{},progress:()=>{},addPoint:(x,y,z,cls,intensity,ret)=>{reads++;return inside(x,y,session.aoi.rings)}});
+ let reads=0;const progress=[];
+ const result=await context.OcartoCopcArea.process(file,{session,getDecoder:async()=>({}),cancelled:()=>false,yield:async()=>{},progress:(done,total)=>progress.push([done,total]),addPoint:(x,y,z,cls,intensity,ret)=>{reads++;return inside(x,y,session.aoi.rings)}});
  assert.equal(result.pages,2,'solo consulta la jerarquía hija que cruza el área');
  assert.equal(result.nodes,2,'solo descomprime la raíz y el bloque espacial candidato');
  assert.equal(result.points,2);
  assert.equal(result.acceptedPoints,1,'aplica el polígono exacto después de acotar los bloques');
  assert.equal(reads,2);
+ assert.deepEqual(progress,[[1,2],[2,2]],'el progreso termina en el total de puntos de los bloques candidatos');
  const outside={...session,aoi:{bounds:{minX:150,maxX:160,minY:150,maxY:160},rings:[]}};
  const skipped=await context.OcartoCopcArea.process(file,{session:outside,getDecoder:async()=>{throw Error('should skip before decoder initialization')},cancelled:()=>false,yield:async()=>{},progress:()=>{},addPoint:()=>true});
  assert.equal(skipped.skipped,true);assert.equal(skipped.pages,0);assert.equal(skipped.points,0);
