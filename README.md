@@ -1,3 +1,7 @@
+## Rendimiento al unir curvas largas (v53)
+
+La unión de curvas conserva un único índice espacial de extremos y sigue revisando celdas vecinas para empalmar dentro de tolerancia. La prueba de estrés conecta 10.000 segmentos consecutivos. Ver [VERSION-v53.md](VERSION-v53.md).
+
 ## Unión de curvas a través de bordes (v52)
 
 La unión busca extremos cercanos en celdas espaciales vecinas, por lo que un pequeño error numérico no deja una curva cortada al caer a ambos lados de una división de búsqueda. Solo une la misma cota; si hay más de un extremo posible, conserva el caso como ambiguo y no adivina. Ver [VERSION-v52.md](VERSION-v52.md).

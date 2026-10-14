@@ -50,20 +50,20 @@ function connect(features, opts={}) {
  if(!Array.isArray(features)||features.length>1000000)throw Error('Segmentos inválidos o demasiados');
  const tolerance=opts.tolerance===undefined?1e-7:Number(opts.tolerance);
  if(!Number.isFinite(tolerance)||tolerance<=0)throw Error('Tolerancia de unión inválida');
- const buckets=new Map(),nodes=[],edges=[];
+ const buckets=new Map(),edges=[];
  function key(x,y,z) {return String(z)+'|'+x+','+y}
  function endpoint(xy,z){
-  const gx=Math.floor(xy[0]/tolerance),gy=Math.floor(xy[1]/tolerance),matches=[];
+  const gx=Math.floor(xy[0]/tolerance),gy=Math.floor(xy[1]/tolerance);let match=null;
   for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
    const bucket=buckets.get(key(gx+dx,gy+dy,z));
-   if(bucket)for(const node of bucket)if(Math.hypot(xy[0]-node.xy[0],xy[1]-node.xy[1])<=tolerance)matches.push(node);
+   if(bucket){const candidates=Array.isArray(bucket)?bucket:[bucket];for(const node of candidates)if(Math.hypot(xy[0]-node.xy[0],xy[1]-node.xy[1])<=tolerance){if(match&&match!==node)throw Error('Coincidencia ambigua de vértices; reduce tolerancia');match=node}}
   }
-  if(matches.length>1)throw Error('Coincidencia ambigua de vértices; reduce tolerancia');
-  if(matches.length===1)return matches[0];
+  if(match)return match;
   const k=key(gx,gy,z),node={xy,links:[]},bucket=buckets.get(k);
-  if(bucket)bucket.push(node);else buckets.set(k,[node]);
-  nodes.push(node);return node;
+  if(!bucket)buckets.set(k,node);else if(Array.isArray(bucket))bucket.push(node);else buckets.set(k,[bucket,node]);
+  return node;
  }
+ function forEachNode(fn){for(const bucket of buckets.values())if(Array.isArray(bucket)){for(const node of bucket)fn(node)}else fn(bucket)}
  for(const f of features){
   const coords=f?.geometry?.coordinates,z=f?.properties?.elevation;
   if(f?.geometry?.type!=='LineString'||!Array.isArray(coords)||coords.length!==2||!Number.isFinite(z)||!coords.every(c=>Array.isArray(c)&&c.length>=2&&Number.isFinite(c[0])&&Number.isFinite(c[1])))throw Error('Segmento de curva inválido');
@@ -72,7 +72,7 @@ function connect(features, opts={}) {
   const e={a,b,z,used:false};edges.push(e);a.links.push(e);b.links.push(e);
  }
  const output=[];let closed=0,junctions=0;
- for(const n of nodes.values())if(n.links.length>2)junctions++;
+ forEachNode(n=>{if(n.links.length>2)junctions++});
  function walk(start,first) {
   const points=[start.xy],elevation=first.z;let current=start,e=first,end;
   while(e&&!e.used){
@@ -86,7 +86,7 @@ function connect(features, opts={}) {
   output.push({type:'Feature',properties:{elevation,source:'MDT preliminar',unsmoothed:true,connected:true,closed:end===start,review_required:true},geometry:{type:'LineString',coordinates:points.map(pt=>[pt[0],pt[1]])}});
  }
  // Prefer open ends and graph junctions. A pure cycle is handled afterwards.
- for(const n of nodes.values())if(n.links.length!==2)for(const e of n.links)if(!e.used)walk(n,e);
+ forEachNode(n=>{if(n.links.length!==2)for(const e of n.links)if(!e.used)walk(n,e)});
  for(const e of edges)if(!e.used)walk(e.a,e);
  return {features:output,segments:edges.length,lines:output.length,closed,junctions,tolerance,method:'v52: extremos coincidentes por cota y tolerancia espacial; sin suavizado; bifurcaciones separadas'};
 }

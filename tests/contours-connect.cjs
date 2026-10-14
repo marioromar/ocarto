@@ -8,6 +8,7 @@ r=connect([seg(5,[0,0],[1,0]),seg(5,[1,0],[2,0]),seg(5,[1,0],[1,1])]);assert.equ
 // Endpoints within tolerance must join even when they land in neighboring spatial-hash buckets.
 r=connect([seg(5,[-2,0],[.99,0]),seg(5,[1.01,0],[4,0])],{tolerance:1});assert.equal(r.lines,1);assert.equal(r.features[0].geometry.coordinates.length,3);
 assert.throws(()=>connect([seg(5,[0,0],[-5,0]),seg(5,[2,0],[5,0]),seg(5,[1,0],[6,1])],{tolerance:1}),/ambigua/,'no debe adivinar entre dos extremos posibles');
+const many=Array.from({length:10000},(_,i)=>seg(12,[i,20],[i+1,20]));r=connect(many);assert.equal(r.lines,1);assert.equal(r.features[0].geometry.coordinates.length,10001,'une una curva larga sin una lista duplicada de nodos');
 const m=[[0,1,2],[0,1,2],[0,1,2]].flatMap((row,j)=>row.map((z,i)=>[i+.5,j+.5,z,1,'observado']));
 r=connect(generate(m,1,.5).features);assert.equal(r.lines,2);assert.equal(r.features.every(f=>f.geometry.coordinates.length===3),true);
 assert.throws(()=>connect([seg(5,[0,0],[1,0])],{tolerance:0}),/Tolerancia/);
