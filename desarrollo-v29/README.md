@@ -1,6 +1,6 @@
-## Proyecto y modelo reutilizable (v30)
+## Modelo reutilizable de vegetación (v29)
 
-El archivo `.ocarto` conserva el modelo local de vegetación y los parámetros de análisis LiDAR, curvas de nivel y vaguadas. Los proyectos anteriores siguen siendo compatibles y reciben valores predeterminados para ajustes que no tuvieran guardados. Los modelos también se pueden exportar/importar en JSON. Las predicciones requieren revisión cartográfica.
+Después de aprender con áreas etiquetadas, el modelo se conserva dentro del archivo `.ocarto` al guardar el proyecto. También puedes exportarlo/importarlo como JSON para reutilizarlo en otros proyectos. Contiene muestras LiDAR resumidas y parámetros; no incluye la nube ni los polígonos anotados. Los proyectos anteriores sin modelo siguen siendo compatibles. Las propuestas requieren revisión cartográfica.
 
 # Ocarto · prototipo local
 
