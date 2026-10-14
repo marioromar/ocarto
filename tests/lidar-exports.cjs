@@ -1,5 +1,6 @@
-const assert=require('node:assert/strict');const {rasterGrid,contoursToDxf}=require('../lidar-exports.js');
+const assert=require('node:assert/strict');const {rasterGrid,prjWkt,contoursToDxf}=require('../lidar-exports.js');
 const r=rasterGrid([[.5,.5,10,1],[1.5,.5,20,1],[.5,1.5,15,1]],1);assert.equal(r.width,2);assert.equal(r.height,2);assert.equal(r.worldFile,'1\n0\n0\n-1\n0.5\n1.5\n');assert.equal(r.rgba[(0*2+0)*4+3],255);assert.equal(r.rgba[(0*2+1)*4+3],0);
 assert.throws(()=>rasterGrid([[.5,.5,2,1],[.5,.5,3,1]],1),/duplicada/);assert.throws(()=>rasterGrid([[.5,.5,null,1]],1,'elevation'),/No hay valores/);assert.throws(()=>rasterGrid([[.5,.5,1,1],[1000.5,1000.5,2,1]],1,'elevation',{maxPixels:100}),/demasiado grande/);
 const d=contoursToDxf([{type:'Feature',properties:{elevation:100.5},geometry:{type:'LineString',coordinates:[[500000,6100000],[500010,6100010],[500020,6100010]]}}],'EPSG:25830');assert.match(d.content,/LWPOLYLINE/);assert.match(d.content,/CURVA_100\.500/);assert.match(d.content,/\r\n38\r\n100\.5\r\n/);assert.equal(d.count,1);assert.throws(()=>contoursToDxf([]),/No hay curvas/);
-console.log('OK: imagen PNG/PGW georreferenciada, vacíos transparentes, límites y DXF de curvas');
+const wkt=prjWkt('EPSG:25830');assert.match(wkt,/ETRS89 \/ UTM zone 30N/);assert.match(wkt,/central_meridian",-3/);assert.match(wkt,/AUTHORITY\["EPSG","25830"\]/);assert.match(prjWkt('EPSG:32730'),/false_northing",10000000/);assert.match(prjWkt('EPSG:4326'),/GEOGCS\["WGS 84"/);assert.throws(()=>prjWkt('CRS local'),/código EPSG/);assert.throws(()=>prjWkt('EPSG:3857'),/no está incluido/);
+console.log('OK: imagen PNG/PGW, CRS PRJ WKT válido para EPSG admitidos, vacíos transparentes, límites y DXF de curvas');
