@@ -1,4 +1,12 @@
-# Ocarto LiDAR: LAS y LAZ
+# Ocarto LiDAR: LAS, LAZ y COPC
+
+## Lectura por área de archivos COPC (v49)
+
+En un mosaico de varios archivos, Ocarto identifica COPC por el VLR del formato, no por el nombre ni la extensión. En un solo archivo COPC, selecciona primero un área cartográfica para activar el mismo flujo. El Worker lee la cabecera, las páginas de jerarquía y los bloques de puntos por rangos del archivo; no copia el archivo completo al búfer LAZ de WASM. Solo descomprime los bloques cuyos cubos espaciales cruzan el encuadre del área y comprueba cada punto contra el polígono exacto antes de acumularlo en los modelos.
+
+La jerarquía puede incluir bloques de nivel grueso que cubran una zona mayor que el polígono; esos bloques se descomprimen completos y luego se filtran punto a punto. El ahorro depende de cómo esté organizado el COPC y del tamaño del área seleccionada. Los LAZ estándar siguen funcionando, pero al no incluir jerarquía espacial deben recorrerse completos. El lector COPC usa la biblioteca local vendor/copc-reader.js (copc 0.0.9, licencia MIT) junto con el laz-perf ya instalado. La aplicación no descarga código ejecutable desde Internet.
+
+Prueba real con el fixture de referencia de 100.000 puntos ellipsoid.copc.laz (se pasa su ruta a npm run test:copc-real): para un área de 10 × 10 m, se descomprimieron 78.619 puntos de dos bloques y se acumularon 112 puntos interiores. Son mediciones de ese fixture, no una garantía de ahorro para otros COPC.
 
 ## Recorte de un mosaico al área seleccionada (v48)
 
@@ -39,6 +47,7 @@ Desde la v39, la copia comprimida se conserva en WASM y se reutiliza en los aná
 ```sh
 npm test
 npm run test:real -- ruta/al/archivo.laz
+npm run test:copc-real -- ruta/al/archivo.copc.laz
 ```
 
 La suite sintética comprueba lectura LAS, análisis por celdas, cancelación entre lotes y la API laz-perf simulada. `test:real` usa el WASM oficial, exige al menos 2 millones de puntos y recorre el flujo completo.

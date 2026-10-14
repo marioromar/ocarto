@@ -24,6 +24,12 @@ async function readFileBuffer(file,{signal,onProgress=()=>{}}={}){
   try{reader.releaseLock()}catch(_){}
  }
 }
+async function hasCopcInfo(file){
+ if(!file||!Number.isSafeInteger(file.size)||file.size<397||typeof file.slice!=='function')return false;
+ const bytes=new Uint8Array(await file.slice(375,397).arrayBuffer());if(bytes.length!==22)return false;
+ let userId='';for(let i=0;i<16&&bytes[i+2];i++)userId+=String.fromCharCode(bytes[i+2]);
+ return userId.trim()==='copc'&&new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength).getUint16(18,true)===1;
+}
 async function streamFileToWorker(file,worker,{jobId,sessionId,signal,onProgress=()=>{},chunkSize=1024*1024}={}){
  if(!file||!Number.isSafeInteger(file.size)||file.size<1)throw Error('Archivo vacío o tamaño no válido');
  if(typeof file.stream!=='function')throw Error('Este navegador no permite leer LAS/LAZ por bloques; actualízalo para importar archivos grandes');
@@ -56,5 +62,5 @@ async function streamFileToWorker(file,worker,{jobId,sessionId,signal,onProgress
  finally{if(signal)signal.removeEventListener('abort',abort);worker.removeEventListener('message',onMessage);if(reader)try{reader.releaseLock()}catch(_){}}
 }
 function abortError(){const e=Error('Carga cancelada');e.name='AbortError';return e}
-return{readFileBuffer,streamFileToWorker};
+return{readFileBuffer,streamFileToWorker,hasCopcInfo};
 });

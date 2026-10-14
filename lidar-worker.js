@@ -176,6 +176,20 @@ async function processAreaTile(job){
  postMessage({type:'area-tile-done',jobId:job.id,sessionId:job.sessionId,points:job.acceptedPoints,terrainCells:session.terrain.size,vegetationCells:session.vegetation.size()});
 }
 
+function addAreaPoint(session,x,y,z,cls,intensity,ret){
+ if(session.aoi){const b=session.aoi.bounds;if(x<b.minX||x>b.maxX||y<b.minY||y>b.maxY)return false;if(!pointInArea(x,y,session.aoi.rings))return false}
+ if(cls===2){const cx=Math.floor(x/session.terrainCell),cy=Math.floor(y/session.terrainCell),key=cx+','+cy;let cell=session.terrain.get(key);if(!cell){if(session.terrain.size>=session.maxCells)throw Error('Demasiadas celdas en el modelo de terreno del área; aumenta el tamaño de celda');cell={x,y,z,n:1};session.terrain.set(key,cell)}else{cell.n++;if(z<cell.z)Object.assign(cell,{x,y,z})}}
+ session.vegetation.add(x,y,z,cls,intensity,ret);return true;
+}
+async function processCopcAreaTile(job,file){
+ const session=areaSession;if(!session||session.id!==job.sessionId)throw Error('La sesión de mosaico ya no está activa');
+ if(!self.OcartoCopcLibrary)importScripts('vendor/copc-reader.js');
+ if(!self.OcartoCopcArea)importScripts('copc-area-worker.js');
+ const result=await self.OcartoCopcArea.process(file,{session,getDecoder:lazModule,addPoint:(x,y,z,cls,intensity,ret)=>addAreaPoint(session,x,y,z,cls,intensity,ret),cancelled:()=>job.cancelled||session.cancelled,yield:yieldWorker,progress:(done,total,accepted)=>postMessage({type:'progress',jobId:job.id,done:Math.min(done,total),total,stage:'copc',accepted})});
+ if(job.cancelled||session.cancelled){areaSession=null;postMessage({type:'area-tile-cancelled',jobId:job.id,sessionId:job.sessionId});return}
+ if(!result.skipped){session.tiles++;session.points+=result.acceptedPoints}
+ postMessage({type:'area-tile-done',jobId:job.id,sessionId:session.id,points:result.acceptedPoints,bounds:result.bounds,copc:true,skipped:!!result.skipped,visitedPoints:result.points,nodes:result.nodes,pages:result.pages,terrainCells:session.terrain.size,vegetationCells:session.vegetation.size()});
+}
 onmessage=async e=>{
  const {type,jobId}=e.data;
  if(type==='cancel'){
@@ -193,6 +207,10 @@ onmessage=async e=>{
  if(type==='area-add'){
   const session=areaSession;if(!session||session.id!==e.data.sessionId){fail('La sesión de mosaico ya no está activa','area',jobId);return}if(activeDetection||activeLoad){fail('Espera a que termine la operación LiDAR actual','area',jobId);return}
   const job={id:jobId||0,cancelled:false,sessionId:session.id};activeDetection=job;try{await processAreaTile(job)}catch(err){if(cloud){releaseCloud(cloud);cloud=null}areaSession=null;fail(err.message||String(err),'area',job.id)}finally{if(activeDetection===job)activeDetection=null}return;
+ }
+ if(type==='area-add-copc'){
+  const session=areaSession;if(!session||session.id!==e.data.sessionId){fail('La sesión de mosaico ya no está activa','area',jobId);return}if(activeDetection||activeLoad){fail('Espera a que termine la operación LiDAR actual','area',jobId);return}
+  const job={id:jobId||0,cancelled:false,sessionId:session.id};activeDetection=job;try{await processCopcAreaTile(job,e.data.file)}catch(err){if(err.name==='AbortError'){areaSession=null;postMessage({type:'area-tile-cancelled',jobId:job.id,sessionId:job.sessionId})}else{areaSession=null;fail(err.message||String(err),'area',job.id)}}finally{if(activeDetection===job)activeDetection=null}return;
  }
  if(type==='area-finish'){
   const session=areaSession;if(!session||session.id!==e.data.sessionId){fail('La sesión de mosaico ya no está activa','area',jobId);return}

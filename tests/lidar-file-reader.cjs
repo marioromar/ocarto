@@ -1,12 +1,16 @@
 'use strict';
 const assert=require('node:assert/strict');
-const {readFileBuffer,streamFileToWorker}=require('../lidar-file-reader.js');
+const {readFileBuffer,streamFileToWorker,hasCopcInfo}=require('../lidar-file-reader.js');
 
 (async()=>{
  const file=new Blob([Uint8Array.from([1,2]),Uint8Array.from([3,4,5])]);let progress=[];
  const buffer=await readFileBuffer(file,{onProgress:(done,total)=>progress.push([done,total])});
  assert.deepEqual([...new Uint8Array(buffer)],[1,2,3,4,5]);
  assert.deepEqual(progress.at(-1),[5,5]);
+ const copcHeader=new Uint8Array(420);copcHeader.set(new TextEncoder().encode('copc'),377);new DataView(copcHeader.buffer).setUint16(393,1,true);
+ assert.equal(await hasCopcInfo(new Blob([copcHeader])),true,'identifica COPC por su VLR, sin depender de la extensión');
+ const ordinaryHeader=copcHeader.slice();ordinaryHeader[377]=0;
+ assert.equal(await hasCopcInfo(new Blob([ordinaryHeader])),false,'no marca un LAZ estándar como COPC');
  const sent=[],listeners=new Set(),worker={addEventListener:(n,fn)=>listeners.add(fn),removeEventListener:(n,fn)=>listeners.delete(fn),postMessage(m){sent.push(m);const reply=m.type==='load-start'?{type:'load-ready',jobId:m.jobId}:m.type==='load-chunk'?{type:'load-chunk-ack',jobId:m.jobId,sequence:m.sequence}:m.type==='load-end'?{type:'loaded',jobId:m.jobId}:m.type==='cancel'?{type:'cancelled',jobId:m.jobId}:null;if(reply)queueMicrotask(()=>listeners.forEach(fn=>fn({data:reply})))}};
  let streamProgress=[];await streamFileToWorker(new Blob([Uint8Array.from([1,2,3,4,5])]),worker,{jobId:41,chunkSize:2,onProgress:(done,total)=>streamProgress.push([done,total])});
  assert.deepEqual(sent.filter(m=>m.type==='load-chunk').map(m=>[...new Uint8Array(m.chunk)]),[[1,2],[3,4],[5]],'transfiere bloques pequeños con espera entre bloques');assert.deepEqual(streamProgress.at(-1),[5,5]);assert.equal(sent.at(-1).type,'load-end');
