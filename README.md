@@ -1,3 +1,7 @@
+## Vegetación vectorial y raster para orientación (v55)
+
+Con ejemplos dibujados sobre el mapa, Ocarto aprende clases de bosque blanco, verde 1/2/3, terreno abierto y matorral; vectoriza las celdas similares y prepara un ZIP con GeoJSON, DXF por capas y tabla `.ocdCrt` para asignar capas a símbolos OCAD. También exporta PNG + PGW clasificado con leyenda. Los códigos ISOM son candidatos: bosque blanco 405, verdes 406/408/410, terreno abierto 401; matorral queda sin símbolo único. El DXF omite áreas con huecos para no rellenar claros interiores; el GeoJSON sí conserva sus huecos. Sin entrenamiento no se asignan códigos. Ver [VERSION-v55.md](VERSION-v55.md).
+
 ## Exportación de plantillas LiDAR para OCAD (v54)
 
 El MDT y la altura de copa pueden exportarse como PNG con world file PGW en ZIP; OCAD puede usar el PNG como plantilla de fondo configurando el mismo CRS. Las curvas conectadas también se pueden exportar como DXF ASCII, con cada cota en una capa y Z. Son salidas preliminares para revisar: la paleta de raster no es simbología cartográfica y el DXF no asigna símbolos OCAD. CSV y GeoJSON siguen disponibles para análisis e intercambio SIG. Ver [VERSION-v54.md](VERSION-v54.md).
