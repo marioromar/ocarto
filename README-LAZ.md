@@ -14,13 +14,13 @@ El script descarga `js/src/laz-perf.js` y `js/src/laz-perf.wasm` desde la etique
 
 ## Decodificación y análisis en lotes
 
-En la v38, el navegador lee el archivo de forma progresiva con avance visible y cancelación real antes de transferirlo al Worker. El decodificador sigue necesitando el buffer LAZ completo; el análisis y descompresión se procesan por lotes.
+Desde la v40, el navegador lee el archivo con avance y cancelación y envía bloques al Worker con confirmación entre bloques. Para LAZ, el Worker copia cada bloque directamente a la asignación final en memoria WASM; no se construye un ArrayBuffer JavaScript completo ni se vuelve a copiar el fichero al final. Para LAS sin compresión, los bloques se montan en el Worker.
 
 El Worker detecta la compresión por los bits altos del formato LAS, crea `new Module.LASZip()`, copia el fichero a memoria Emscripten y valida conteo, longitud del registro y formato. Lee X/Y/Z en los offsets oficiales 0/4/8 y aplica escalas y offsets LAS. Al cargar, calcula la extensión y genera una vista de hasta 60.000 puntos; no mantiene tres arrays `Float64` del tamaño de la nube. El archivo original permanece en el Worker para análisis posteriores.
 
 LAS y LAZ se recorren por lotes de 100.000 puntos. El análisis conserva máximos por celda en una retícula global y opcionalmente compara vecinos 3×3, lo que evita falsos máximos en bordes de tesela. La interfaz muestra avance y permite cancelar carga o análisis. Al analizar LAZ, el archivo se vuelve a descomprimir; esto ahorra memoria a costa de tiempo adicional. El decodificador y sus búferes se liberan también al cancelar o fallar.
 
-La v39 conserva la copia comprimida en memoria WASM tras cargar el LAZ y la reutiliza en los análisis siguientes, evitando volver a copiar el archivo completo en cada operación. La carga inicial mantiene una copia de trabajo completa en memoria JavaScript mientras se copia a WASM. La memoria de análisis depende del tamaño del archivo, de los temporales de laz-perf y del número de celdas ocupadas; no hay un límite fijo de puntos en LAS/LAZ. CSV/XYZ conserva el límite de 250.000 puntos del prototipo. La detección sigue siendo experimental y no clasifica profesionalmente árboles, rocas u otros elementos.
+Desde la v39, la copia comprimida se conserva en WASM y se reutiliza en los análisis siguientes. La carga de LAZ necesita su tamaño completo en WASM más la memoria temporal del decodificador y el resumen del análisis; la memoria disponible del navegador y del equipo sigue limitando el tamaño práctico. No hay un límite fijo de puntos para LAS/LAZ. CSV/XYZ conserva el límite de 250.000 puntos del prototipo. La detección sigue siendo experimental y no clasifica profesionalmente árboles, rocas u otros elementos.
 
 ## Pruebas realizadas
 

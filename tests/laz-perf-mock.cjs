@@ -56,6 +56,10 @@ async function run(format, length, count) {
   await ctx.onmessage({data:{type:'load',buffer:plain}});
   assert.equal(messages.at(-1).type,'loaded','a replacement LAS loads normally');
   assert(freed.includes(8),'replacing a LAZ releases its cached WASM allocation');
+  const streamed=buffer.slice(0),streamJob=91;await ctx.onmessage({data:{type:'load-start',jobId:streamJob,fileSize:streamed.byteLength}});assert.equal(messages.at(-1).type,'load-ready');
+  let offset=0,sequence=0;for(const size of [101,streamed.byteLength-101]){const chunk=new Uint8Array(streamed,offset,size);sequence++;await ctx.onmessage({data:{type:'load-chunk',jobId:streamJob,sequence,offset,chunk}});offset+=size;assert.equal(messages.at(-1).type,'load-chunk-ack')}
+  await ctx.onmessage({data:{type:'load-end',jobId:streamJob}});assert.equal(messages.at(-1).type,'loaded','LAZ chunks are copied straight into the retained WASM allocation');assert.equal(messages.at(-1).jobId,streamJob);
+  assert.equal(mallocSizes.filter(size=>size===streamed.byteLength).length,3,'streamed LAZ uses its destination allocation directly, with no second compressed-file copy');
 }
 (async () => {
   await run(0, 20, 1);

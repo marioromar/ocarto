@@ -1,8 +1,8 @@
 /* Ocarto LiDAR worker: streamed LAS + laz-perf WebAssembly LAZ decoder. */
 let cloud=null,activeDetection=null,activeLoad=null;
-const fail=(message,operation)=>postMessage({type:'error',message,operation});
+const fail=(message,operation,jobId)=>postMessage({type:'error',message,operation,jobId});
 const yieldWorker=()=>new Promise(resolve=>setTimeout(resolve,0));
-function readHeader(buffer){
+function readHeader(buffer,fileSize=buffer?.byteLength){
  if(!buffer||typeof buffer.byteLength!=="number"||buffer.byteLength<227)throw Error('Cabecera LAS incompleta (mínimo 227 bytes)');
  const d=new DataView(buffer);if(d.getUint32(0,true)!==0x4653414c)throw Error('Cabecera LAS inválida');
  const major=d.getUint8(24),minor=d.getUint8(25),flags=d.getUint8(104),format=flags&63,compressed=!!(flags&0xc0),recordLength=d.getUint16(105,true);
@@ -10,17 +10,17 @@ function readHeader(buffer){
  if(major===1&&minor>=4&&d.byteLength>=255){const extended=Number(d.getBigUint64(247,true));if(extended)count=extended}
  const minLength={0:20,1:28,2:26,3:34,4:57,5:63,6:30,7:36,8:38,9:59,10:67}[format];
  if(!minLength)throw Error(`Formato de punto LAS ${format} no soportado todavía`);
- if(!Number.isSafeInteger(count)||count<1||recordLength<minLength||offset>=buffer.byteLength)throw Error('Cabecera LAS inconsistente o archivo incompleto');
+ if(!Number.isSafeInteger(count)||count<1||recordLength<minLength||offset>=fileSize)throw Error('Cabecera LAS inconsistente o archivo incompleto');
  const sx=d.getFloat64(131,true),sy=d.getFloat64(139,true),sz=d.getFloat64(147,true),ox=d.getFloat64(155,true),oy=d.getFloat64(163,true),oz=d.getFloat64(171,true);
  if(![sx,sy,sz,ox,oy,oz].every(Number.isFinite)||!sx||!sy||!sz)throw Error('Escalas u offsets LAS inválidos');
- if(!compressed&&offset+count*recordLength>buffer.byteLength)throw Error('Tamaño de registros LAS inconsistente o archivo incompleto');
+ if(!compressed&&offset+count*recordLength>fileSize)throw Error('Tamaño de registros LAS inconsistente o archivo incompleto');
  return{major,minor,format,compressed,recordLength,offset,count,sx,sy,sz,ox,oy,oz};
 }
 function previewWriter(count){const stride=Math.max(1,Math.ceil(count/60000)),preview=new Float64Array(Math.ceil(count/stride)*3);let at=0;return{preview,add(i,x,y,z){if(i%stride===0){preview[at++]=x;preview[at++]=y;preview[at++]=z}}}}
-function finishLoad(bounds,meta,buffer,sample,storedCloud=null){const previous=cloud;cloud=storedCloud||{buffer,meta,bounds};if(previous&&previous!==cloud)releaseCloud(previous);postMessage({type:'loaded',count:meta.count,bounds,preview:sample.preview,format:meta.format,version:`${meta.major}.${meta.minor}${meta.compressed?' LAZ':''}`},[sample.preview.buffer])}
+function finishLoad(bounds,meta,buffer,sample,storedCloud=null,jobId=null){const previous=cloud;cloud=storedCloud||{buffer,meta,bounds};if(previous&&previous!==cloud)releaseCloud(previous);postMessage({type:'loaded',jobId,count:meta.count,bounds,preview:sample.preview,format:meta.format,version:`${meta.major}.${meta.minor}${meta.compressed?' LAZ':''}`},[sample.preview.buffer])}
 function releaseCloud(state){if(state?.laz?.mod&&state.laz.input){state.laz.mod._free(state.laz.input);state.laz.input=0}}
 function openStoredLAZ(state){const laz=state?.laz;if(!laz?.mod||!laz.input||!laz.byteLength)throw Error('El LAZ conservado en memoria ya no está disponible');const decoder=new laz.mod.LASZip();try{decoder.open(laz.input,laz.byteLength);return{mod:laz.mod,decoder}}catch(e){try{decoder.delete()}catch(_){}throw e}}
-async function readLAS(buffer,meta,job){const d=new DataView(buffer),sample=previewWriter(meta.count);let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;const batch=100000;for(let start=0;start<meta.count;start+=batch){if(job.cancelled)break;const end=Math.min(meta.count,start+batch);for(let i=start,p=meta.offset+start*meta.recordLength;i<end;i++,p+=meta.recordLength){const x=d.getInt32(p,true)*meta.sx+meta.ox,y=d.getInt32(p+4,true)*meta.sy+meta.oy,z=d.getInt32(p+8,true)*meta.sz+meta.oz;if(![x,y,z].every(Number.isFinite))throw Error(`Coordenada LAS no finita en punto ${i}`);if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;sample.add(i,x,y,z)}postMessage({type:'progress',done:end,total:meta.count,stage:'read'});await yieldWorker()}if(job.cancelled){postMessage({type:'cancelled',jobId:job.id,operation:'load'});return}finishLoad({minX,maxX,minY,maxY},meta,buffer,sample)}
+async function readLAS(buffer,meta,job){const d=new DataView(buffer),sample=previewWriter(meta.count);let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;const batch=100000;for(let start=0;start<meta.count;start+=batch){if(job.cancelled)break;const end=Math.min(meta.count,start+batch);for(let i=start,p=meta.offset+start*meta.recordLength;i<end;i++,p+=meta.recordLength){const x=d.getInt32(p,true)*meta.sx+meta.ox,y=d.getInt32(p+4,true)*meta.sy+meta.oy,z=d.getInt32(p+8,true)*meta.sz+meta.oz;if(![x,y,z].every(Number.isFinite))throw Error(`Coordenada LAS no finita en punto ${i}`);if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;sample.add(i,x,y,z)}postMessage({type:'progress',done:end,total:meta.count,stage:'read'});await yieldWorker()}if(job.cancelled){postMessage({type:'cancelled',jobId:job.id,operation:'load'});return}finishLoad({minX,maxX,minY,maxY},meta,buffer,sample,null,job.id)}
 // laz-perf 3.4.0 is vendored locally under Apache-2.0; no remote scripts are fetched.
 let lazModulePromise;
 async function lazModule(){
@@ -34,13 +34,12 @@ async function lazModule(){
  })();
  try{return await lazModulePromise}catch(e){lazModulePromise=null;throw e}
 }
-async function readLAZ(buffer,meta,job){
+async function readLAZ(buffer,meta,job,preloaded=null){
  const count=meta.count,recordLength=meta.recordLength,format=meta.format,sample=previewWriter(count);
- const mod=await lazModule();if(job.cancelled){postMessage({type:'cancelled',jobId:job.id,operation:'load'});return}let input=0,point=0,decoder=null,minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity,keepInput=false;
+ const mod=preloaded?.mod||await lazModule();if(job.cancelled){if(preloaded?.input)mod._free(preloaded.input);postMessage({type:'cancelled',jobId:job.id,operation:'load'});return}let input=preloaded?.input||0,point=0,decoder=null,minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity,keepInput=false;
  try{
-  input=mod._malloc(buffer.byteLength);if(!input)throw Error('Memoria insuficiente para descomprimir LAZ');
-  mod.HEAPU8.set(new Uint8Array(buffer),input);
-  decoder=new mod.LASZip();decoder.open(input,buffer.byteLength);
+  if(!input){input=mod._malloc(buffer.byteLength);if(!input)throw Error('Memoria insuficiente para descomprimir LAZ');mod.HEAPU8.set(new Uint8Array(buffer),input)}
+  decoder=new mod.LASZip();decoder.open(input,preloaded?.byteLength||buffer.byteLength);
   const decodedCount=decoder.getCount(),decodedLength=decoder.getPointLength(),decodedFormat=decoder.getPointFormat();
   if(decodedCount!==count)throw Error(`El número de puntos LAZ no coincide: ${decodedCount} frente a ${count}`);
   if(decodedLength!==recordLength||decodedFormat!==format)throw Error('La cabecera LAZ no coincide con el decodificador');
@@ -60,7 +59,34 @@ async function readLAZ(buffer,meta,job){
   if(point)mod._free(point);if(input&&!keepInput)mod._free(input);
  }
  if(job.cancelled){postMessage({type:'cancelled',jobId:job.id,operation:'load'});return}
- finishLoad({minX,maxX,minY,maxY},meta,null,sample,{buffer:null,meta,bounds:{minX,maxX,minY,maxY},laz:{mod,input,byteLength:buffer.byteLength}});
+ finishLoad({minX,maxX,minY,maxY},meta,null,sample,{buffer:null,meta,bounds:{minX,maxX,minY,maxY},laz:{mod,input,byteLength:preloaded?.byteLength||buffer.byteLength}},job.id);
+}
+function disposeStreamStage(job){const s=job?.stream;if(s?.input&&s.mod)s.mod._free(s.input);if(job)job.stream=null}
+async function initStreamStage(job){
+ const s=job.stream;if(s.initialized)return;
+ const head=s.prefix.subarray(0,s.prefixUsed),needed=head.length>=26&&head[24]===1&&head[25]>=4?375:227;
+ if(head.length<needed)return;
+ s.meta=readHeader(head.buffer.slice(head.byteOffset,head.byteOffset+head.byteLength),s.fileSize);
+ if(s.meta.compressed){s.mod=await lazModule();if(job.cancelled)throw Object.assign(Error('Carga cancelada'),{name:'AbortError'});s.input=s.mod._malloc(s.fileSize);if(!s.input)throw Error('Memoria insuficiente para cargar LAZ');s.mod.HEAPU8.set(head,s.input)}
+ else{s.buffer=new Uint8Array(s.fileSize);s.buffer.set(head)}
+ s.initialized=true;
+}
+async function appendStreamChunk(job,m){
+ const s=job.stream;if(!s||m.offset!==s.received||!(m.chunk instanceof Uint8Array)||m.offset+m.chunk.byteLength>s.fileSize)throw Error('Bloques LAS/LAZ fuera de orden o con tamaño inesperado');
+ let chunk=m.chunk,at=m.offset;s.received+=chunk.byteLength;
+ if(!s.initialized){const take=Math.min(s.prefixTarget-s.prefixUsed,chunk.byteLength);if(take){s.prefix.set(chunk.subarray(0,take),s.prefixUsed);s.prefixUsed+=take;chunk=chunk.subarray(take);at+=take;await initStreamStage(job)}}
+ if(job.cancelled)throw Object.assign(Error('Carga cancelada'),{name:'AbortError'});
+ if(chunk.byteLength){if(!s.initialized)throw Error('Cabecera LAS incompleta');if(s.meta.compressed)s.mod.HEAPU8.set(chunk,s.input+at);else s.buffer.set(chunk,at)}
+}
+async function finishStreamLoad(job){
+ const s=job.stream;if(!s)throw Error('No hay una carga por bloques activa');
+ if(s.received!==s.fileSize)throw Error(`Lectura incompleta: ${s.received} de ${s.fileSize} bytes`);
+ if(!s.initialized)await initStreamStage(job);
+ if(!s.initialized)throw Error('Cabecera LAS incompleta');
+ if(job.cancelled){disposeStreamStage(job);postMessage({type:'cancelled',jobId:job.id,operation:'load'});return}
+ const meta=s.meta;
+ if(meta.compressed){const preloaded={mod:s.mod,input:s.input,byteLength:s.fileSize};s.input=0;job.stream=null;await readLAZ(null,meta,job,preloaded)}
+ else{const buffer=s.buffer.buffer;job.stream=null;await readLAS(buffer,meta,job)}
 }
 // LAS classification is stored at byte 15 (formats 0–5, low five bits)
 // or byte 16 (formats 6–10, full eight bits).
@@ -119,4 +145,32 @@ async function analyzeVegetation(opts,job){
  const result=store.finish();postMessage({type:'vegetation',jobId:job.id,cellSize:result.cellSize,cells:result.cells,classifiedPoints:result.processed,rows:result.rows,quality:result.quality});
 }
 
-onmessage=async e=>{const {type,jobId}=e.data;if(type==='cancel'){if(activeLoad?.id===jobId)activeLoad.cancelled=true;if(activeDetection?.id===jobId)activeDetection.cancelled=true;return}const loading=type==='load';let acceptedLoad=false;try{if(loading){if(activeLoad||activeDetection)throw Error('Espera a que termine la operación LiDAR actual');acceptedLoad=true;const b=e.data.buffer,meta=readHeader(b),job={id:jobId||0,cancelled:false};activeLoad=job;if(meta.compressed)await readLAZ(b,meta,job);else await readLAS(b,meta,job);if(activeLoad===job)activeLoad=null}else if(type==='detect'||type==='terrain'||type==='vegetation'){if(activeDetection)throw Error('Ya hay un análisis en curso');const job={id:jobId||0,cancelled:false};activeDetection=job;try{if(type==='vegetation')await analyzeVegetation(e.data.options,job);else await detect(type==='terrain'?{...e.data.options,mode:'terrain',classFilter:'ground',localMax:false}:e.data.options,job)}finally{if(activeDetection===job)activeDetection=null}}}catch(err){if(loading&&acceptedLoad){activeLoad=null}fail(err.message||String(err),loading?'load':type)}};
+onmessage=async e=>{
+ const {type,jobId}=e.data;
+ if(type==='cancel'){
+  if(activeLoad?.id===jobId){activeLoad.cancelled=true;if(activeLoad.stream){disposeStreamStage(activeLoad);activeLoad=null;postMessage({type:'cancelled',jobId,operation:'load'})}}
+  if(activeDetection?.id===jobId)activeDetection.cancelled=true;return;
+ }
+ if(type==='load-start'){
+  try{if(activeLoad||activeDetection)throw Error('Espera a que termine la operación LiDAR actual');
+   const fileSize=e.data.fileSize;if(!Number.isSafeInteger(fileSize)||fileSize<227)throw Error('Archivo demasiado pequeño para una cabecera LAS');
+   const job={id:jobId||0,cancelled:false,stream:{fileSize,received:0,prefix:new Uint8Array(375),prefixUsed:0,prefixTarget:375,initialized:false,meta:null,buffer:null,mod:null,input:0}};
+   activeLoad=job;postMessage({type:'load-ready',jobId:job.id});
+  }catch(err){fail(err.message||String(err),'load',jobId)}return;
+ }
+ if(type==='load-chunk'){
+  const job=activeLoad;if(!job||job.id!==jobId||!job.stream){fail('No hay una carga por bloques activa','load');return}
+  try{await appendStreamChunk(job,e.data);if(job.cancelled){disposeStreamStage(job);if(activeLoad===job)activeLoad=null;postMessage({type:'cancelled',jobId,operation:'load'});return}postMessage({type:'load-chunk-ack',jobId,sequence:e.data.sequence})}
+  catch(err){disposeStreamStage(job);if(activeLoad===job)activeLoad=null;if(err.name==='AbortError')postMessage({type:'cancelled',jobId,operation:'load'});else fail(err.message||String(err),'load',jobId)}return;
+ }
+ if(type==='load-end'){
+  const job=activeLoad;if(!job||job.id!==jobId||!job.stream){fail('No hay una carga por bloques activa','load');return}
+  try{await finishStreamLoad(job);if(activeLoad===job)activeLoad=null}
+  catch(err){disposeStreamStage(job);if(activeLoad===job)activeLoad=null;fail(err.message||String(err),'load',jobId)}return;
+ }
+ const loading=type==='load';let acceptedLoad=false;
+ try{
+  if(loading){if(activeLoad||activeDetection)throw Error('Espera a que termine la operación LiDAR actual');acceptedLoad=true;const b=e.data.buffer,meta=readHeader(b),job={id:jobId||0,cancelled:false};activeLoad=job;if(meta.compressed)await readLAZ(b,meta,job);else await readLAS(b,meta,job);if(activeLoad===job)activeLoad=null}
+  else if(type==='detect'||type==='terrain'||type==='vegetation'){if(activeDetection)throw Error('Ya hay un análisis en curso');const job={id:jobId||0,cancelled:false};activeDetection=job;try{if(type==='vegetation')await analyzeVegetation(e.data.options,job);else await detect(type==='terrain'?{...e.data.options,mode:'terrain',classFilter:'ground',localMax:false}:e.data.options,job)}finally{if(activeDetection===job)activeDetection=null}}
+ }catch(err){if(loading&&acceptedLoad)activeLoad=null;fail(err.message||String(err),loading?'load':type)}
+};

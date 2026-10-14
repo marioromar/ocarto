@@ -1,7 +1,7 @@
 {
   "name": "ocarto-lidar-worker",
   "private": true,
-  "version": "0.39.0",
+  "version": "0.40.0",
   "scripts": {
     "vendor:laz-perf": "node scripts/vendor-laz-perf.cjs",
     "test": "node tests/worker-smoke.cjs && node tests/lidar-file-reader.cjs && node tests/laz-perf-mock.cjs && node tests/geojson-import.cjs && node tests/geo-crs-math.cjs && node tests/geojson-crs.cjs && node tests/kml-import.cjs && node tests/kmz-import.cjs && node tests/kmz-export.cjs && node tests/dxf-import.cjs && node tests/terrain-grid.cjs && node tests/contours.cjs && node tests/contours-connect.cjs && node tests/contour-smoothing.cjs && node tests/contour-profiles.cjs && node tests/valley-proposals.cjs && node tests/valley-tracing.cjs && node tests/vegetation-lidar.cjs && node tests/wms-templates.cjs && node tests/vectorize-vegetation.cjs && node tests/road-align.cjs && node tests/vegetation-learning.cjs && node tests/vectorize-structures.cjs && node tests/road-extract.cjs && node tests/project-vegetation-model.cjs && node tests/project-settings.cjs && node tests/project-backup.cjs && node tests/recovery-browser.cjs",

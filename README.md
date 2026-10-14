@@ -1,6 +1,10 @@
+## Carga LiDAR por bloques directamente al Worker (v40)
+
+La lectura del archivo se confirma bloque a bloque con el Worker y permite cancelarla mientras avanza. Para LAZ, los bytes llegan directamente a su asignación definitiva en memoria WASM: Ocarto no crea antes un ArrayBuffer JavaScript con el tamaño completo ni vuelve a copiar el archivo comprimido al terminar. LAS sin compresión se monta en el Worker por bloques. Ver [VERSION-v40.md](VERSION-v40.md).
+
 ## LAZ reutilizable durante el análisis (v39)
 
-Tras cargar un LAZ, el Worker conserva la única copia comprimida en memoria WASM y la reutiliza al preparar terreno, detectar máximos o analizar vegetación. Evita repetir la asignación y copia del archivo completo en cada análisis. La carga inicial aún requiere memoria para el archivo completo y su copia WASM. Ver [VERSION-v39.md](VERSION-v39.md).
+Tras cargar un LAZ, el Worker conserva la única copia comprimida en memoria WASM y la reutiliza al preparar terreno, detectar máximos o analizar vegetación. Ver [VERSION-v39.md](VERSION-v39.md).
 
 ## Importación LiDAR cancelable (v38)
 
