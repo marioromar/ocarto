@@ -1,10 +1,10 @@
 # Ocarto LiDAR: LAS y LAZ
 
-## Recorte de un mosaico al área seleccionada (v47)
+## Recorte de un mosaico al área seleccionada (v48)
 
-Selecciona primero un polígono del mapa y luego carga dos o más ficheros LAS/LAZ. Para cada archivo, Ocarto comprueba la extensión declarada en su cabecera y omite las teselas exteriores sin reservar el búfer completo. En las teselas que cruzan el área, filtra los puntos y solo suma al terreno y vegetación los que caen dentro del polígono (respetando sus huecos). Si no hay un área seleccionada, mantiene el mosaico por extensión completa.
+Selecciona primero un polígono del mapa y luego carga dos o más ficheros LAS/LAZ. Para cada archivo, Ocarto comprueba la extensión declarada en su cabecera y omite las teselas exteriores sin reservar el búfer completo. En las teselas que cruzan el área, descarta primero por el rectángulo envolvente del polígono y aplica la comprobación exacta del polígono solo a los puntos que pasan ese filtro. Solo suma al terreno y vegetación los puntos interiores (respetando sus huecos). Si no hay un área seleccionada, mantiene el mosaico por extensión completa.
 
-El recorte reduce los puntos agregados, los modelos exportados y la lectura de teselas exteriores. Para una tesela que cruza el área, el lector aún consume el archivo completo en bloques y luego decodifica todos sus puntos para filtrar el polígono. Se detectan encuadres de teselas solapados y se avisa de que los puntos repetidos se cuentan más de una vez. No se deduplican automáticamente porque una deduplicación exacta de millones de registros exigiría conservar claves de puntos y elevaría mucho la memoria. Ver [VERSION-v47.md](VERSION-v47.md).
+El recorte reduce los puntos agregados, los modelos exportados y la lectura de teselas exteriores. Para una tesela que cruza el área, el lector aún consume el archivo completo en bloques y luego decodifica todos sus puntos para filtrar el polígono. Se detectan encuadres de teselas solapados y se avisa de que los puntos repetidos se cuentan más de una vez. No se deduplican automáticamente porque una deduplicación exacta de millones de registros exigiría conservar claves de puntos y elevaría mucho la memoria. Ver [VERSION-v47.md](VERSION-v47.md) y [VERSION-v48.md](VERSION-v48.md).
 
 ## Mosaico de archivos LAS/LAZ (v41)
 

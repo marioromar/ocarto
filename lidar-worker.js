@@ -163,7 +163,7 @@ async function processAreaTile(job){
    for(let i=start;i<end;i++){
     let x,y,z,cls,intensity,ret;if(meta.compressed){decoder.getPoint(point);x=v.getInt32(0,true)*meta.sx+meta.ox;y=v.getInt32(4,true)*meta.sy+meta.oy;z=v.getInt32(8,true)*meta.sz+meta.oz;cls=pointClass(v,meta.format);intensity=v.getUint16(12,true);ret=meta.format<=5?v.getUint8(14)&7:v.getUint8(14)&15}
     else{const p=meta.offset+i*meta.recordLength;x=d.getInt32(p,true)*meta.sx+meta.ox;y=d.getInt32(p+4,true)*meta.sy+meta.oy;z=d.getInt32(p+8,true)*meta.sz+meta.oz;cls=pointClass(d,meta.format,p);intensity=d.getUint16(p+12,true);ret=meta.format<=5?d.getUint8(p+14)&7:d.getUint8(p+14)&15}
-    if(session.aoi&&!pointInArea(x,y,session.aoi.rings))continue;
+    if(session.aoi){const b=session.aoi.bounds;if(x<b.minX||x>b.maxX||y<b.minY||y>b.maxY)continue;if(!pointInArea(x,y,session.aoi.rings))continue;}
     job.acceptedPoints++;
     if(cls===2){const cx=Math.floor(x/session.terrainCell),cy=Math.floor(y/session.terrainCell),key=cx+','+cy;let cell=session.terrain.get(key);if(!cell){if(session.terrain.size>=session.maxCells)throw Error('Demasiadas celdas en el modelo de terreno del área; aumenta el tamaño de celda');cell={x,y,z,n:1};session.terrain.set(key,cell)}else{cell.n++;if(z<cell.z)Object.assign(cell,{x,y,z})}}
     session.vegetation.add(x,y,z,cls,intensity,ret);
