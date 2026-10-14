@@ -18,3 +18,9 @@
 
 ## Pruebas
 `npm test`, nuevos casos `tests/vegetation-learning.cjs`. Prueba LiDAR real v24 conservada, `node tests/lidar-v24-real.cjs /ruta/al/archivo.laz`.
+
+## Actualización de robustez de v25
+- Validación completa de todos los anillos del polígono, incluidos los huecos, y de sus coordenadas finitas.
+- Límite de 250.000 vértices por área de aprendizaje para evitar geometrías accidentales que saturen memoria.
+- Cálculo incremental de los límites del área, sin expandir listas grandes como argumentos de función.
+- La prueba `tests/vegetation-learning.cjs` cubre anillos inválidos, complejidad excesiva y exclusión de huecos.
