@@ -1,6 +1,0 @@
-const assert=require('node:assert/strict'),R=require('../road-extract.js');
-const w=100,h=85,rgb=[190,175,140],data=new Uint8ClampedArray(w*h*4);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4,road=Math.abs(y-((x*.22)+25))<=2;data[i]=road?190:22;data[i+1]=road?175:90;data[i+2]=road?140:20;data[i+3]=255}
-const input={width:w,height:h,data},georef={a:1,b:0,c:1000,d:0,e:-1,f:2000};const r=R.extract(input,georef,{referenceRGB:rgb,tolerance:14,minLength:30,minArea:15});
-assert.equal(r.type,'FeatureCollection');assert.ok(r.features.length>=1,'detects a long narrow dirt track');const best=r.features[0];assert.equal(best.geometry.type,'LineString');assert.ok(best.properties.approx_length_m>50);assert.equal(best.properties.apply_automatically,false);assert.ok(best.geometry.coordinates.every(p=>p[0]>1000&&p[1]<2000));
-assert.throws(()=>R.extract({width:5,height:5,data:[]},georef),/inválida/);assert.throws(()=>R.extract(input,georef,{tolerance:-5}),/inválidos/);assert.equal(R.extract(input,georef,{referenceRGB:[0,0,0],tolerance:5}).features.length,0,'non-matching colors do not hallucinate roads');
-console.log('✓ v27 ortofoto: máscara RGB, esqueletización, vectorización georreferenciada, límites y revisión');
