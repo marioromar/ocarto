@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),M=require('../vegetation-lidar.js');
+const g=M.create(5);
+g.add(1,1,100,2,100,2);g.add(1,1,100.2,2,100,2);g.add(1,1,107,5,220,1);g.add(2,2,108,4,180,1);g.add(2,2,104,3,110,2);
+g.add(10,10,140,5,150,1);g.add(18,18,100,2,50,1);g.add(1,1,100,1,50,1);
+const r=g.finish();assert.equal(r.cells,3);assert.equal(r.processed,7);
+const a=r.rows.find(x=>x.x===2.5);assert.equal(a.ground_points,2);assert.equal(a.vegetation_points,3);assert.equal(a.canopy_max_above_ground_m,8);assert.equal(a.canopy_mean_above_ground_m,+( (107+108+104)/3-100).toFixed(3));
+assert.equal(a.vegetation_return_fraction,.6);assert.equal(a.map_color,null);assert.equal(a.passability,null);
+const onlyCanopy=r.rows.find(x=>x.x===12.5);assert.equal(onlyCanopy.quality,'sin-suelo-local');assert.equal(onlyCanopy.canopy_max_above_ground_m,null);
+const onlyGround=r.rows.find(x=>x.x===17.5);assert.equal(onlyGround.canopy_max_above_ground_m,null);
+const z=M.create(10,{maxCells:1});z.add(1,1,10,2);assert.throws(()=>z.add(20,20,10,2),/Demasiadas celdas/);
+assert.throws(()=>M.create(0),/inválido/);
+console.log('✓ v23 vegetación: altura relativa suelo, proporciones, faltantes y límites');
