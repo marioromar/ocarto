@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict');const V=require('../vectorize-vegetation.js');
+const row=(i,j,coverage=.65,height=8,points=20)=>({x:i+.5,y:j+.5,ground_points:5,vegetation_points:points,vegetation_return_fraction:coverage,canopy_max_above_ground_m:height});
+const small=[row(0,0),row(1,0),row(0,1),row(1,1),row(4,0),row(4,1)];
+const result=V.vectorize(small,1,{minArea:1});assert.equal(result.features.length,2);assert.deepEqual(result.features.map(f=>f.geometry.type),['Polygon','Polygon']);assert.equal(result.features[0].properties.category,'dense');
+assert.equal(result.features[0].geometry.coordinates[0].length,5);assert.equal(result.features[0].properties.passability,null);
+const donut=[];for(let x=0;x<5;x++)for(let y=0;y<5;y++)if(x!==2||y!==2)donut.push(row(x,y));
+const d=V.vectorize(donut,1,{minArea:1});assert.equal(d.features.length,1);assert.equal(d.features[0].geometry.coordinates.length,2,'preserves interior hole');
+assert.equal(V.classify(row(0,0,.08,2.5)),'open');assert.equal(V.classify(row(0,0,.4,1.1)),'low');assert.equal(V.classify(row(0,0,.25,9)),'sparse');assert.equal(V.classify({x:0,y:0,ground_points:0,vegetation_points:22,vegetation_return_fraction:1,canopy_max_above_ground_m:null}),null);
+assert.throws(()=>V.vectorize([row(0,0),row(0,0)],1),/duplicadas/);
+const input=[row(0,0)];V.vectorize(input,1);assert.equal(input[0].map_symbol,undefined,'does not modify source');
+console.log('✓ v24 vegetación vectorial: uniones 4-conexas, huecos, clases provisionales, límites');
