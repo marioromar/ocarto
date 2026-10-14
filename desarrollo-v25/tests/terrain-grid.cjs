@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict');
+const {buildModel}=require('../terrain-grid.js');
+const p=[[0.5,1.5,10,3],[2.5,1.5,14,2],[1.5,0.5,12,2],[1.5,2.5,16,2]];
+let m=buildModel(p,1);
+assert.equal(m.observed,4);assert.equal(m.filled,1);assert.ok(m.unfilled>0);
+assert.deepEqual(m.rows.find(x=>x[0]===1.5&&x[1]===1.5),[1.5,1.5,13,0,'interpolado']);
+assert.equal(m.rows.filter(x=>x[4]==='interpolado').length,1);
+assert.ok(!m.rows.find(x=>x[0]===3.5));
+const duplicate=buildModel([...p,[0.5,1.5,8,1]],1);assert.equal(duplicate.duplicates,1);assert.equal(duplicate.observed,4);assert.equal(duplicate.rows.find(x=>x[0]===.5&&x[1]===1.5)[2],8);
+assert.equal(buildModel([],1).rows.length,0);
+assert.throws(()=>buildModel(p,0),/Tamaño/);assert.throws(()=>buildModel([[0,0,NaN,1]],1),/inválida/);
+assert.throws(()=>buildModel(p,1,{maxOutput:4}),/Demasiadas/);
+console.log('OK: interpolación cardinal conservadora, no extrapolación, duplicados, límites y validación');
