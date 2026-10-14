@@ -11,9 +11,11 @@ function train(rows,polygons,options={}){
  if(!Array.isArray(rows)||!Array.isArray(polygons)||rows.length>150000||polygons.length>200)throw Error('Datos de entrenamiento inválidos');
  const perLabelMax=Number(options.maxPerLabel??280);if(!Number.isInteger(perLabelMax)||perLabelMax<10||perLabelMax>2000)throw Error('Límite de muestras inválido');
  const byLabel=new Map(),counts=new Map(),conflicts=new Set(),selected=new Map();
- for(const poly of polygons){const label=String(poly.label||'').toLowerCase();if(!labels.includes(label))throw Error('Etiqueta de vegetación no reconocida');const rings=poly.coordinates;if(!Array.isArray(rings)||!Array.isArray(rings[0])||rings[0].length<3||rings[0].some(p=>!Array.isArray(p)||p.length<2||!p.slice(0,2).every(Number.isFinite)))throw Error('Polígono de aprendizaje inválido');
-  const xs=rings[0].map(p=>p[0]),ys=rings[0].map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
-  for(let i=0;i<rows.length;i++){const r=rows[i];if(r.x<x0||r.x>x1||r.y<y0||r.y>y1)continue;if(!inPolygon(r.x,r.y,rings))continue;const fp=fingerprint(r);if(!fp)continue;const prev=selected.get(i);if(prev&&prev.label!==label){conflicts.add(i);continue}selected.set(i,{label,fp});}
+ for(const poly of polygons){const label=String(poly.label||'').toLowerCase();if(!labels.includes(label))throw Error('Etiqueta de vegetación no reconocida');const rings=poly.coordinates;
+  if(!Array.isArray(rings)||!rings.length)throw Error('Polígono de aprendizaje inválido');
+  let vertexCount=0,x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  for(const ring of rings){if(!Array.isArray(ring)||ring.length<3)throw Error('Polígono de aprendizaje inválido');vertexCount+=ring.length;if(vertexCount>250000)throw Error('Polígono de aprendizaje demasiado complejo');for(const point of ring){if(!Array.isArray(point)||point.length<2||!Number.isFinite(point[0])||!Number.isFinite(point[1]))throw Error('Polígono de aprendizaje inválido');if(ring===rings[0]){x0=Math.min(x0,point[0]);x1=Math.max(x1,point[0]);y0=Math.min(y0,point[1]);y1=Math.max(y1,point[1]);}}}
+  for(let i=0;i<rows.length;i++){const r=rows[i];if(!Number.isFinite(r?.x)||!Number.isFinite(r?.y)||r.x<x0||r.x>x1||r.y<y0||r.y>y1)continue;if(!inPolygon(r.x,r.y,rings))continue;const fp=fingerprint(r);if(!fp)continue;const prev=selected.get(i);if(prev&&prev.label!==label){conflicts.add(i);continue}selected.set(i,{label,fp});}
  }
  for(const [i,s] of selected){if(conflicts.has(i))continue;counts.set(s.label,(counts.get(s.label)||0)+1);if(!byLabel.has(s.label))byLabel.set(s.label,[]);byLabel.get(s.label).push(s.fp)}
  if([...counts.values()].reduce((a,b)=>a+b,0)<5)throw Error('Muestras insuficientes: dibuja áreas sobre celdas LiDAR con datos de suelo y vegetación');
