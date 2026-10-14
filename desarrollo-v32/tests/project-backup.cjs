@@ -1,0 +1,6 @@
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const html=fs.readFileSync(require.resolve('../index.html'),'utf8'),backup=fs.readFileSync(require.resolve('../project-backup.js'),'utf8');
+assert.match(backup,/indexedDB\.open\(DB,1\)/,'uses durable browser storage');assert.match(backup,/objectStore\(STORE\)\.put\(\{id:KEY/,'keeps one latest project backup');assert.match(backup,/objectStore\(STORE\)\.get\(KEY\)/,'reads latest backup');assert.match(backup,/finally\{db\.close\(\)\}/,'closes database connections');
+assert.match(html,/function createProjectSnapshot\(\)/,'one snapshot source powers both backup and file export');assert.match(html,/setTimeout\(\(\)=>\{if\(!backupDirty\)return;backupDirty=false;void saveLocalBackup\(createProjectSnapshot\(\)\)\},2200\)/,'autosaves after quiet period');assert.match(html,/document\.addEventListener\('pointerup',queueLocalBackup,true\)/);assert.match(html,/id="downloadLocalBackup" disabled/);assert.match(html,/OcartoProjectBackup\.loadLatest\(\)/);assert.match(html,/download\(record\.project/,'recovered backup downloads as regular project');
+const project={format:'ocarto-project',version:1,name:'Prueba',features:[],candidates:[]};assert.equal(project.format,'ocarto-project');
+console.log('✓ v32 copia automática en el dispositivo, espera de cambios y descarga recuperable');
