@@ -33,13 +33,13 @@
     for(let i=0;i<entities.length;i++){
       const r=entities[i];if(r.type==='POLYLINE'){
         const header=r;let verts=[];i++;while(i<entities.length&&entities[i].type==='VERTEX'){const p=pairPoint(entities[i],10,20,factor);if(p)verts.push({x:p[0],y:p[1],bulge:number(entities[i],42)});i++}if(entities[i]?.type!=='SEQEND')i--;
-        const g=polylineGeometry(verts,(number(header,70)&1)!==0);if(g)features.push({type:'Feature',geometry:g,properties:{name:value(header,8)||'POLYLINE',dxf_type:'POLYLINE'}});else skipped++;continue;
+        const g=polylineGeometry(verts,(number(header,70)&1)!==0);if(g)features.push({type:'Feature',geometry:g,properties:{name:value(header,8)||'POLYLINE',dxf_layer:value(header,8)||'0',dxf_type:'POLYLINE'}});else skipped++;continue;
       }
       if(r.type==='VERTEX'||r.type==='SEQEND')continue;
       const g=entityGeometry(r,factor);if(g)features.push({type:'Feature',geometry:g,properties:{name:value(r,8)||r.type,dxf_layer:value(r,8)||'0',dxf_type:r.type}});else skipped++;
     }
     if(!features.length)throw Error('No se encontraron entidades DXF compatibles (POINT, LINE, polilíneas, CIRCLE o ARC)');
-    return{type:'FeatureCollection',metadata:{crs:referenced?mapCrs:'local',coordinate_status:referenced?'georeferenced':'local',dxf_units_factor:unitFactor},features,skipped};
+    return{type:'FeatureCollection',metadata:{crs:referenced?mapCrs:'local',coordinate_status:referenced?'georeferenced':'local',dxf_units_factor:unitFactor,layers:[...new Set(features.map(f=>f.properties?.dxf_layer).filter(Boolean))]},features,skipped};
   }
   root.OcartoDxf={parseDxf};if(typeof module==='object'&&module.exports)module.exports=root.OcartoDxf;
 })(typeof globalThis!=='undefined'?globalThis:this);
