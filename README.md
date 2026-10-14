@@ -1,6 +1,6 @@
-## Recorte de modelos LiDAR por área cartográfica (v42)
+## Recorte de modelos LiDAR por área cartográfica (v43)
 
-Selecciona un polígono en el mapa y carga varios archivos LAS/LAZ juntos. Ocarto descarta las teselas cuyo encuadre no cruza el polígono y recorta los puntos de las demás antes de acumular terreno y vegetación. Sin un área seleccionada, procesa la extensión completa de las teselas. Ver [VERSION-v42.md](VERSION-v42.md).
+Selecciona un polígono en el mapa y carga varios archivos LAS/LAZ juntos. Ocarto comprueba el encuadre de cada tesela y recorta al polígono los puntos de las que lo cruzan antes de acumular terreno y vegetación. Las teselas exteriores se omiten. Sin área seleccionada, procesa la extensión completa. Ver [VERSION-v43.md](VERSION-v43.md).
 
 Los archivos deben compartir CRS y unidades. Los solapes pueden duplicar recuentos de densidad. Cada modelo tiene un límite provisional de 100.000 celdas; para áreas mayores, aumenta el tamaño de celda.
 

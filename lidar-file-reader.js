@@ -32,7 +32,8 @@ async function streamFileToWorker(file,worker,{jobId,sessionId,signal,onProgress
  let waiter=null,sequence=0,done=0,failed=null,skipped=false;
  const onMessage=event=>{const m=event.data||{};if(m.jobId!==jobId)return;
   if(m.type==='load-ready'&&waiter?.kind==='ready'){const w=waiter;waiter=null;w.resolve()}
-  else if(m.type==='load-skip'){skipped=true;if(waiter?.kind==='chunk'){const w=waiter;waiter=null;w.resolve()}}
+  else if(m.type==='load-skip'){skipped=true}
+  else if(m.type==='load-skip-ack'&&m.sequence===sequence&&waiter?.kind==='chunk'){const w=waiter;waiter=null;w.resolve()}
   else if(m.type==='load-chunk-ack'&&m.sequence===sequence&&waiter?.kind==='chunk'){const w=waiter;waiter=null;w.resolve()}
   else if(m.type==='loaded'&&waiter?.kind==='finish'){const w=waiter;waiter=null;w.resolve(m)}
   else if((m.type==='error'&&m.operation==='load')||m.type==='cancelled'){failed=Object.assign(Error(m.message||'Carga cancelada'),{name:m.type==='cancelled'?'AbortError':'Error'});if(waiter){const w=waiter;waiter=null;w.reject(failed)}}

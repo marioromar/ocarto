@@ -80,7 +80,7 @@ async function appendStreamChunk(job,m){
  let chunk=m.chunk,at=m.offset;s.received+=chunk.byteLength;
  if(!s.initialized){const take=Math.min(s.prefixTarget-s.prefixUsed,chunk.byteLength);if(take){s.prefix.set(chunk.subarray(0,take),s.prefixUsed);s.prefixUsed+=take;chunk=chunk.subarray(take);at+=take;await initStreamStage(job)}}
  if(job.cancelled)throw Object.assign(Error('Carga cancelada'),{name:'AbortError'});
- if(s.skipped)return;
+ if(s.skipped){postMessage({type:'load-skip-ack',jobId:job.id,sequence:m.sequence,bounds:s.meta.bounds});return}
  if(chunk.byteLength){if(!s.initialized)throw Error('Cabecera LAS incompleta');if(s.meta.compressed)s.mod.HEAPU8.set(chunk,s.input+at);else s.buffer.set(chunk,at)}
 }
 async function finishStreamLoad(job){
