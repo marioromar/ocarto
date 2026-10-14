@@ -148,7 +148,7 @@ async function analyzeVegetation(opts,job){
   }
  }finally{if(decoder){try{decoder.delete()}catch(_){}}if(point)mod._free(point)}
  if(job.cancelled){postMessage({type:'cancelled',jobId:job.id,operation:'vegetation'});return}
- const result=store.finish();postMessage({type:'vegetation',jobId:job.id,cellSize:result.cellSize,cells:result.cells,classifiedPoints:result.processed,rows:result.rows,quality:result.quality});
+ const result=store.finish({includeGeoJSON:false});postMessage({type:'vegetation',jobId:job.id,cellSize:result.cellSize,cells:result.cells,classifiedPoints:result.processed,rows:result.rows,quality:result.quality});
 }
 
 async function processAreaTile(job){
@@ -194,7 +194,7 @@ onmessage=async e=>{
  }
  if(type==='area-finish'){
   const session=areaSession;if(!session||session.id!==e.data.sessionId){fail('La sesión de mosaico ya no está activa','area',jobId);return}
-  try{if(!session.tiles)throw Error('No se procesaron teselas');const vegetation=session.vegetation.finish(),terrain=[...session.terrain.values()].map(p=>[p.x,p.y,p.z,p.n]);areaSession=null;postMessage({type:'area-finished',jobId,sessionId:session.id,tiles:session.tiles,points:session.points,terrain,vegetationRows:vegetation.rows,terrainCells:terrain.length,vegetationCells:vegetation.cells,vegetationProcessed:vegetation.processed})}
+  try{if(!session.tiles)throw Error('No se procesaron teselas');const vegetation=session.vegetation.finish({includeGeoJSON:false}),terrain=[...session.terrain.values()].map(p=>[p.x,p.y,p.z,p.n]);areaSession=null;postMessage({type:'area-finished',jobId,sessionId:session.id,tiles:session.tiles,points:session.points,terrain,vegetationRows:vegetation.rows,terrainCells:terrain.length,vegetationCells:vegetation.cells,vegetationProcessed:vegetation.processed})}
   catch(err){areaSession=null;fail(err.message||String(err),'area',jobId)}return;
  }
  if(type==='area-abort'){
