@@ -17,7 +17,7 @@
   };
  }
  async function walkNodes(api,get,rootPage,info,bounds,options,onNode){
-  const queue=[rootPage],seenPages=new Set();let pageIndex=0,nodes=0;
+  const rootId=rootPage.pageOffset+':'+rootPage.pageLength,queue=[rootPage],seenPages=new Set(),queuedPages=new Set([rootId]);let pageIndex=0,nodes=0;
   while(pageIndex<queue.length){
    if(options.cancelled())throw Object.assign(Error('Mosaico cancelado'),{name:'AbortError'});
    const page=queue[pageIndex++],pageId=page.pageOffset+':'+page.pageLength;
@@ -31,7 +31,14 @@
     if(++nodes>1000000)throw Error('COPC supera el límite de 1.000.000 de bloques');
     await onNode(node);
    }
-   for(const [key,childPage] of Object.entries(parsed.pages))if(intersectsNode(key,info,bounds))queue.push(childPage);
+   for(const [key,childPage] of Object.entries(parsed.pages))if(intersectsNode(key,info,bounds)){
+    const childId=childPage.pageOffset+':'+childPage.pageLength;
+    if(!seenPages.has(childId)&&!queuedPages.has(childId)){
+     queuedPages.add(childId);
+     if(queuedPages.size>100000)throw Error('La jerarquía COPC supera el límite de 100.000 páginas');
+     queue.push(childPage);
+    }
+   }
    await options.yield();
   }
   return{pages:seenPages.size,nodes};
@@ -49,12 +56,13 @@
   const bounds={minX:h.min[0],maxX:h.max[0],minY:h.min[1],maxY:h.max[1]},session=options.session,aoiBounds=session.aoi?.bounds;
   if(aoiBounds&&(bounds.minX>aoiBounds.maxX||bounds.maxX<aoiBounds.minX||bounds.minY>aoiBounds.maxY||bounds.maxY<aoiBounds.minY))return{bounds,points:0,acceptedPoints:0,nodes:0,pages:0,meta,skipped:true};
   let targetPoints=0;
-  const candidateIndex=await walkNodes(api,get,rootPage,copc.info,aoiBounds,options,node=>{targetPoints+=node.pointCount;if(targetPoints>h.pointCount)throw Error('La jerarquía COPC supera el conteo de la cabecera')});
+  const candidateIndex=await walkNodes(api,get,rootPage,copc.info,aoiBounds,options,node=>{const next=targetPoints+node.pointCount;if(!Number.isSafeInteger(next)||next>h.pointCount)throw Error('La jerarquía COPC supera el conteo de la cabecera');targetPoints=next});
   if(!targetPoints)return{bounds,points:0,acceptedPoints:0,nodes:0,pages:candidateIndex.pages,meta,skipped:true};
   const mod=await options.getDecoder();
   let visitedPoints=0,acceptedPoints=0;
   const decodedIndex=await walkNodes(api,get,rootPage,copc.info,aoiBounds,options,async node=>{
-    if(node.pointDataOffset+node.pointDataLength>file.size)throw Error('Un bloque de puntos COPC está fuera del archivo');
+    const dataEnd=node.pointDataOffset+node.pointDataLength;
+    if(!Number.isSafeInteger(dataEnd)||dataEnd>file.size)throw Error('Un bloque de puntos COPC está fuera del archivo');
     const data=await api.loadPointDataBuffer(get,h,node,mod),dv=new DataView(data.buffer,data.byteOffset,data.byteLength);
     if(data.byteLength!==node.pointCount*recordLength)throw Error('El bloque COPC descomprimido tiene una longitud inesperada');
     for(let i=0;i<node.pointCount;i++){

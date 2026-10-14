@@ -1,3 +1,7 @@
+## COPC: jerarquía y conteos más robustos (v51)
+
+El recorrido deduplica páginas de jerarquía al encolarlas, limita también la cola a 100.000 páginas y rechaza sumas de puntos o finales de bloque que excedan los enteros seguros de JavaScript. La lectura en dos pasadas y el progreso por puntos candidatos se mantienen. Ver [VERSION-v51.md](VERSION-v51.md).
+
 ## Lectura espacial de COPC para mosaicos (v50)
 
 Al crear modelos para un área seleccionada, Ocarto detecta archivos COPC por su VLR y consulta su jerarquía espacial. Lee y descomprime solo los bloques que pueden cruzar el área y después aplica el filtro exacto del polígono. Los LAS/LAZ estándar mantienen el flujo anterior. Ver [VERSION-v49.md](VERSION-v49.md), [VERSION-v50.md](VERSION-v50.md) y [README-LAZ.md](README-LAZ.md).

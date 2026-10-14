@@ -19,7 +19,7 @@ const pages=new Map([
 const api={
  async create(){return{header:{majorVersion:1,minorVersion:4,pointDataRecordFormat:7,pointCount:3,pointDataRecordLength:36,scale:[1,1,1],offset:[0,0,0],min:[0,0,0],max:[100,100,10]},info:{cube:[0,0,0,100,100,100],rootHierarchyPage:{pageOffset:100,pageLength:96}}}},
  async loadHierarchyPage(_get,page){
-  if(page.pageOffset===100)return{nodes:{'0-0-0-0':{pointCount:1,pointDataOffset:300,pointDataLength:10}},pages:{'1-0-0-0':{pageOffset:400,pageLength:32},'1-1-0-0':{pageOffset:500,pageLength:32}}};
+  if(page.pageOffset===100)return{nodes:{'0-0-0-0':{pointCount:1,pointDataOffset:300,pointDataLength:10}},pages:{'1-0-0-0':{pageOffset:400,pageLength:32},'1-0-0-1':{pageOffset:400,pageLength:32},'1-1-0-0':{pageOffset:500,pageLength:32}}};
   return pages.get(page.pageOffset);
  },
  async loadPointDataBuffer(_get,_header,node){
@@ -46,5 +46,10 @@ const inside=(x,y,rings)=>{let hit=false;for(const ring of rings){let r=false;fo
  const outside={...session,aoi:{bounds:{minX:150,maxX:160,minY:150,maxY:160},rings:[]}};
  const skipped=await context.OcartoCopcArea.process(file,{session:outside,getDecoder:async()=>{throw Error('should skip before decoder initialization')},cancelled:()=>false,yield:async()=>{},progress:()=>{},addPoint:()=>true});
  assert.equal(skipped.skipped,true);assert.equal(skipped.pages,0);assert.equal(skipped.points,0);
- console.log('✓ COPC mock: consulta páginas y bloques espaciales candidatos, filtra polígono y omite encuadres exteriores');
+ const create=api.create;
+ api.create=async()=>({header:{majorVersion:1,minorVersion:4,pointDataRecordFormat:7,pointCount:Number.MAX_SAFE_INTEGER,pointDataRecordLength:36,scale:[1,1,1],offset:[0,0,0],min:[0,0,0],max:[100,100,10]},info:{cube:[0,0,0,100,100,100],rootHierarchyPage:{pageOffset:100,pageLength:96}}});
+ api.loadHierarchyPage=async()=>({nodes:{'0-0-0-0':{pointCount:Number.MAX_SAFE_INTEGER,pointDataOffset:300,pointDataLength:10},'1-0-0-0':{pointCount:1,pointDataOffset:310,pointDataLength:10}},pages:{}});
+ await assert.rejects(()=>context.OcartoCopcArea.process(file,{session,getDecoder:async()=>({}),cancelled:()=>false,yield:async()=>{},progress:()=>{},addPoint:()=>true}),/conteo de la cabecera/,'rechaza sumas de puntos fuera del rango entero seguro');
+ api.create=create;
+ console.log('✓ COPC mock: páginas compartidas, bloques candidatos, progreso exacto, filtro de polígono, omisión exterior y conteos seguros');
 })().catch(error=>{console.error(error);process.exitCode=1});
