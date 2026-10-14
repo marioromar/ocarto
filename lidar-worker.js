@@ -17,6 +17,7 @@ function readHeader(buffer,fileSize=buffer?.byteLength){
  return{major,minor,format,compressed,recordLength,offset,count,sx,sy,sz,ox,oy,oz,bounds};
 }
 function pointInArea(x,y,rings){let inside=false;for(const ring of rings){let hit=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const [xi,yi]=ring[i],[xj,yj]=ring[j];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))hit=!hit}if(hit)inside=!inside}return inside}
+function estimateAreaGrid(bounds,cell,maxCells){const nx=Math.floor(bounds.maxX/cell)-Math.floor(bounds.minX/cell)+1,ny=Math.floor(bounds.maxY/cell)-Math.floor(bounds.minY/cell)+1;if(!Number.isSafeInteger(nx)||!Number.isSafeInteger(ny)||nx<1||ny<1||nx>maxCells||ny>maxCells||nx*ny>Number.MAX_SAFE_INTEGER)return maxCells+1;return nx*ny}
 function intersectsBounds(a,b){return a.minX<=b.maxX&&a.maxX>=b.minX&&a.minY<=b.maxY&&a.maxY>=b.minY}
 function previewWriter(count){const stride=Math.max(1,Math.ceil(count/60000)),preview=new Float64Array(Math.ceil(count/stride)*3);let at=0;return{preview,add(i,x,y,z){if(i%stride===0){preview[at++]=x;preview[at++]=y;preview[at++]=z}}}}
 function finishLoad(bounds,meta,buffer,sample,storedCloud=null,jobId=null){const previous=cloud;cloud=storedCloud||{buffer,meta,bounds};if(previous&&previous!==cloud)releaseCloud(previous);postMessage({type:'loaded',jobId,count:meta.count,bounds,preview:sample.preview,format:meta.format,version:`${meta.major}.${meta.minor}${meta.compressed?' LAZ':''}`},[sample.preview.buffer])}
@@ -185,7 +186,8 @@ onmessage=async e=>{
   try{if(activeLoad||activeDetection||areaSession)throw Error('Ya hay una operación LiDAR activa');const terrainCell=Number(e.data.terrainCell),vegetationCell=Number(e.data.vegetationCell),maxCells=100000;if(!Number.isFinite(terrainCell)||terrainCell<=0||!Number.isFinite(vegetationCell)||vegetationCell<1)throw Error('Tamaños de celda del área inválidos');
    importScripts('vegetation-lidar.js');if(typeof self.OcartoVegetation?.create!=='function')throw Error('No está disponible vegetation-lidar.js');if(cloud){releaseCloud(cloud);cloud=null}
    const aoi=e.data.aoi||null;if(aoi){if(!Array.isArray(aoi.rings)||!aoi.rings.length||aoi.rings.some(r=>!Array.isArray(r)||r.length<3||r.some(p=>!Array.isArray(p)||p.length!==2||!p.every(Number.isFinite))))throw Error('El polígono de recorte no contiene coordenadas válidas');const xs=aoi.rings[0].map(p=>p[0]),ys=aoi.rings[0].map(p=>p[1]);aoi.bounds={minX:Math.min(...xs),maxX:Math.max(...xs),minY:Math.min(...ys),maxY:Math.max(...ys)}}
-   areaSession={id:e.data.sessionId,terrainCell,vegetationCell,maxCells,terrain:new Map(),vegetation:self.OcartoVegetation.create(vegetationCell,{maxCells}),tiles:0,points:0,cancelled:false,aoi};postMessage({type:'area-ready',sessionId:areaSession.id});
+   const capacity=aoi?{terrainCells:estimateAreaGrid(aoi.bounds,terrainCell,maxCells),vegetationCells:estimateAreaGrid(aoi.bounds,vegetationCell,maxCells),maxCells}:null;
+   areaSession={id:e.data.sessionId,terrainCell,vegetationCell,maxCells,terrain:new Map(),vegetation:self.OcartoVegetation.create(vegetationCell,{maxCells}),tiles:0,points:0,cancelled:false,aoi};postMessage({type:'area-ready',sessionId:areaSession.id,capacity});
   }catch(err){fail(err.message||String(err),'area',e.data.sessionId)}return;
  }
  if(type==='area-add'){
