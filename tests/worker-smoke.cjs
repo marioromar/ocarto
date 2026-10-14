@@ -1,6 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const messages=[];
 const ctx={postMessage:m=>messages.push(m),Float64Array,DataView,Uint8Array,Map,Number,Math,Error,Promise,setTimeout};
+ctx.self=ctx;ctx.importScripts=name=>{if(name!=='vegetation-lidar.js')throw Error('Unexpected import '+name);vm.runInContext(fs.readFileSync(require('path').join(__dirname,'../vegetation-lidar.js'),'utf8'),ctx)};
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(require('path').join(__dirname,'../lidar-worker.js'),'utf8'),ctx);
 function las(points){const size=227+points.length*20,b=new ArrayBuffer(size),d=new DataView(b);d.setUint32(0,0x4653414c,true);d.setUint8(24,1);d.setUint8(25,2);d.setUint8(104,0);d.setUint16(105,20,true);d.setUint32(96,227,true);d.setUint32(107,points.length,true);for(const off of [131,139,147])d.setFloat64(off,1,true);points.forEach((p,i)=>p.forEach((v,j)=>d.setInt32(227+i*20+j*4,v,true)));return b;}
@@ -55,5 +56,9 @@ async function send(data){await ctx.onmessage({data});return messages.at(-1)}
  const streamed=las([[12,34,56],[20,40,60]]),jobId=88;await ctx.onmessage({data:{type:'load-start',jobId,fileSize:streamed.byteLength}});assert.equal(messages.at(-1).type,'load-ready');
  const halves=[new Uint8Array(streamed,0,113),new Uint8Array(streamed,113)];let offset=0,sequence=0;for(const chunk of halves){sequence++;await ctx.onmessage({data:{type:'load-chunk',jobId,sequence,offset,chunk}});offset+=chunk.byteLength;assert.equal(messages.at(-1).type,'load-chunk-ack')}
  await ctx.onmessage({data:{type:'load-end',jobId}});assert.equal(messages.at(-1).type,'loaded','El Worker monta LAS a partir de fragmentos');assert.equal(messages.at(-1).jobId,jobId);assert.equal(messages.at(-1).count,2);
+ function areaLas(points){const b=las(points.map(p=>p.slice(0,3))),v=new DataView(b);points.forEach((p,i)=>v.setUint8(227+i*20+15,p[3]));return b}
+ await ctx.onmessage({data:{type:'area-start',sessionId:900,terrainCell:10,vegetationCell:5}});assert.equal(messages.at(-1).type,'area-ready');
+ for(const [j,pts] of [[901,[[0,0,10,2],[0,0,20,3]]],[902,[[0,0,8,2],[0,0,25,3]]]]){await send({type:'load',jobId:j-800,buffer:areaLas(pts)});assert.equal(messages.at(-1).type,'loaded');await ctx.onmessage({data:{type:'area-add',sessionId:900,jobId:j}});assert.equal(messages.at(-1).type,'area-tile-done','cada tesela se procesa y libera antes de continuar')}
+ await ctx.onmessage({data:{type:'area-finish',sessionId:900,jobId:903}});const area=messages.at(-1);assert.equal(area.type,'area-finished');assert.equal(area.tiles,2);assert.equal(area.points,4);assert.equal(area.terrain.length,1);assert.equal(area.terrain[0][2],8);assert.equal(area.terrain[0][3],2);assert.equal(area.vegetationRows.length,1);assert.equal(area.vegetationRows[0].canopy_max_above_ground_m,17,'combina suelo y copa entre archivos');
  console.log('OK: 21 comprobaciones de carga LAS, halo, detección, parámetros y errores');
 })().catch(e=>{console.error(e);process.exitCode=1});

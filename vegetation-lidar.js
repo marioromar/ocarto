@@ -30,7 +30,7 @@ function create(cell,opts={}){
   rows.sort((a,b)=>a.y-b.y||a.x-b.x);
   return {cellSize:cell,cells:bins.size,processed,quality:'Indicadores no calibrados; requieren cartografía de entrenamiento.',rows,geojson:{type:'FeatureCollection',name:'Ocarto v23 indicadores de vegetacion',properties:{cellSize:cell,nonAutomatic:true},features}};
  };
- return {add,finish};
+ return {add,finish,size:()=>bins.size};
 }
 return {create};
 });

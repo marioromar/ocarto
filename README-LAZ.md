@@ -1,5 +1,11 @@
 # Ocarto LiDAR: LAS y LAZ
 
+## Mosaico de archivos LAS/LAZ (v41)
+
+Selecciona varios archivos LAS/LAZ al mismo tiempo. Ocarto procesa cada tesela por separado, combina las cotas mínimas de suelo y los indicadores de vegetación por celda, y libera el búfer LAZ de esa tesela antes de cargar la siguiente. La memoria retenida por los modelos depende del número de celdas, no de la suma de puntos de todos los archivos.
+
+Las teselas deben compartir CRS y unidades. El área se define por la unión de sus extensiones, sin recorte por polígono todavía. Si los archivos se solapan, los recuentos de puntos pueden duplicarse. Cada modelo admite hasta 100.000 celdas; aumenta el tamaño de celda para áreas grandes.
+
 ## Recuperación de laz-perf/WebAssembly
 
 El worker usa la API oficial de **laz-perf 3.4.0** de Hobu, fijada a esa versión y publicada bajo licencia Apache-2.0. La distribución JS/WASM se instala localmente en `vendor/`; la aplicación no carga código ejecutable desde CDN.

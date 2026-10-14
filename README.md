@@ -1,3 +1,9 @@
+## Modelos LiDAR de un área con varias teselas (v41)
+
+Selecciona varios archivos LAS/LAZ juntos. Ocarto procesa uno cada vez, acumula el modelo de terreno y los indicadores de vegetación por celda en el Worker y libera la nube de cada archivo antes de cargar el siguiente. Al final, exporta el modelo combinado del área. Ver [VERSION-v41.md](VERSION-v41.md).
+
+Los archivos se consideran parte de una misma zona y deben compartir CRS y unidades. El área es la unión de sus extensiones; todavía no se recorta por un polígono dibujado. Los solapes pueden duplicar recuentos de densidad. Cada modelo tiene un límite provisional de 100.000 celdas; para áreas mayores, aumenta el tamaño de celda.
+
 ## Carga LiDAR por bloques directamente al Worker (v40)
 
 La lectura del archivo se confirma bloque a bloque con el Worker y permite cancelarla mientras avanza. Para LAZ, los bytes llegan directamente a su asignación definitiva en memoria WASM: Ocarto no crea antes un ArrayBuffer JavaScript con el tamaño completo ni vuelve a copiar el archivo comprimido al terminar. LAS sin compresión se monta en el Worker por bloques. Ver [VERSION-v40.md](VERSION-v40.md).

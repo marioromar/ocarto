@@ -17,6 +17,7 @@ async function run(format, length, count) {
       const idx = emitted.length;
       const base = idx === 0 ? [100, 200, 30] : [110, 220, 40];
       v.setInt32(ptr, base[0], true); v.setInt32(ptr + 4, base[1], true); v.setInt32(ptr + 8, base[2], true);
+      v.setUint8(ptr + 15, idx % 2 ? 3 : 2); v.setUint8(ptr + 16, idx % 2 ? 3 : 2);
       emitted.push(idx);
     }
     delete() { this.deleted = true; }
@@ -26,8 +27,8 @@ async function run(format, length, count) {
     _malloc(size) { const p = nextPtr; mallocSizes.push(size); nextPtr += size + 8; return p; },
     _free(ptr) { freed.push(ptr); },
   };
-  const self = { createLazPerf: async options => { assert.equal(options.locateFile('laz-perf.wasm'), 'vendor/laz-perf.wasm'); return mod; } };
-  const ctx = { self, postMessage: m => messages.push(m), importScripts: file => assert.equal(file, 'vendor/laz-perf.js'),
+  const self = { createLazPerf: async options => { assert.equal(options.locateFile('laz-perf.wasm'), 'vendor/laz-perf.wasm'); return mod; },OcartoVegetation:require('../vegetation-lidar.js') };
+  const ctx = { self, postMessage: m => messages.push(m), importScripts: file => { if(file!=='vendor/laz-perf.js'&&file!=='vegetation-lidar.js')throw Error('unexpected import '+file); },
     Float64Array, DataView, Uint8Array, Map, Number, Math, Error, Promise, setTimeout };
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../lidar-worker.js'), 'utf8'), ctx);
@@ -60,6 +61,9 @@ async function run(format, length, count) {
   let offset=0,sequence=0;for(const size of [101,streamed.byteLength-101]){const chunk=new Uint8Array(streamed,offset,size);sequence++;await ctx.onmessage({data:{type:'load-chunk',jobId:streamJob,sequence,offset,chunk}});offset+=size;assert.equal(messages.at(-1).type,'load-chunk-ack')}
   await ctx.onmessage({data:{type:'load-end',jobId:streamJob}});assert.equal(messages.at(-1).type,'loaded','LAZ chunks are copied straight into the retained WASM allocation');assert.equal(messages.at(-1).jobId,streamJob);
   assert.equal(mallocSizes.filter(size=>size===streamed.byteLength).length,3,'streamed LAZ uses its destination allocation directly, with no second compressed-file copy');
+  const areaId=120;await ctx.onmessage({data:{type:'area-start',sessionId:areaId,terrainCell:1000,vegetationCell:1000}});assert.equal(messages.at(-1).type,'area-ready');
+  for(const j of [121,122]){const jobId=j,source=buffer.slice(0);await ctx.onmessage({data:{type:'load-start',jobId,fileSize:source.byteLength}});let at=0,seq=0;for(const size of [125,source.byteLength-125]){const chunk=new Uint8Array(source,at,size);seq++;await ctx.onmessage({data:{type:'load-chunk',jobId,sequence:seq,offset:at,chunk}});at+=size;assert.equal(messages.at(-1).type,'load-chunk-ack')}await ctx.onmessage({data:{type:'load-end',jobId}});assert.equal(messages.at(-1).type,'loaded');const areaJob=j+10;await ctx.onmessage({data:{type:'area-add',sessionId:areaId,jobId:areaJob}});assert.equal(messages.at(-1).type,'area-tile-done','cada archivo LAZ aporta al acumulador y libera su búfer WASM')}
+  await ctx.onmessage({data:{type:'area-finish',sessionId:areaId,jobId:140}});assert.equal(messages.at(-1).type,'area-finished');assert.equal(messages.at(-1).tiles,2);assert.equal(messages.at(-1).points,2*count);assert.equal(freed.length>=5,true,'se liberan las asignaciones LAZ al sustituir y al completar las teselas del mosaico');
 }
 (async () => {
   await run(0, 20, 1);

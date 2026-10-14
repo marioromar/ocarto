@@ -1,5 +1,5 @@
 /* Ocarto LiDAR worker: streamed LAS + laz-perf WebAssembly LAZ decoder. */
-let cloud=null,activeDetection=null,activeLoad=null;
+let cloud=null,activeDetection=null,activeLoad=null,areaSession=null;
 const fail=(message,operation,jobId)=>postMessage({type:'error',message,operation,jobId});
 const yieldWorker=()=>new Promise(resolve=>setTimeout(resolve,0));
 function readHeader(buffer,fileSize=buffer?.byteLength){
@@ -90,7 +90,7 @@ async function finishStreamLoad(job){
 }
 // LAS classification is stored at byte 15 (formats 0–5, low five bits)
 // or byte 16 (formats 6–10, full eight bits).
-function pointClass(v,format){return format<=5?v.getUint8(15)&31:v.getUint8(16)}
+function pointClass(v,format,p=0){return format<=5?v.getUint8(p+15)&31:v.getUint8(p+16)}
 function acceptsClass(code,filter){
  if(filter==='all')return true;
  if(filter==='ground')return code===2;
@@ -145,11 +145,52 @@ async function analyzeVegetation(opts,job){
  const result=store.finish();postMessage({type:'vegetation',jobId:job.id,cellSize:result.cellSize,cells:result.cells,classifiedPoints:result.processed,rows:result.rows,quality:result.quality});
 }
 
+async function processAreaTile(job){
+ const session=areaSession;if(!session||session.id!==job.sessionId)throw Error('La sesión de mosaico ya no está activa');
+ if(!cloud)throw Error('Carga primero una tesela LAS/LAZ');
+ importScripts('vegetation-lidar.js');
+ const {buffer,meta}=cloud,batch=100000;let decoder=null,mod=null,point=0;
+ try{
+  let d=null,v=null;if(meta.compressed){const opened=openStoredLAZ(cloud);mod=opened.mod;decoder=opened.decoder;point=mod._malloc(meta.recordLength);if(!point)throw Error('Memoria insuficiente para registros LAZ');v=new DataView(mod.HEAPU8.buffer,point,meta.recordLength)}else d=new DataView(buffer);
+  for(let start=0;start<meta.count;start+=batch){if(job.cancelled||session.cancelled)break;const end=Math.min(meta.count,start+batch);
+   for(let i=start;i<end;i++){
+    let x,y,z,cls,intensity,ret;if(meta.compressed){decoder.getPoint(point);x=v.getInt32(0,true)*meta.sx+meta.ox;y=v.getInt32(4,true)*meta.sy+meta.oy;z=v.getInt32(8,true)*meta.sz+meta.oz;cls=pointClass(v,meta.format);intensity=v.getUint16(12,true);ret=meta.format<=5?v.getUint8(14)&7:v.getUint8(14)&15}
+    else{const p=meta.offset+i*meta.recordLength;x=d.getInt32(p,true)*meta.sx+meta.ox;y=d.getInt32(p+4,true)*meta.sy+meta.oy;z=d.getInt32(p+8,true)*meta.sz+meta.oz;cls=pointClass(d,meta.format,p);intensity=d.getUint16(p+12,true);ret=meta.format<=5?d.getUint8(p+14)&7:d.getUint8(p+14)&15}
+    if(cls===2){const cx=Math.floor(x/session.terrainCell),cy=Math.floor(y/session.terrainCell),key=cx+','+cy;let cell=session.terrain.get(key);if(!cell){if(session.terrain.size>=session.maxCells)throw Error('Demasiadas celdas en el modelo de terreno del área; aumenta el tamaño de celda');cell={x,y,z,n:1};session.terrain.set(key,cell)}else{cell.n++;if(z<cell.z)Object.assign(cell,{x,y,z})}}
+    session.vegetation.add(x,y,z,cls,intensity,ret);
+   }
+   postMessage({type:'progress',jobId:job.id,done:end,total:meta.count,stage:'area'});await yieldWorker();
+  }
+ }finally{if(decoder){try{decoder.delete()}catch(_){}}if(point)mod._free(point);if(cloud){releaseCloud(cloud);cloud=null}}
+ if(job.cancelled||session.cancelled){areaSession=null;postMessage({type:'area-tile-cancelled',jobId:job.id,sessionId:job.sessionId});return}
+ session.tiles++;session.points+=meta.count;
+ postMessage({type:'area-tile-done',jobId:job.id,sessionId:job.sessionId,points:meta.count,terrainCells:session.terrain.size,vegetationCells:session.vegetation.size()});
+}
+
 onmessage=async e=>{
  const {type,jobId}=e.data;
  if(type==='cancel'){
   if(activeLoad?.id===jobId){activeLoad.cancelled=true;if(activeLoad.stream){disposeStreamStage(activeLoad);activeLoad=null;postMessage({type:'cancelled',jobId,operation:'load'})}}
   if(activeDetection?.id===jobId)activeDetection.cancelled=true;return;
+ }
+ if(type==='area-start'){
+  try{if(activeLoad||activeDetection||areaSession)throw Error('Ya hay una operación LiDAR activa');const terrainCell=Number(e.data.terrainCell),vegetationCell=Number(e.data.vegetationCell),maxCells=100000;if(!Number.isFinite(terrainCell)||terrainCell<=0||!Number.isFinite(vegetationCell)||vegetationCell<1)throw Error('Tamaños de celda del área inválidos');
+   importScripts('vegetation-lidar.js');if(typeof self.OcartoVegetation?.create!=='function')throw Error('No está disponible vegetation-lidar.js');if(cloud){releaseCloud(cloud);cloud=null}
+   areaSession={id:e.data.sessionId,terrainCell,vegetationCell,maxCells,terrain:new Map(),vegetation:self.OcartoVegetation.create(vegetationCell,{maxCells}),tiles:0,points:0,cancelled:false};postMessage({type:'area-ready',sessionId:areaSession.id});
+  }catch(err){fail(err.message||String(err),'area',e.data.sessionId)}return;
+ }
+ if(type==='area-add'){
+  const session=areaSession;if(!session||session.id!==e.data.sessionId){fail('La sesión de mosaico ya no está activa','area',jobId);return}if(activeDetection||activeLoad){fail('Espera a que termine la operación LiDAR actual','area',jobId);return}
+  const job={id:jobId||0,cancelled:false,sessionId:session.id};activeDetection=job;try{await processAreaTile(job)}catch(err){if(cloud){releaseCloud(cloud);cloud=null}areaSession=null;fail(err.message||String(err),'area',job.id)}finally{if(activeDetection===job)activeDetection=null}return;
+ }
+ if(type==='area-finish'){
+  const session=areaSession;if(!session||session.id!==e.data.sessionId){fail('La sesión de mosaico ya no está activa','area',jobId);return}
+  try{if(!session.tiles)throw Error('No se procesaron teselas');const vegetation=session.vegetation.finish(),terrain=[...session.terrain.values()].map(p=>[p.x,p.y,p.z,p.n]);areaSession=null;postMessage({type:'area-finished',jobId,sessionId:session.id,tiles:session.tiles,points:session.points,terrain,vegetationRows:vegetation.rows,terrainCells:terrain.length,vegetationCells:vegetation.cells,vegetationProcessed:vegetation.processed})}
+  catch(err){areaSession=null;fail(err.message||String(err),'area',jobId)}return;
+ }
+ if(type==='area-abort'){
+  if(areaSession?.id===e.data.sessionId){areaSession.cancelled=true;if(activeDetection?.sessionId===areaSession.id)activeDetection.cancelled=true;else{areaSession=null;if(cloud){releaseCloud(cloud);cloud=null}}}
+  postMessage({type:'area-aborted',sessionId:e.data.sessionId});return;
  }
  if(type==='load-start'){
   try{if(activeLoad||activeDetection)throw Error('Espera a que termine la operación LiDAR actual');
