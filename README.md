@@ -1,3 +1,7 @@
+## Unión de curvas a través de bordes (v52)
+
+La unión busca extremos cercanos en celdas espaciales vecinas, por lo que un pequeño error numérico no deja una curva cortada al caer a ambos lados de una división de búsqueda. Solo une la misma cota; si hay más de un extremo posible, conserva el caso como ambiguo y no adivina. Ver [VERSION-v52.md](VERSION-v52.md).
+
 ## COPC: jerarquía y conteos más robustos (v51)
 
 El recorrido deduplica páginas de jerarquía al encolarlas, limita también la cola a 100.000 páginas y rechaza sumas de puntos o finales de bloque que excedan los enteros seguros de JavaScript. La lectura en dos pasadas y el progreso por puntos candidatos se mantienen. Ver [VERSION-v51.md](VERSION-v51.md).
