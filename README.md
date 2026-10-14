@@ -1,3 +1,7 @@
+## Exportación de plantillas LiDAR para OCAD (v54)
+
+El MDT y la altura de copa pueden exportarse como PNG con world file PGW en ZIP; OCAD puede usar el PNG como plantilla de fondo configurando el mismo CRS. Las curvas conectadas también se pueden exportar como DXF ASCII, con cada cota en una capa y Z. Son salidas preliminares para revisar: la paleta de raster no es simbología cartográfica y el DXF no asigna símbolos OCAD. CSV y GeoJSON siguen disponibles para análisis e intercambio SIG. Ver [VERSION-v54.md](VERSION-v54.md).
+
 ## Rendimiento al unir curvas largas (v53)
 
 La unión de curvas conserva un único índice espacial de extremos y sigue revisando celdas vecinas para empalmar dentro de tolerancia. La prueba de estrés conecta 10.000 segmentos consecutivos. Ver [VERSION-v53.md](VERSION-v53.md).
