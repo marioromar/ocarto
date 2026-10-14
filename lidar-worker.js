@@ -12,10 +12,12 @@ function readHeader(buffer,fileSize=buffer?.byteLength){
  if(!minLength)throw Error(`Formato de punto LAS ${format} no soportado todavía`);
  if(!Number.isSafeInteger(count)||count<1||recordLength<minLength||offset>=fileSize)throw Error('Cabecera LAS inconsistente o archivo incompleto');
  const sx=d.getFloat64(131,true),sy=d.getFloat64(139,true),sz=d.getFloat64(147,true),ox=d.getFloat64(155,true),oy=d.getFloat64(163,true),oz=d.getFloat64(171,true);
- if(![sx,sy,sz,ox,oy,oz].every(Number.isFinite)||!sx||!sy||!sz)throw Error('Escalas u offsets LAS inválidos');
  if(!compressed&&offset+count*recordLength>fileSize)throw Error('Tamaño de registros LAS inconsistente o archivo incompleto');
- return{major,minor,format,compressed,recordLength,offset,count,sx,sy,sz,ox,oy,oz};
+ const bounds={minX:d.getFloat64(187,true),maxX:d.getFloat64(179,true),minY:d.getFloat64(203,true),maxY:d.getFloat64(195,true)};
+ return{major,minor,format,compressed,recordLength,offset,count,sx,sy,sz,ox,oy,oz,bounds};
 }
+function pointInArea(x,y,rings){let inside=false;for(const ring of rings){let hit=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const [xi,yi]=ring[i],[xj,yj]=ring[j];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))hit=!hit}if(hit)inside=!inside}return inside}
+function intersectsBounds(a,b){return a.minX<=b.maxX&&a.maxX>=b.minX&&a.minY<=b.maxY&&a.maxY>=b.minY}
 function previewWriter(count){const stride=Math.max(1,Math.ceil(count/60000)),preview=new Float64Array(Math.ceil(count/stride)*3);let at=0;return{preview,add(i,x,y,z){if(i%stride===0){preview[at++]=x;preview[at++]=y;preview[at++]=z}}}}
 function finishLoad(bounds,meta,buffer,sample,storedCloud=null,jobId=null){const previous=cloud;cloud=storedCloud||{buffer,meta,bounds};if(previous&&previous!==cloud)releaseCloud(previous);postMessage({type:'loaded',jobId,count:meta.count,bounds,preview:sample.preview,format:meta.format,version:`${meta.major}.${meta.minor}${meta.compressed?' LAZ':''}`},[sample.preview.buffer])}
 function releaseCloud(state){if(state?.laz?.mod&&state.laz.input){state.laz.mod._free(state.laz.input);state.laz.input=0}}
@@ -67,6 +69,8 @@ async function initStreamStage(job){
  const head=s.prefix.subarray(0,s.prefixUsed),needed=head.length>=26&&head[24]===1&&head[25]>=4?375:227;
  if(head.length<needed)return;
  s.meta=readHeader(head.buffer.slice(head.byteOffset,head.byteOffset+head.byteLength),s.fileSize);
+ const session=areaSession?.id===job.sessionId?areaSession:null;
+ if(session?.aoi&&Object.values(s.meta.bounds).every(Number.isFinite)&&s.meta.bounds.minX<=s.meta.bounds.maxX&&s.meta.bounds.minY<=s.meta.bounds.maxY&&!intersectsBounds(session.aoi.bounds,s.meta.bounds)){s.skipped=true;s.initialized=true;postMessage({type:'load-skip',jobId:job.id,bounds:s.meta.bounds});return}
  if(s.meta.compressed){s.mod=await lazModule();if(job.cancelled)throw Object.assign(Error('Carga cancelada'),{name:'AbortError'});s.input=s.mod._malloc(s.fileSize);if(!s.input)throw Error('Memoria insuficiente para cargar LAZ');s.mod.HEAPU8.set(head,s.input)}
  else{s.buffer=new Uint8Array(s.fileSize);s.buffer.set(head)}
  s.initialized=true;
@@ -76,13 +80,15 @@ async function appendStreamChunk(job,m){
  let chunk=m.chunk,at=m.offset;s.received+=chunk.byteLength;
  if(!s.initialized){const take=Math.min(s.prefixTarget-s.prefixUsed,chunk.byteLength);if(take){s.prefix.set(chunk.subarray(0,take),s.prefixUsed);s.prefixUsed+=take;chunk=chunk.subarray(take);at+=take;await initStreamStage(job)}}
  if(job.cancelled)throw Object.assign(Error('Carga cancelada'),{name:'AbortError'});
+ if(s.skipped)return;
  if(chunk.byteLength){if(!s.initialized)throw Error('Cabecera LAS incompleta');if(s.meta.compressed)s.mod.HEAPU8.set(chunk,s.input+at);else s.buffer.set(chunk,at)}
 }
 async function finishStreamLoad(job){
  const s=job.stream;if(!s)throw Error('No hay una carga por bloques activa');
- if(s.received!==s.fileSize)throw Error(`Lectura incompleta: ${s.received} de ${s.fileSize} bytes`);
+ if(!s.skipped&&s.received!==s.fileSize)throw Error(`Lectura incompleta: ${s.received} de ${s.fileSize} bytes`);
  if(!s.initialized)await initStreamStage(job);
  if(!s.initialized)throw Error('Cabecera LAS incompleta');
+ if(s.skipped){job.stream=null;postMessage({type:'loaded',jobId:job.id,count:0,bounds:s.meta.bounds,skipped:true});return}
  if(job.cancelled){disposeStreamStage(job);postMessage({type:'cancelled',jobId:job.id,operation:'load'});return}
  const meta=s.meta;
  if(meta.compressed){const preloaded={mod:s.mod,input:s.input,byteLength:s.fileSize};s.input=0;job.stream=null;await readLAZ(null,meta,job,preloaded)}
@@ -149,13 +155,15 @@ async function processAreaTile(job){
  const session=areaSession;if(!session||session.id!==job.sessionId)throw Error('La sesión de mosaico ya no está activa');
  if(!cloud)throw Error('Carga primero una tesela LAS/LAZ');
  importScripts('vegetation-lidar.js');
- const {buffer,meta}=cloud,batch=100000;let decoder=null,mod=null,point=0;
+ const {buffer,meta}=cloud,batch=100000;let decoder=null,mod=null,point=0;job.acceptedPoints=0;
  try{
   let d=null,v=null;if(meta.compressed){const opened=openStoredLAZ(cloud);mod=opened.mod;decoder=opened.decoder;point=mod._malloc(meta.recordLength);if(!point)throw Error('Memoria insuficiente para registros LAZ');v=new DataView(mod.HEAPU8.buffer,point,meta.recordLength)}else d=new DataView(buffer);
-  for(let start=0;start<meta.count;start+=batch){if(job.cancelled||session.cancelled)break;const end=Math.min(meta.count,start+batch);
+   for(let start=0;start<meta.count;start+=batch){if(job.cancelled||session.cancelled)break;const end=Math.min(meta.count,start+batch);
    for(let i=start;i<end;i++){
     let x,y,z,cls,intensity,ret;if(meta.compressed){decoder.getPoint(point);x=v.getInt32(0,true)*meta.sx+meta.ox;y=v.getInt32(4,true)*meta.sy+meta.oy;z=v.getInt32(8,true)*meta.sz+meta.oz;cls=pointClass(v,meta.format);intensity=v.getUint16(12,true);ret=meta.format<=5?v.getUint8(14)&7:v.getUint8(14)&15}
     else{const p=meta.offset+i*meta.recordLength;x=d.getInt32(p,true)*meta.sx+meta.ox;y=d.getInt32(p+4,true)*meta.sy+meta.oy;z=d.getInt32(p+8,true)*meta.sz+meta.oz;cls=pointClass(d,meta.format,p);intensity=d.getUint16(p+12,true);ret=meta.format<=5?d.getUint8(p+14)&7:d.getUint8(p+14)&15}
+    if(session.aoi&&!pointInArea(x,y,session.aoi.rings))continue;
+    job.acceptedPoints++;
     if(cls===2){const cx=Math.floor(x/session.terrainCell),cy=Math.floor(y/session.terrainCell),key=cx+','+cy;let cell=session.terrain.get(key);if(!cell){if(session.terrain.size>=session.maxCells)throw Error('Demasiadas celdas en el modelo de terreno del área; aumenta el tamaño de celda');cell={x,y,z,n:1};session.terrain.set(key,cell)}else{cell.n++;if(z<cell.z)Object.assign(cell,{x,y,z})}}
     session.vegetation.add(x,y,z,cls,intensity,ret);
    }
@@ -163,8 +171,8 @@ async function processAreaTile(job){
   }
  }finally{if(decoder){try{decoder.delete()}catch(_){}}if(point)mod._free(point);if(cloud){releaseCloud(cloud);cloud=null}}
  if(job.cancelled||session.cancelled){areaSession=null;postMessage({type:'area-tile-cancelled',jobId:job.id,sessionId:job.sessionId});return}
- session.tiles++;session.points+=meta.count;
- postMessage({type:'area-tile-done',jobId:job.id,sessionId:job.sessionId,points:meta.count,terrainCells:session.terrain.size,vegetationCells:session.vegetation.size()});
+ session.tiles++;session.points+=job.acceptedPoints;
+ postMessage({type:'area-tile-done',jobId:job.id,sessionId:job.sessionId,points:job.acceptedPoints,terrainCells:session.terrain.size,vegetationCells:session.vegetation.size()});
 }
 
 onmessage=async e=>{
@@ -176,7 +184,8 @@ onmessage=async e=>{
  if(type==='area-start'){
   try{if(activeLoad||activeDetection||areaSession)throw Error('Ya hay una operación LiDAR activa');const terrainCell=Number(e.data.terrainCell),vegetationCell=Number(e.data.vegetationCell),maxCells=100000;if(!Number.isFinite(terrainCell)||terrainCell<=0||!Number.isFinite(vegetationCell)||vegetationCell<1)throw Error('Tamaños de celda del área inválidos');
    importScripts('vegetation-lidar.js');if(typeof self.OcartoVegetation?.create!=='function')throw Error('No está disponible vegetation-lidar.js');if(cloud){releaseCloud(cloud);cloud=null}
-   areaSession={id:e.data.sessionId,terrainCell,vegetationCell,maxCells,terrain:new Map(),vegetation:self.OcartoVegetation.create(vegetationCell,{maxCells}),tiles:0,points:0,cancelled:false};postMessage({type:'area-ready',sessionId:areaSession.id});
+   const aoi=e.data.aoi||null;if(aoi){if(!Array.isArray(aoi.rings)||!aoi.rings.length||aoi.rings.some(r=>!Array.isArray(r)||r.length<3||r.some(p=>!Array.isArray(p)||p.length!==2||!p.every(Number.isFinite))))throw Error('El polígono de recorte no contiene coordenadas válidas');const xs=aoi.rings[0].map(p=>p[0]),ys=aoi.rings[0].map(p=>p[1]);aoi.bounds={minX:Math.min(...xs),maxX:Math.max(...xs),minY:Math.min(...ys),maxY:Math.max(...ys)}}
+   areaSession={id:e.data.sessionId,terrainCell,vegetationCell,maxCells,terrain:new Map(),vegetation:self.OcartoVegetation.create(vegetationCell,{maxCells}),tiles:0,points:0,cancelled:false,aoi};postMessage({type:'area-ready',sessionId:areaSession.id});
   }catch(err){fail(err.message||String(err),'area',e.data.sessionId)}return;
  }
  if(type==='area-add'){
@@ -195,7 +204,7 @@ onmessage=async e=>{
  if(type==='load-start'){
   try{if(activeLoad||activeDetection)throw Error('Espera a que termine la operación LiDAR actual');
    const fileSize=e.data.fileSize;if(!Number.isSafeInteger(fileSize)||fileSize<227)throw Error('Archivo demasiado pequeño para una cabecera LAS');
-   const job={id:jobId||0,cancelled:false,stream:{fileSize,received:0,prefix:new Uint8Array(375),prefixUsed:0,prefixTarget:375,initialized:false,meta:null,buffer:null,mod:null,input:0}};
+   const job={id:jobId||0,cancelled:false,sessionId:e.data.sessionId,stream:{fileSize,received:0,prefix:new Uint8Array(375),prefixUsed:0,prefixTarget:375,initialized:false,meta:null,buffer:null,mod:null,input:0}};
    activeLoad=job;postMessage({type:'load-ready',jobId:job.id});
   }catch(err){fail(err.message||String(err),'load',jobId)}return;
  }

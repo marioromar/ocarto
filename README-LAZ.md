@@ -1,5 +1,11 @@
 # Ocarto LiDAR: LAS y LAZ
 
+## Recorte de un mosaico al área seleccionada (v42)
+
+Selecciona primero un polígono del mapa y luego carga dos o más ficheros LAS/LAZ. El Worker comprueba la extensión de cada cabecera: si no se cruza con el área, omite el archivo sin reservar su búfer de entrada. Para los archivos que sí se cruzan, decodifica sus puntos y solo suma al terreno y vegetación los que caen dentro del polígono (respetando sus huecos). Si no hay un área seleccionada, mantiene el mosaico por extensión completa.
+
+El recorte reduce el trabajo posterior y el tamaño de los modelos exportados. Los LAZ que cruzan el área todavía deben leerse y decodificarse completos para comprobar sus puntos; la compresión no permite saltar directamente a una región arbitraria con el lector actual. Ver [VERSION-v42.md](VERSION-v42.md).
+
 ## Mosaico de archivos LAS/LAZ (v41)
 
 Selecciona varios archivos LAS/LAZ al mismo tiempo. Ocarto procesa cada tesela por separado, combina las cotas mínimas de suelo y los indicadores de vegetación por celda, y libera el búfer LAZ de esa tesela antes de cargar la siguiente. La memoria retenida por los modelos depende del número de celdas, no de la suma de puntos de todos los archivos.

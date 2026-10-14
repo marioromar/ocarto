@@ -1,8 +1,8 @@
-## Modelos LiDAR de un área con varias teselas (v41)
+## Recorte de modelos LiDAR por área cartográfica (v42)
 
-Selecciona varios archivos LAS/LAZ juntos. Ocarto procesa uno cada vez, acumula el modelo de terreno y los indicadores de vegetación por celda en el Worker y libera la nube de cada archivo antes de cargar el siguiente. Al final, exporta el modelo combinado del área. Ver [VERSION-v41.md](VERSION-v41.md).
+Selecciona un polígono en el mapa y carga varios archivos LAS/LAZ juntos. Ocarto descarta las teselas cuyo encuadre no cruza el polígono y recorta los puntos de las demás antes de acumular terreno y vegetación. Sin un área seleccionada, procesa la extensión completa de las teselas. Ver [VERSION-v42.md](VERSION-v42.md).
 
-Los archivos se consideran parte de una misma zona y deben compartir CRS y unidades. El área es la unión de sus extensiones; todavía no se recorta por un polígono dibujado. Los solapes pueden duplicar recuentos de densidad. Cada modelo tiene un límite provisional de 100.000 celdas; para áreas mayores, aumenta el tamaño de celda.
+Los archivos deben compartir CRS y unidades. Los solapes pueden duplicar recuentos de densidad. Cada modelo tiene un límite provisional de 100.000 celdas; para áreas mayores, aumenta el tamaño de celda.
 
 ## Carga LiDAR por bloques directamente al Worker (v40)
 
