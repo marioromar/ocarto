@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+assert.match(html,/function addLidarFeaturesToCart\(fc,sourceLabel,symbolFor\)/);
+assert.match(html,/S\.features\.push\(\.\.\.fresh\)/,'terrain detections become CART features');
+assert.match(html,/review_required:true,auto_accept:false/,'CART candidates stay under review');
+assert.match(html,/large\?'large-rock':'rock'/,'rock size chooses an orienteering symbol');
+assert.match(html,/symbol:'passable-wall'/,'wall/scarp proposal receives provisional map symbol');
+assert.match(html,/symbol:'small-watercourse'/,'valley proposal receives provisional map symbol');
+assert.match(html,/function addLidarFeaturesToCart[\s\S]{0,4000}source_key/,'CART insertion deduplicates repeated source geometries');
+assert.match(html,/Ocarto v1\.125/);
+console.log('✓ rocas, muros/escarpes y vaguadas LiDAR se incorporan a CART con simbología y revisión');
