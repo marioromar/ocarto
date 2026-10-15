@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.join(__dirname,'..');
+const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const editorTools=fs.readFileSync(path.join(root,'editor-tools-v224.js'),'utf8');
+const version=fs.readFileSync(path.join(root,'VERSION-v224.md'),'utf8');
+assert.match(html,/<title>Ocarto v1\.124 ·/,'browser tab identifies the current app version');
+assert.match(html,/Ocarto · v1\.124/,'visible app status identifies the current app version');
+assert.match(version,/# Ocarto v1\.124/,'release notes identify the same version');
+assert.match(editorTools,/id='fillClosedBoundary'/,'closed-boundary fill tool is available');
+assert.match(editorTools,/id='rotate180Selected'/,'one-click 180-degree rotation is available');
+console.log('✓ título y versión visible de Ocarto coinciden con la versión publicada');
