@@ -186,3 +186,7 @@ En **Capas y LiDAR → Ajuste experimental de caminos**, selecciona una ortofoto
 ## Ajustar bordes en contornos Bézier (v63)
 
 «Ajustar bordes» puede proyectar vértices al contorno curvo de la segunda área. Los tiradores del vértice desplazado mantienen su posición relativa y la forma continúa siendo Bézier. Sigue requiriendo dos áreas desbloqueadas y sin huecos. Ver [VERSION-v163.md](VERSION-v163.md).
+
+## Proyección refinada sobre curvas Bézier (v64)
+
+El ajuste a contornos curvos refina numéricamente la posición más cercana entre muestras y aplica la tolerancia sobre la distancia resultante. Ver [VERSION-v164.md](VERSION-v164.md).

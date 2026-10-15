@@ -1,7 +1,7 @@
 {
   "name": "ocarto-lidar-worker",
   "private": true,
-  "version": "1.0.63",
+  "version": "1.0.64",
   "scripts": {
     "vendor:laz-perf": "node scripts/vendor-laz-perf.cjs",
     "test": "node scripts/test-all.cjs",

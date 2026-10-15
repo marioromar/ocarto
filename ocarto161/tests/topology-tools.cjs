@@ -9,4 +9,8 @@ const curved=snapCurvedEdges([{x:1,y:2.25,vertexType:'corner',outTangent:{x:0,y:
 assert.strictEqual(curved.moved,1);assert(Math.abs(curved.points[0].x-1)<.1);assert(curved.points[0].y>1.5);assert.strictEqual(curved.points[0].vertexType,'corner');assert.deepStrictEqual(curved.points[0].outTangent,{x:0,y:1});
 const noSnap=snapCurvedEdges([{x:100,y:100}],target,.1,true,32);assert.strictEqual(noSnap.moved,0);
 assert.throws(()=>snapCurvedEdges([],[],-1),/tolerancia/);
-console.log('✓ ajuste de vértices a segmentos y curvas Bézier con metadatos conservados');
+const longCurve=[{x:0,y:0,outTangent:{x:0,y:1000}},{x:1000,y:0,inTangent:{x:0,y:1000}}];
+const t=.503,u=1-t,exact={x:u*u*u*0+3*u*u*t*0+3*u*t*t*1000+t*t*t*1000,y:3*u*u*t*1000+3*u*t*t*1000};
+const refined=snapCurvedEdges([{x:exact.x,y:exact.y}],longCurve,.01,true,16);
+assert.strictEqual(refined.moved,1);assert(Math.abs(refined.points[0].x-exact.x)<1e-5);assert(Math.abs(refined.points[0].y-exact.y)<1e-5);
+console.log('✓ ajuste de vértices a segmentos Bézier con precisión refinada y metadatos conservados');
