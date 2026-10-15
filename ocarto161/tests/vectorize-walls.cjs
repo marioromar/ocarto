@@ -1,0 +1,5 @@
+const assert=require('node:assert/strict');const W=require('../vectorize-walls.js');
+const step=[];for(let j=0;j<8;j++)for(let i=0;i<3;i++)step.push([(i+.5),j+.5,i===0?0:1.4,5]);
+const result=W.detect(step,1,{minStep:.8,minLength:6});assert.equal(result.features.length,1,'joins consecutive height-step edges');assert.equal(result.features[0].geometry.type,'LineString');assert.deepEqual(result.features[0].geometry.coordinates,[[1,0],[1,8]]);assert.equal(result.features[0].properties.approx_length_m,8);assert.equal(result.features[0].properties.review_required,true);assert.equal(result.features[0].properties.auto_accept,false);
+const smooth=[];for(let j=0;j<8;j++)for(let i=0;i<3;i++)smooth.push([i+.5,j+.5,i*.2,3]);assert.equal(W.detect(smooth,1,{minStep:.8,minLength:1}).features.length,0,'does not classify gradual slopes as wall candidates');
+assert.equal(W.detect(step,1,{minStep:.8,minLength:9}).features.length,0,'applies minimum vector length');assert.throws(()=>W.detect(step,1,{minStep:0}),/Parámetros/);console.log('✓ v80 muros: líneas de cambio brusco de cota, continuidad y filtros de revisión');

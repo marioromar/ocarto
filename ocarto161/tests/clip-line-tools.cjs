@@ -1,0 +1,1 @@
+const assert=require('assert');const {clipLineToArea}=require('../topology-tools.js');const r=clipLineToArea([[-1,1],[0.5,1],[1,1],[3,1]],[[0,0],[2,0],[2,2],[0,2]]);assert.strictEqual(r.length,1);assert.strictEqual(r[0].length,2);console.log('✓ recorte de línea por área');

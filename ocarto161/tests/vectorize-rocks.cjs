@@ -1,0 +1,7 @@
+const assert=require('node:assert/strict'),R=require('../vectorize-rocks.js');
+function grid(fn=()=>0){const rows=[];for(let j=0;j<9;j++)for(let i=0;i<9;i++)rows.push([i+.5,j+.5,fn(i,j),4,'observado']);return rows}
+let rows=grid((i,j)=>i===4&&j===4?1.2:0);let fc=R.detect(rows,1,{minProminence:.5,radius:2,minPoints:2});assert.equal(fc.features.length,1);assert.equal(fc.features[0].geometry.type,'Point');assert.deepEqual(fc.features[0].geometry.coordinates,[4.5,4.5,1.2]);assert.equal(fc.features[0].properties.local_prominence_m,1.2);assert.equal(fc.features[0].properties.review_required,true);assert.equal(fc.features[0].properties.auto_accept,false);
+assert.equal(R.detect(grid(),1,{minProminence:.2,radius:2}).features.length,0,'flat terrain yields no candidates');assert.equal(R.detect(grid((i,j)=>i===4&&j===4?.3:0),1,{minProminence:.5,radius:2}).features.length,0,'applies prominence threshold');
+const hole=rows.filter(r=>!(r[0]===3.5&&r[1]===3.5));assert.equal(R.detect(hole,1,{minProminence:.1,radius:2}).features.length,0,'ignores candidates near incomplete neighborhoods');
+assert.equal(R.detect(rows.map(r=>r[0]===4.5&&r[1]===4.5?[...r.slice(0,4),'interpolado']:r),1,{minProminence:.5,radius:2}).features.length,0,'ignores interpolated terrain cells');
+assert.throws(()=>R.detect(rows,1,{minProminence:0}),/Parámetros/);console.log('✓ v82 rocas candidatas: prominencia local, vecindad observada, huecos y revisión');

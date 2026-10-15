@@ -1,0 +1,1 @@
+const assert=require('assert');const {splitArea}=require('../split-tools.js');const r=splitArea([[0,0],[4,0],[4,4],[0,4]],0,2);assert.strictEqual(r.length,2);assert.ok(r.every(x=>x.length>=3));console.log('✓ corte de área en dos');

@@ -1,0 +1,31 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {readFileBuffer,streamFileToWorker,hasCopcInfo}=require('../lidar-file-reader.js');
+
+(async()=>{
+ const file=new Blob([Uint8Array.from([1,2]),Uint8Array.from([3,4,5])]);let progress=[];
+ const buffer=await readFileBuffer(file,{onProgress:(done,total)=>progress.push([done,total])});
+ assert.deepEqual([...new Uint8Array(buffer)],[1,2,3,4,5]);
+ assert.deepEqual(progress.at(-1),[5,5]);
+ const copcHeader=new Uint8Array(420);copcHeader.set(new TextEncoder().encode('copc'),377);new DataView(copcHeader.buffer).setUint16(393,1,true);
+ assert.equal(await hasCopcInfo(new Blob([copcHeader])),true,'identifica COPC por su VLR, sin depender de la extensión');
+ const ordinaryHeader=copcHeader.slice();ordinaryHeader[377]=0;
+ assert.equal(await hasCopcInfo(new Blob([ordinaryHeader])),false,'no marca un LAZ estándar como COPC');
+ const sent=[],listeners=new Set(),worker={addEventListener:(n,fn)=>listeners.add(fn),removeEventListener:(n,fn)=>listeners.delete(fn),postMessage(m){sent.push(m);const reply=m.type==='load-start'?{type:'load-ready',jobId:m.jobId}:m.type==='load-chunk'?{type:'load-chunk-ack',jobId:m.jobId,sequence:m.sequence}:m.type==='load-end'?{type:'loaded',jobId:m.jobId}:m.type==='cancel'?{type:'cancelled',jobId:m.jobId}:null;if(reply)queueMicrotask(()=>listeners.forEach(fn=>fn({data:reply})))}};
+ let streamProgress=[];await streamFileToWorker(new Blob([Uint8Array.from([1,2,3,4,5])]),worker,{jobId:41,chunkSize:2,onProgress:(done,total)=>streamProgress.push([done,total])});
+ assert.deepEqual(sent.filter(m=>m.type==='load-chunk').map(m=>[...new Uint8Array(m.chunk)]),[[1,2],[3,4],[5]],'transfiere bloques pequeños con espera entre bloques');assert.deepEqual(streamProgress.at(-1),[5,5]);assert.equal(sent.at(-1).type,'load-end');
+ const skipSent=[],skipListeners=new Set(),skipWorker={addEventListener:(n,fn)=>skipListeners.add(fn),removeEventListener:(n,fn)=>skipListeners.delete(fn),postMessage(m){skipSent.push(m);let reply;if(m.type==='load-start')reply={type:'load-ready',jobId:m.jobId};else if(m.type==='load-chunk'){for(const fn of skipListeners)fn({data:{type:'load-skip',jobId:m.jobId}});reply={type:'load-skip-ack',jobId:m.jobId,sequence:m.sequence};}else if(m.type==='load-end')reply={type:'loaded',jobId:m.jobId,skipped:true};if(reply)queueMicrotask(()=>skipListeners.forEach(fn=>fn({data:reply})))}};
+ const skipFile={size:6,stream(){return new ReadableStream({start(c){c.enqueue(Uint8Array.from([1,2]));c.enqueue(Uint8Array.from([3,4]));c.enqueue(Uint8Array.from([5,6]));},cancel(){}})}};
+ const skipped=await streamFileToWorker(skipFile,skipWorker,{jobId:43,chunkSize:2});assert.equal(skipped.skipped,true);assert.equal(skipSent.filter(m=>m.type==='load-chunk').length,1,'al detectar que el tile queda fuera, solo transfiere el primer bloque de cabecera');assert.equal(skipSent.at(-1).type,'load-end');
+ const cancelWorker={...worker,postMessage(m){worker.postMessage.call(this,m)}},streamAbort=new AbortController();
+ await assert.rejects(streamFileToWorker(new Blob([new Uint8Array(16)]),cancelWorker,{jobId:42,signal:streamAbort.signal,chunkSize:2,onProgress:()=>streamAbort.abort()}),error=>error.name==='AbortError');
+ assert(sent.some(m=>m.type==='cancel'&&m.jobId===42),'cancel interrupts the chunk transfer and tells the Worker to release its partial allocation');
+ const controller=new AbortController();let cancelled=false;
+ const slowFile={size:4,stream(){return new ReadableStream({start(c){c.enqueue(Uint8Array.from([8,9]));},cancel(){cancelled=true}})}};
+ const pending=readFileBuffer(slowFile,{signal:controller.signal});
+ await new Promise(resolve=>setImmediate(resolve));controller.abort();
+ await assert.rejects(pending,error=>error.name==='AbortError');
+ assert.equal(cancelled,true,'abort cancels the pending file stream');
+ await assert.rejects(readFileBuffer({size:0,stream(){throw Error('should not open')}}),/Archivo vacío/);
+ console.log('✓ lectura LAS/LAZ por bloques: bytes, avance y cancelación antes de enviar al Worker');
+})().catch(error=>{console.error(error);process.exitCode=1});

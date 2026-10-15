@@ -1,0 +1,16 @@
+/* Ocarto v79: vectorize the learned frutales label without assuming tree spacing. */
+(function(root,factory){const api=factory(root);if(typeof module==='object'&&module.exports)module.exports=api;else root.OcartoFruitDetection=api})(typeof globalThis!=='undefined'?globalThis:this,function(root){
+'use strict';
+function inside(point,ring){let hit=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[i],b=ring[j];if((a[1]>point[1])!==(b[1]>point[1])&&point[0]<(b[0]-a[0])*(point[1]-a[1])/(b[1]-a[1])+a[0])hit=!hit}return hit}
+// This is evidence for review only. It never decides whether an area is orchard.
+function rowEvidence(rows,ring,labeler){const points=rows.filter(r=>labeler(r)==='frutales'&&Number.isFinite(r.x)&&Number.isFinite(r.y)&&inside([r.x,r.y],ring)).map(r=>[r.x,r.y]);if(points.length<4)return{evidence:'insuficiente',points:points.length,orientation:null};const bins=18,counts=Array(bins).fill(0);for(let i=0;i<points.length;i++){const nearest=[];for(let j=0;j<points.length;j++){if(i===j)continue;const dx=points[j][0]-points[i][0],dy=points[j][1]-points[i][1],d=Math.hypot(dx,dy);if(d>0)nearest.push({dx,dy,d})}nearest.sort((a,b)=>a.d-b.d);for(const q of nearest.slice(0,3)){let angle=Math.atan2(q.dy,q.dx);if(angle<0)angle+=Math.PI;if(angle>=Math.PI)angle-=Math.PI;counts[Math.min(bins-1,Math.floor(angle/Math.PI*bins))]++}}const total=counts.reduce((a,b)=>a+b,0),best=Math.max(...counts),index=counts.indexOf(best),ratio=total?best/total:0,orientation=+(index+.5)*180/bins;return{evidence:ratio>=.5?'alineacion-marcada':ratio>=.36?'alineacion-posible':'sin-alineacion-clara',points:points.length,orientation,ratio:+ratio.toFixed(3)}}
+function detect(rows,cell,labeler,opts={}){
+ if(typeof labeler!=='function')throw Error('Etiqueta ejemplos de frutales y aprende un modelo antes de detectar');
+ const V=root.OcartoVegetationVector||(typeof require==='function'?require('./vectorize-vegetation.js'):null);if(!V?.vectorize)throw Error('No está disponible el vectorizador de áreas');
+ const result=V.vectorize(rows,cell,{minArea:opts.minArea??0,minWidth:opts.minWidth??0,overrides:opts.overrides,maxFeatures:opts.maxFeatures??10000,labeler:r=>labeler(r)==='frutales'?'frutales':null});
+ result.name='Ocarto · áreas candidatas de frutales aprendidas · revisar';result.features=result.features.filter(f=>f.properties.category==='frutales').map(f=>{const e=rowEvidence(rows,f.geometry.coordinates[0],labeler);return{...f,properties:{...f.properties,kind:'area-candidata-frutales-lidar',fruit_detection:'modelo aprendido con ejemplos del usuario',row_pattern_evidence:e.evidence,row_pattern_points:e.points,row_orientation_degrees:e.orientation,row_alignment_ratio:e.ratio??null,review_required:true,auto_accept:false}}});
+ result.properties={...result.properties,fruitDetection:{method:'clasificación por ejemplos LiDAR etiquetados como frutales; la alineación de copas se informa solo como pista de revisión',treeSpacingUsed:false,rowPatternUsedForDecision:false,areaThresholdM2:opts.minArea??0,widthThresholdM:opts.minWidth??0},warning:'Áreas candidatas según el modelo local. Revisar con ortofoto y cartografía; el LiDAR no confirma por sí solo la especie.'};
+ return result;
+}
+return{detect};
+});

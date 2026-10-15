@@ -1,0 +1,1 @@
+const assert=require('assert');const S=require('../smooth-tools.js');const p=[[0,0],[1,.01],[2,0],[3,1]];assert(S.apply(p,{mode:'conservative',simplification:.1}).length<=p.length);const q=S.apply(p,{mode:'geometric',simplification:0,intensity:.5});assert.equal(q.length,p.length);console.log('✓ suavizado conservador y geométrico');

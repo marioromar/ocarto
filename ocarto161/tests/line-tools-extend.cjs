@@ -1,0 +1,1 @@
+const assert=require('assert');const T=require('../line-tools.js');const r=T.extendToNearest([[0,0],[1,0]],[[[4,0],[5,0]]],4);assert.deepStrictEqual(r.line,[[0,0],[4,0]]);console.log('✓ prolongación de líneas hasta elemento cercano');

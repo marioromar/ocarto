@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const html=fs.readFileSync(require('node:path').join(__dirname,'..','index.html'),'utf8');
+const lineStart=html.slice(html.indexOf('function startLineContinuation(p)'),html.indexOf('function startAreaExpansion(p)'));
+const areaStart=html.slice(html.indexOf('function startAreaExpansion(p)'),html.indexOf('function isSimpleRing(points)'));
+assert.ok(lineStart.includes("f.type!=='line'"));
+assert.ok(!lineStart.includes("f.curve==='bezier'"),'Bézier lines can be continued');
+assert.ok(areaStart.includes("f.type!=='area'"));
+assert.ok(!areaStart.includes("f.curve==='bezier'"),'Bézier areas can be expanded');
+const lineFinish=html.slice(html.indexOf("if(d.continuation?.kind==='line'){"),html.indexOf("}else if(d.continuation?.kind==='area')"));
+assert.ok(lineFinish.includes('target.points=merged;'));
+assert.ok(!lineFinish.includes('delete target.curve'),'line continuation preserves the original curve mode and handles');
+const areaFinish=html.slice(html.indexOf("}else if(d.continuation?.kind==='area'){"),html.indexOf('const historyBefore=snapshotMap(),newFeature='));
+assert.ok(areaFinish.includes("original.curve==='bezier'?sampledPoints(merged,true,16):merged"),'Bezier area expansion validates the sampled outline');
+console.log('✓ continuación de líneas Bézier y ampliación de áreas con validación del contorno curvo');

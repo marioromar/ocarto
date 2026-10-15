@@ -1,0 +1,1 @@
+const assert=require('assert');const {cutLine}=require('../split-tools.js');const r=cutLine([[0,0],[1,0],[2,0],[3,0]],1,2);assert.deepStrictEqual(r,[[[0,0],[1,0]],[[2,0],[3,0]]]);console.log('✓ eliminación de tramo de línea');

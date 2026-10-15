@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict');
+const L=require('../vegetation-image-learning.js');
+const rows=[];for(let i=0;i<6;i++)rows.push({x:i,y:0,ortho_r:35+i,ortho_g:145+i,ortho_b:40+i,ortho_texture:12});for(let i=6;i<12;i++)rows.push({x:i,y:0,ortho_r:210+i,ortho_g:185+i,ortho_b:55+i,ortho_texture:8});
+const poly=(label,x0,x1)=>({label,coordinates:[[[x0,-1],[x1,-1],[x1,1],[x0,1],[x0,-1]]]});
+const model=L.train(rows,[poly('verde2',-.5,5.5),poly('amarillo',5.5,12)],{templateId:'ortho-1'});
+assert.equal(model.predict(rows[2]),'verde2');assert.equal(model.predict(rows[9]),'amarillo');assert.equal(model.templateId,'ortho-1');
+const restored=L.fromJSON(model.toJSON());assert.equal(restored.predict(rows[8]),'amarillo');
+assert.throws(()=>L.fromJSON({...model.toJSON(),prototypes:model.toJSON().prototypes.map((p,i)=>i? p:{label:'bad',fp:[0,0,0,0]})}),/Muestra de ortofoto inválida/);
+assert.throws(()=>L.train(rows,[poly('verde1',20,30)]),/muestras suficientes/);
+console.log('✓ aprendizaje local por ejemplos de color y textura de ortofoto, con validación y persistencia');

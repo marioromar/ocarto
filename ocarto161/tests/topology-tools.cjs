@@ -1,0 +1,12 @@
+const assert=require('assert');const {snapEdges,snapCurvedEdges}=require('../topology-tools.js');
+const r=snapEdges([[0,0],[2.05,0]],[[2,-1],[2,1]],.1);assert.deepStrictEqual(r.points,[[0,0],[2,0]]);assert.strictEqual(r.moved,1);
+const endpoint=snapEdges([[2.05,1.05]],[[2,0],[2,1]],.1);assert.deepStrictEqual(endpoint.points,[[2,1]]);
+const untouched=snapEdges([[0,0]],[[2,0],[2,1]],.1);assert.deepStrictEqual(untouched.points,[[0,0]]);assert.strictEqual(untouched.moved,0);
+assert.throws(()=>snapEdges([],[], -1),/tolerancia/);
+const arc=[{x:0,y:0,outTangent:{x:0,y:3}},{x:3,y:0,inTangent:{x:0,y:3}}];
+const target=[{x:0,y:1},{x:3,y:1}];
+const curved=snapCurvedEdges([{x:1,y:2.25,vertexType:'corner',outTangent:{x:0,y:1}}],arc,.3,true,96);
+assert.strictEqual(curved.moved,1);assert(Math.abs(curved.points[0].x-1)<.1);assert(curved.points[0].y>1.5);assert.strictEqual(curved.points[0].vertexType,'corner');assert.deepStrictEqual(curved.points[0].outTangent,{x:0,y:1});
+const noSnap=snapCurvedEdges([{x:100,y:100}],target,.1,true,32);assert.strictEqual(noSnap.moved,0);
+assert.throws(()=>snapCurvedEdges([],[],-1),/tolerancia/);
+console.log('✓ ajuste de vértices a segmentos y curvas Bézier con metadatos conservados');

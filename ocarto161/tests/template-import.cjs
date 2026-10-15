@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(require.resolve('../index.html'),'utf8');
+assert.match(html,/accept="image\/\*,application\/pdf.*\.geotiff.*\.prj"/,'picker accepts images, PDF, TIFF, GeoTIFF and georeference sidecars');
+assert.match(html,/decodePdfTemplate\(file\)/,'PDF pages can be rasterized as template images');
+assert.match(html,/decodeGeoTiffTemplate\(file\)/,'TIFF images are decoded through GeoTIFF reader');
+assert.match(html,/findSidecar\(f,sidecars/,'selected world files and PRJ files are associated by basename');assert.match(html,/S\.awaitingControlPoint=!!S\.template&&!S\.template\.georef/,'missing georeferencing automatically starts paired-point adjustment');assert.match(html,/No se encontró georreferenciación/,'missing associated metadata prompts the fallback workflow');
+assert.match(html,/pdf\.worker\.min\.mjs/,'local PDF.js worker is configured for offline operation');
+assert.ok(fs.existsSync(require.resolve('../vendor/image-import/pdf.min.mjs')));
+assert.ok(fs.existsSync(require.resolve('../vendor/image-import/pdf.worker.min.mjs')));
+assert.ok(fs.existsSync(require.resolve('../vendor/image-import/geotiff.js')));
+const source=html.match(/function geotiffAffine\([^\n]+/);assert.ok(source,'GeoTIFF affine reader exists');
+const affine=vm.runInNewContext(`(${source[0]})`);
+const makeImage=(tags,keys={})=>({fileDirectory:{getValue:key=>tags[key]},getGeoKeys:()=>keys});
+let g=affine(makeImage({ModelPixelScale:[2,3,0],ModelTiepoint:[0,0,0,100,200,0]},{ProjectedCSTypeGeoKey:25830}),100,100,50,50);
+assert.deepEqual(JSON.parse(JSON.stringify(g)),{a:4,b:0,c:100,d:0,e:-6,f:200,source:'GeoTIFF',crs:'EPSG:25830'});
+g=affine(makeImage({ModelTransformation:[2,0,0,100,0,-3,0,200,0,0,1,0,0,0,0,1]},{}),80,60,40,30);
+assert.equal(g.a,4);assert.equal(g.e,-6);assert.equal(g.c,100);assert.equal(g.f,200);
+console.log('✓ v93 búsqueda previa de georreferenciación y ajuste automático si falta');

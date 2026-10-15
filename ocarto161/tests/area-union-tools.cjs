@@ -1,0 +1,1 @@
+const assert=require('assert');const {unionAdjacent}=require('../area-tools.js');const r=unionAdjacent([[0,0],[2,0],[2,2],[0,2]],[[2,0],[4,0],[4,2],[2,2]],.01);assert.ok(r.length>=6);console.log('✓ unión de áreas contiguas');

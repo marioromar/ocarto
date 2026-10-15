@@ -1,0 +1,1 @@
+const assert=require('assert');const A=require('../area-tools.js');const r=A.bridge([[0,0],[2,0],[2,2]],[[3,0],[5,0],[5,2]],2);assert.equal(r.gap,1);assert.deepStrictEqual(r.indices,[1,0]);console.log('✓ cierre de hueco entre áreas distintas');

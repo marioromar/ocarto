@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict');
+const {simplify}=require('../simplify-tools.js');
+const topology=require('../topology-tools.js');
+const line=Array.from({length:31},(_,i)=>({x:i,y:i%2?.1:0,id:i,vertexType:i===8?'corner':i===20?'dash':'normal'}));
+const reduced=simplify(line,1);
+assert.ok(reduced.length<line.length,'near-straight sections lose redundant vertices');
+assert.equal(reduced[0].id,0);assert.equal(reduced.at(-1).id,30);
+assert.ok(reduced.some(p=>p.id===8),'corner vertices are mandatory');assert.ok(reduced.some(p=>p.id===20),'dash vertices are mandatory');
+assert.equal(line.length,31,'source geometry is not mutated');
+const ring=Array.from({length:80},(_,i)=>{const a=i/80*Math.PI*2,r=10+Math.sin(i*5)*.08;return{x:Math.cos(a)*r,y:Math.sin(a)*r,vertexType:i===18?'corner':'normal',id:i}});
+const reducedRing=simplify(ring,1,{closed:true});assert.ok(reducedRing.length>=3&&reducedRing.length<ring.length);assert.ok(reducedRing.some(p=>p.id===18));assert.ok(topology.validate(reducedRing.map(p=>[p.x,p.y]),true).valid,'simplified closed rings remain simple');
+assert.deepEqual(simplify(line,0),line,'zero tolerance leaves all vertices');
+assert.throws(()=>simplify([{x:NaN,y:0}],1),/Vértice no válido/);
+console.log('✓ simplificación Douglas–Peucker preserva extremos, esquinas y forma cerrada');

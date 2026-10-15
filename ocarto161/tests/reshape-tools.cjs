@@ -1,0 +1,1 @@
+const assert=require('assert');const R=require('../reshape-tools.js');const out=R.replace([[0,0],[1,0],[2,0],[3,0]],[1,0],[3,0],[[1,0],[1,1],[3,0]]);assert.deepStrictEqual(out,[[0,0],[1,0],[1,1],[3,0]]);console.log('✓ modificación de tramo de línea');

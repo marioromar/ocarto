@@ -1,0 +1,7 @@
+const assert=require('node:assert/strict');const {toMapAreas}=require('../vegetation-map.js');
+const fc={type:'FeatureCollection',features:[{type:'Feature',properties:{category:'verde1'},geometry:{type:'Polygon',coordinates:[[[10,20],[12,20],[12,22],[10,20]],[[10.4,20.4],[10.8,20.4],[10.4,20.8],[10.4,20.4]]] }},{type:'Feature',properties:{category:'frutales'},geometry:{type:'Polygon',coordinates:[[[20,30],[22,30],[22,32],[20,30]]]}}]};
+const out=toMapAreas(fc,{batchId:7,styles:{verde1:{name:'Verde 1',color:'#abc123'},frutales:{name:'Frutales',color:'#b78b53'}},transform:(x,y)=>({x:x-10,y:40-y,rawX:x,rawY:y})});
+assert.equal(out.layers.length,2);assert.equal(out.features.length,2);assert.equal(out.features[0].type,'area');assert.equal(out.features[0].points[0].x,0);assert.equal(out.features[0].points[0].y,20);assert.equal(out.features[0].points[0].rawX,10);assert.equal(out.features[0].holes.length,1);assert.equal(out.features[0].layerId,out.layers[0].id);assert.equal(out.features[1].aiVegetationLabel,'frutales');assert.equal(fc.features[0].geometry.coordinates[0].length,4,'input geometry stays unchanged');
+assert.throws(()=>toMapAreas(fc,{styles:{},transform:(x,y)=>({x,y})}),/No se pudieron convertir/);
+assert.throws(()=>toMapAreas(fc,{styles:{verde1:{color:'#fff'}},transform:()=>({x:NaN,y:0})}),/No se pudieron convertir/);assert.throws(()=>toMapAreas(fc,{styles:{verde1:{color:'#fff'}}}),/transformación/);
+console.log('OK: áreas LiDAR se convierten a objetos editables, capas por clase, huecos, coordenadas y errores');
