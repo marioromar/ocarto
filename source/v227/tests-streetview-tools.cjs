@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {streetViewUrl}=require('../streetview-tools.js');
+const {transformCoordinate}=require('../geo-crs.js');
+const utm=transformCoordinate(-3,40,'EPSG:4326','EPSG:25830');
+const gps=transformCoordinate(utm.x,utm.y,'EPSG:25830','EPSG:4326');
+assert.ok(Math.abs(gps.x+3)<1e-7);
+assert.ok(Math.abs(gps.y-40)<1e-7);
+assert.equal(streetViewUrl(gps.y,gps.x),'https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=40,-3');
+assert.throws(()=>streetViewUrl(91,0),/fuera de rango/);
+assert.throws(()=>streetViewUrl(0,181),/fuera de rango/);
+console.log('✓ Street View: conversión UTM y URL de Google Maps con coordenadas válidas');
