@@ -11,3 +11,5 @@
 
 - `npm test`: 60 pruebas pasadas.
 - Prueba real de OCAD 11: 4.278 áreas leídas; ningún código de área sin símbolo correspondiente.
+- Flujo combinado con el LAZ PNOA 385-4115: 11.295.695 puntos decodificados, 4.001 áreas guía cubiertas y 62.486 celdas LiDAR utilizables con celda de 4 m.
+- En esa tesela solo `amarillo` y `frutales` reunieron muestras de entrenamiento suficientes. `verde1`, `verde2`, `verde3`, `blanco` y `rayado` aparecen como clases no entrenadas, por lo que el modelo no debe interpretarse como una clasificación completa del mapa.
