@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {alignBuilding}=require('../align-building-tools.js');
+const rotate=(p,a,c=[0,0])=>{const x=p[0]-c[0],y=p[1]-c[1];return[x*Math.cos(a)-y*Math.sin(a)+c[0],x*Math.sin(a)+y*Math.cos(a)+c[1]]};
+const angle=Math.PI/6,box=[[0,0],[4,0],[4,2],[0,2]].map(p=>rotate(p,angle,[10,10]));
+const hole=[[1,1],[2,1],[2,1.5],[1,1.5]].map(p=>rotate(p,angle,[10,10]));
+const aligned=alignBuilding(box,[hole],[[[0,10],[30,10]]]);
+assert.ok(Math.abs(aligned.rotation+angle)<1e-10);
+assert.ok(Math.abs(aligned.outer[0][1]-aligned.outer[1][1])<1e-10);
+assert.equal(aligned.holes.length,1);assert.equal(aligned.holes[0].length,4);
+assert.throws(()=>alignBuilding([[0,0],[1,0]],[],[[[0,0],[1,0]]]),/contorno/);
+console.log('✓ edificios rotan su eje largo paralelo al segmento de calle más cercano');
