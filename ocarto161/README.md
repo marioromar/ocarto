@@ -193,4 +193,4 @@ El ajuste a contornos curvos refina numéricamente la posición más cercana ent
 
 ## Ajuste entre áreas desplazadas (v65)
 
-«Ajustar bordes» toma en cuenta la posición del objeto además de las coordenadas locales de sus vértices. Así funciona correctamente aunque hayas movido las áreas por separado. Ver [VERSION-v165.md](VERSION-v165.md).
+«Ajustar bordes» toma en cuenta la posición del objeto además de las coordenadas locales de sus vértices. Así funciona correctamente aunque hayas movido las áreas por separado. Ver [VERSION-v166.md](VERSION-v166.md).
