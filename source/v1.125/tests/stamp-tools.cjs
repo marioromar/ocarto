@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {contains,pointInRing,ringFromLinePaths}=require('../stamp-tools.js');
+const paths=[[[0,0],[4,0]],[[4,4],[0,4]],[[4,0],[4,4]],[[0,4],[0,0]]];
+const ring=ringFromLinePaths(paths,1e-8);
+assert.equal(ring.length,4);
+assert.ok(pointInRing([2,2],ring));
+assert.ok(pointInRing([0,2],ring),'boundary points count as inside');
+assert.ok(!pointInRing([5,2],ring));
+assert.ok(contains([1,1],ring,[[[1.5,1.5],[2.5,1.5],[2.5,2.5],[1.5,2.5]]]));
+assert.ok(!contains([2,2],ring,[[[1.5,1.5],[2.5,1.5],[2.5,2.5],[1.5,2.5]]]));
+assert.deepEqual(ringFromLinePaths([[[0,0],[4,0],[4,4],[0,4],[0,0]]]),[[0,0],[4,0],[4,4],[0,4]]);
+assert.throws(()=>ringFromLinePaths([[[0,0],[1,0]],[[1,1],[0,1]]]),/conectado|cerrado/);
+console.log('✓ estampado: selección de recinto por área o contorno compuesto, límites y huecos');
