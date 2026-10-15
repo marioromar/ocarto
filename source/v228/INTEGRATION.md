@@ -1,0 +1,3 @@
+# Ocarto v228 integration
+
+Select a georeferenced editable area and load urban-width-tools.js and urban-width-ui.js after topology-tools.js and stamp-tools.js. The current HTML exposes mapPoint and symbolUnitScale to the UI through its existing lexical context. Add roadWidthBoostMm to drawFeature/drawStyledLine and add line_width_mm to GeoJSON export, as recorded in the full Ocarto v228 ZIP. The tool clips crossing street lines to the selected area, expands fully contained paved polygons, and insets fully contained building polygons. All changes are one undoable map action. Test with npm test.
