@@ -1,0 +1,6 @@
+const assert=require('assert');const {clipLineToArea,clipLineToPolygon,clipLineOutsidePolygon,validatePolygon}=require('../topology-tools.js');const square=[[0,0],[2,0],[2,2],[0,2]],r=clipLineToArea([[-1,1],[0.5,1],[1,1],[3,1]],square);assert.strictEqual(r.length,1);assert.deepStrictEqual(r[0],[[0,1],[0.5,1],[1,1],[2,1]]);
+assert.deepStrictEqual(clipLineOutsidePolygon([[-1,1],[3,1]],square),[[[-1,1],[0,1]],[[2,1],[3,1]]]);
+const hole=clipLineToPolygon([[-1,2],[5,2]],[[0,0],[4,0],[4,4],[0,4]],[[[1,1],[3,1],[3,3],[1,3]]]);assert.deepStrictEqual(hole,[[[0,2],[1,2]],[[3,2],[4,2]]]);
+const concave=[[0,0],[6,0],[6,6],[4,6],[4,2],[2,2],[2,6],[0,6]],split=clipLineToPolygon([[-1,4],[7,4]],concave);assert.equal(split.length,2);assert.deepStrictEqual(split,[[[0,4],[2,4]],[[4,4],[6,4]]]);
+assert.deepStrictEqual(clipLineToPolygon([[0,0],[4,0]],[[4,4],[4,0],[0,0],[0,4]]),[[[0,0],[4,0]]],'the polygon boundary is retained');assert.throws(()=>clipLineToPolygon([[0,0],[1,1]],[[0,0],[1,1],[2,2]]),/Área no válida/);assert.ok(split.every(x=>x.length>=2&&x.every(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]))));assert.ok(validatePolygon(concave).valid);
+console.log('✓ recorte de línea recta por áreas cóncavas y con huecos; conserva todas las partes');
