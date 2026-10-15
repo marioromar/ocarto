@@ -16,5 +16,6 @@ assert.equal(M.inPolygon(2,2,[[[0,0],[4,0],[4,4],[0,4]],[[1,1],[3,1],[3,3],[1,3]
 
 const one=M.train(cells,[examples[0]]);assert.equal(one.predict(cells[0]),'verde3');assert.equal(one.predict(cells.at(-1)),null,'single class must not paint unrelated cells');
 const manyGuideAreas=M.train(cells,Array.from({length:240},()=>examples[0]));assert.equal(manyGuideAreas.predict(cells[0]),'verde3','large OCAD guide layers are spatially indexed instead of rejected');assert.equal(manyGuideAreas.counts.verde3,40,'overlapping same-class guides do not multiply training cells');
+assert.deepEqual(M.missingLabels(manyGuideAreas,[examples[0],examples[1],{label:'no-es-clase',coordinates:[]}]),['blanco'],'reports guide classes with no valid LiDAR training cells');
 assert.deepEqual(M.fingerprint({ground_points:5,vegetation_points:0,canopy_max_above_ground_m:null,canopy_mean_above_ground_m:null,vegetation_return_fraction:0}),[0,0,0,0,0,0]);
 console.log('✓ v25 aprendizaje LiDAR: etiquetas supervisadas, filtro de muestras, predicción conservadora y vectorización');
