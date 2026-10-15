@@ -204,4 +204,8 @@ La eliminación múltiple rechaza los vértices creados al dividir una curva Bé
 
 El aprendizaje de vegetación acepta miles de áreas guía de un mapa OCAD. Usa un índice espacial para buscar las celdas LiDAR que caen dentro de cada área, en lugar de comparar cada área con toda la nube. El mapa OCAD puede aportar ejemplos sin ortofoto; la ortofoto georreferenciada añade color y textura cuando se dispone de ella. La interfaz avisa de las clases que no reunieron celdas LiDAR suficientes. Las propuestas siguen pendientes de revisión. Ver [VERSION-v167.md](VERSION-v167.md).
 
+## Lectura de símbolos OCAD 11 (Ocarto v1.68)
+
+El validador CRT puede leer ahora la tabla de símbolos de mapas OCAD 11, además de OCAD 12 y 2018. Esto permite comprobar y sugerir los códigos de capa contra un mapa de destino OCAD 11, sin modificarlo. Ver [VERSION-v168.md](VERSION-v168.md).
+
 Prueba con datos reales: `npm run test:vegetation-real -- /ruta/archivo.laz /ruta/mapa.ocd`. El informe resume puntos, celdas válidas, clases guía con muestras, áreas candidatas y conflictos.
