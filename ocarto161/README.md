@@ -190,3 +190,7 @@ En **Capas y LiDAR → Ajuste experimental de caminos**, selecciona una ortofoto
 ## Proyección refinada sobre curvas Bézier (v64)
 
 El ajuste a contornos curvos refina numéricamente la posición más cercana entre muestras y aplica la tolerancia sobre la distancia resultante. Ver [VERSION-v164.md](VERSION-v164.md).
+
+## Ajuste entre áreas desplazadas (v65)
+
+«Ajustar bordes» toma en cuenta la posición del objeto además de las coordenadas locales de sus vértices. Así funciona correctamente aunque hayas movido las áreas por separado. Ver [VERSION-v165.md](VERSION-v165.md).

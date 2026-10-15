@@ -14,3 +14,8 @@ const t=.503,u=1-t,exact={x:u*u*u*0+3*u*u*t*0+3*u*t*t*1000+t*t*t*1000,y:3*u*u*t*
 const refined=snapCurvedEdges([{x:exact.x,y:exact.y}],longCurve,.01,true,16);
 assert.strictEqual(refined.moved,1);assert(Math.abs(refined.points[0].x-exact.x)<1e-5);assert(Math.abs(refined.points[0].y-exact.y)<1e-5);
 console.log('✓ ajuste de vértices a segmentos Bézier con precisión refinada y metadatos conservados');
+const shifted=snapEdges([[0,0]],[[0,-1],[0,1]],2.1,{x:10,y:0},{x:12,y:0});
+assert.deepStrictEqual(shifted.points,[[2,0]]);assert.strictEqual(shifted.moved,1);
+const shiftedCurve=snapCurvedEdges([{x:1,y:2.25,vertexType:'corner',outTangent:{x:0,y:1}}],arc,.3,true,96,{x:500,y:-200},{x:500,y:-200});
+assert(Math.hypot(shiftedCurve.points[0].x-curved.points[0].x,shiftedCurve.points[0].y-curved.points[0].y)<1e-6);
+assert.throws(()=>snapEdges([[0,0]],[[0,0]],1,{x:NaN,y:0}),/tolerancia/);
