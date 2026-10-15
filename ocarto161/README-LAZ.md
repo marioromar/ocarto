@@ -8,7 +8,7 @@ La jerarquía puede incluir bloques de nivel grueso que cubran una zona mayor qu
 
 Para que el indicador de avance alcance el 100 % aunque el área solo cubra una parte del archivo, Ocarto recorre dos veces las páginas de jerarquía: primero suma los puntos de los bloques candidatos y luego los descomprime. No guarda la lista de bloques entre recorridos, por lo que mantiene acotada la memoria; las páginas pequeñas de jerarquía se leen de nuevo.
 
-Prueba real con el fixture de referencia de 100.000 puntos ellipsoid.copc.laz (se pasa su ruta a npm run test:copc-real): para un área de 10 × 10 m, se descomprimieron 78.619 puntos de dos bloques y se acumularon 112 puntos interiores. Son mediciones de ese fixture, no una garantía de ahorro para otros COPC.
+Prueba real con el fixture de referencia de 100.000 puntos ellipsoid.copc.laz (en una verificación puntual de lectura por área): para un área de 10 × 10 m, se descomprimieron 78.619 puntos de dos bloques y se acumularon 112 puntos interiores. Son mediciones de ese fixture, no una garantía de ahorro para otros COPC.
 
 ## Recorte de un mosaico al área seleccionada (v48)
 
@@ -49,10 +49,10 @@ Desde la v39, la copia comprimida se conserva en WASM y se reutiliza en los aná
 ```sh
 npm test
 npm run test:real -- ruta/al/archivo.laz
-npm run test:copc-real -- ruta/al/archivo.copc.laz
+npm run test:vegetation-real -- ruta/al/archivo.laz ruta/al/mapa.ocd
 ```
 
-La suite sintética comprueba lectura LAS, análisis por celdas, cancelación entre lotes y la API laz-perf simulada. `test:real` usa el WASM oficial, exige al menos 2 millones de puntos y recorre el flujo completo.
+La suite sintética comprueba lectura LAS, análisis por celdas, cancelación entre lotes y la API laz-perf simulada. `test:real` usa el WASM oficial, exige al menos 2 millones de puntos y calcula indicadores LiDAR. Si se añade un mapa OCAD, también entrena y vectoriza ejemplos revisables. La ortofoto es opcional.
 
 El 13 de octubre de 2026, el archivo `PNOA_2024_AND_279-4085_H30_NPC01.laz` (7.585.022 puntos, formato 8) terminó con 40.000 celdas, 6 teselas y 765 máximos locales en dos ejecuciones completas. La segunda ejecución tardó 7,1 s en cargar y 14,2 s hasta completar el análisis; el proceso alcanzó 197 MiB de RSS máximo. Son mediciones puntuales, no un límite de memoria o rendimiento garantizado.
 
