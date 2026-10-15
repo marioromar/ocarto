@@ -27,14 +27,20 @@ function fromJSON(data){
  return makeModel({format:'ocarto-vegetation-model',version:1,featureNames:[...featureNames],sigma:[...data.sigma],thresholds,samples,counts,conflicts});
 }
 function train(rows,polygons,options={}){
- if(!Array.isArray(rows)||!Array.isArray(polygons)||rows.length>150000||polygons.length>200)throw Error('Datos de entrenamiento inválidos');
+ if(!Array.isArray(rows)||!Array.isArray(polygons)||rows.length>150000||polygons.length>20000)throw Error('Datos de entrenamiento inválidos');
  const perLabelMax=Number(options.maxPerLabel??280);if(!Number.isInteger(perLabelMax)||perLabelMax<10||perLabelMax>2000)throw Error('Límite de muestras inválido');
- const byLabel=new Map(),counts=new Map(),conflicts=new Set(),selected=new Map();
+ const byLabel=new Map(),counts=new Map(),conflicts=new Set(),selected=new Map(),validRows=[];let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+ for(let i=0;i<rows.length;i++){const r=rows[i];if(!Number.isFinite(r?.x)||!Number.isFinite(r?.y))continue;validRows.push(i);minX=Math.min(minX,r.x);maxX=Math.max(maxX,r.x);minY=Math.min(minY,r.y);maxY=Math.max(maxY,r.y)}
+ const gridSide=Math.min(256,Math.max(8,Math.ceil(Math.sqrt(validRows.length)))),binWidth=Math.max((maxX-minX)/gridSide,1e-9),binHeight=Math.max((maxY-minY)/gridSide,1e-9),bins=new Map();
+ for(const i of validRows){const r=rows[i],bx=Math.min(gridSide-1,Math.floor((r.x-minX)/binWidth)),by=Math.min(gridSide-1,Math.floor((r.y-minY)/binHeight)),key=bx+','+by;let bucket=bins.get(key);if(!bucket)bins.set(key,bucket=[]);bucket.push(i)}
+ let totalVertices=0;
  for(const poly of polygons){const label=String(poly.label||'').toLowerCase();if(!labels.includes(label))throw Error('Etiqueta de vegetación no reconocida');const rings=poly.coordinates;
   if(!Array.isArray(rings)||!rings.length)throw Error('Polígono de aprendizaje inválido');
   let vertexCount=0,x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
-  for(const ring of rings){if(!Array.isArray(ring)||ring.length<3)throw Error('Polígono de aprendizaje inválido');vertexCount+=ring.length;if(vertexCount>250000)throw Error('Polígono de aprendizaje demasiado complejo');for(const point of ring){if(!Array.isArray(point)||point.length<2||!Number.isFinite(point[0])||!Number.isFinite(point[1]))throw Error('Polígono de aprendizaje inválido');if(ring===rings[0]){x0=Math.min(x0,point[0]);x1=Math.max(x1,point[0]);y0=Math.min(y0,point[1]);y1=Math.max(y1,point[1]);}}}
-  for(let i=0;i<rows.length;i++){const r=rows[i];if(!Number.isFinite(r?.x)||!Number.isFinite(r?.y)||r.x<x0||r.x>x1||r.y<y0||r.y>y1)continue;if(!inPolygon(r.x,r.y,rings))continue;const fp=fingerprint(r);if(!fp)continue;const prev=selected.get(i);if(prev&&prev.label!==label){conflicts.add(i);continue}selected.set(i,{label,fp});}
+  for(const ring of rings){if(!Array.isArray(ring)||ring.length<3)throw Error('Polígono de aprendizaje inválido');vertexCount+=ring.length;totalVertices+=ring.length;if(vertexCount>250000||totalVertices>2000000)throw Error('Polígono de aprendizaje demasiado complejo');for(const point of ring){if(!Array.isArray(point)||point.length<2||!Number.isFinite(point[0])||!Number.isFinite(point[1]))throw Error('Polígono de aprendizaje inválido');if(ring===rings[0]){x0=Math.min(x0,point[0]);x1=Math.max(x1,point[0]);y0=Math.min(y0,point[1]);y1=Math.max(y1,point[1]);}}}
+  if(x1<minX||x0>maxX||y1<minY||y0>maxY)continue;
+  const bx0=Math.max(0,Math.min(gridSide-1,Math.floor((x0-minX)/binWidth))),bx1=Math.max(0,Math.min(gridSide-1,Math.floor((x1-minX)/binWidth))),by0=Math.max(0,Math.min(gridSide-1,Math.floor((y0-minY)/binHeight))),by1=Math.max(0,Math.min(gridSide-1,Math.floor((y1-minY)/binHeight)));
+  for(let bx=bx0;bx<=bx1;bx++)for(let by=by0;by<=by1;by++)for(const i of bins.get(bx+','+by)||[]){const r=rows[i];if(r.x<x0||r.x>x1||r.y<y0||r.y>y1||!inPolygon(r.x,r.y,rings))continue;const fp=fingerprint(r);if(!fp)continue;const prev=selected.get(i);if(prev&&prev.label!==label){conflicts.add(i);continue}selected.set(i,{label,fp});}
  }
  for(const [i,s] of selected){if(conflicts.has(i))continue;counts.set(s.label,(counts.get(s.label)||0)+1);if(!byLabel.has(s.label))byLabel.set(s.label,[]);byLabel.get(s.label).push(s.fp)}
  if([...counts.values()].reduce((a,b)=>a+b,0)<5)throw Error('Muestras insuficientes: dibuja áreas sobre celdas LiDAR con datos de suelo y vegetación');
