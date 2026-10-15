@@ -45,7 +45,7 @@
         next.push(f);
       }
       if(!counts.roads&&!counts.paved&&!counts.buildings)throw Error('No hay calles ni edificios compatibles dentro de esta zona');
-      S.features=next;recordMapEdit(before);renderVectorLayers();draw();toast(`${counts.roads} tramos de calle ensanchados · ${counts.paved} calles de área ampliadas · ${counts.buildings} edificios estrechados${counts.skipped?` · ${counts.skipped} omitidos por geometría compleja`:''}. Deshacer revierte el ajuste`);
+      S.features=next;const zoneIndex=S.features.indexOf(zone);S.selection=zoneIndex>=0?{collection:'feature',index:zoneIndex}:null;S.multiSelection=[];S.selectedVertices=[];recordMapEdit(before);renderVectorLayers();draw();toast(`${counts.roads} tramos de calle ensanchados · ${counts.paved} calles de área ampliadas · ${counts.buildings} edificios estrechados${counts.skipped?` · ${counts.skipped} omitidos por geometría compleja`:''}. Deshacer revierte el ajuste`);
     }catch(err){toast('Ajuste urbano: '+err.message)}
   };
 })();
