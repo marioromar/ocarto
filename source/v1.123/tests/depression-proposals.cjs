@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {detect}=require('../depression-proposals.js');
+const cell=1, rows=[];
+for(let j=0;j<7;j++)for(let i=0;i<7;i++)rows.push([i+.5,j+.5,(i===3&&j===3)?0:1,1,'observado']);
+const found=detect(rows,cell,{minRelief:.5,radius:2});
+assert.equal(found.features.length,1);
+assert.deepEqual(found.features[0].geometry.coordinates,[3.5,3.5]);
+assert.equal(found.features[0].properties.review_required,true);
+assert.equal(found.features[0].properties.auto_accept,false);
+assert.equal(detect(rows.filter(r=>!(r[0]===3.5&&r[1]===1.5)),cell,{minRelief:.5,radius:2}).features.length,0,'missing ring must not create false candidates');
+const plateau=rows.map(r=>r[0]>=3.5&&r[0]<=4.5&&r[1]>=3.5&&r[1]<=4.5?[r[0],r[1],0,1,'observado']:r);
+assert.equal(detect(plateau,cell,{minRelief:.5,radius:2}).features.length,0,'flat-bottom plateaus are not emitted as duplicate points');
+assert.throws(()=>detect(rows,0),/inválidos/);
+assert.throws(()=>detect(rows,cell,{radius:9}),/no válidos/);
+console.log('✓ depression proposals');
