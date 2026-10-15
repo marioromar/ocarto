@@ -1,20 +1,13 @@
 {
   "name": "ocarto-lidar-worker",
   "private": true,
-  "version": "1.0.66",
+  "version": "1.0.67",
   "scripts": {
     "vendor:laz-perf": "node scripts/vendor-laz-perf.cjs",
     "test": "node scripts/test-all.cjs",
-    "test:real": "node tests/laz-perf-real.cjs",
-    "test:terrain-real": "node tests/terrain-real.cjs",
-    "test:terrain-model-real": "node tests/terrain-model-real.cjs",
-    "test:valley-real": "node tests/lidar-v23-real.cjs",
-    "test:vegetation-real": "node tests/lidar-v24-real.cjs",
-    "test:lidar-real": "node tests/lidar-v26-real.cjs",
-    "test:browser": "node tests/recovery-browser.cjs",
-    "test:copc-real": "node tests/copc-area-real.cjs",
-    "test:mosaic-real": "node tests/lidar-mosaic-real.cjs",
-    "test:boundary-real": "node tests/laz-boundary-check.cjs"
+    "test:real": "node scripts/lidar-real-workflow.cjs",
+    "test:vegetation-real": "node scripts/lidar-real-workflow.cjs",
+    "test:browser": "node tests/recovery-browser.cjs"
   },
   "dependencies": {
     "geotiff": "^3.0.5",
