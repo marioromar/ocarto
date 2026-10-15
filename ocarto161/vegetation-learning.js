@@ -53,5 +53,6 @@ function train(rows,polygons,options={}){
  const modelData={format:'ocarto-vegetation-model',version:1,featureNames:[...featureNames],sigma,thresholds,samples,counts:Object.fromEntries(counts),conflicts:conflicts.size};
  return makeModel(modelData);
 }
-return {train,fromJSON,labels,fingerprint,inPolygon};
+function missingLabels(model,polygons){const trained=new Set(Array.isArray(model?.labels)?model.labels:[]);return[...new Set((Array.isArray(polygons)?polygons:[]).map(p=>String(p?.label||'').toLowerCase()).filter(label=>labels.includes(label)))].filter(label=>!trained.has(label))}
+return {train,fromJSON,labels,fingerprint,inPolygon,missingLabels};
 });
