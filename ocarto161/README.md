@@ -142,7 +142,7 @@ La versión actual lee DXF ASCII y convierte `POINT`, `LINE`, `LWPOLYLINE`, `POL
 
 
 ## Versión v16: rejilla inicial de terreno
-En «LiDAR e IA», importa LAS/LAZ, ajusta «Tamaño de celda XY» y «Puntos mínimos por celda», pulsa «Preparar rejilla de terreno (suelo)» y exporta el CSV. Utiliza clase 2 y Z mínimo por celda. No sustituye un MDT ni genera curvas de nivel. `npm run test:terrain-real -- ruta/al/archivo.laz` permite comprobar la nube real.
+En «LiDAR e IA», importa LAS/LAZ, ajusta «Tamaño de celda XY» y «Puntos mínimos por celda», pulsa «Preparar rejilla de terreno (suelo)» y exporta el CSV. Utiliza clase 2 y Z mínimo por celda. No sustituye un MDT ni genera curvas de nivel. La suite sintética comprueba la rejilla; para analizar un LAZ real, usa `npm run test:real -- ruta/al/archivo.laz`.
 
 
 ## Ocarto v23: detección y WMS
@@ -153,7 +153,7 @@ Ver [VERSION-v23.md](VERSION-v23.md). Incorporados análisis preliminares de eje
 
 - Una vez analizada una nube LAS/LAZ con indicadores de vegetación, pulsa **«Vectorizar coberturas LiDAR → GeoJSON»**. Ocarto genera áreas fusionadas para revisar, con agujeros interiores y categorías estructurales, nunca transitabilidad ni símbolos definitivos.
 - Para preparar una **propuesta** de ajuste de un camino: añade y georreferencia una ortofoto local, define el CRS UTM métrico, selecciona una línea existente (dibujada o importada), elige el color aproximado de la superficie y pulsa **«Proponer ajuste sobre ortofoto»**. El original queda intacto. Ajuste preliminar basado en color y continuidad, NO identifica caminos autónomamente. Servicios WMS solo como plantillas visuales por restricciones CORS y formatos.
-- Pruebas: `npm test` y `node tests/lidar-v24-real.cjs /ruta/fichero.laz`. Detalles en `VERSION-v24.md`.
+- Pruebas: `npm test` y `npm run test:vegetation-real -- /ruta/fichero.laz /ruta/mapa.ocd`. La segunda orden decodifica el LAZ y prueba el aprendizaje con áreas del OCAD. Detalles en `VERSION-v24.md`.
 
 ## v25: aprendizaje de vegetación mediante ejemplos dibujados
 
@@ -191,6 +191,17 @@ En **Capas y LiDAR → Ajuste experimental de caminos**, selecciona una ortofoto
 
 El ajuste a contornos curvos refina numéricamente la posición más cercana entre muestras y aplica la tolerancia sobre la distancia resultante. Ver [VERSION-v164.md](VERSION-v164.md).
 
-## Ajuste entre áreas desplazadas (v65)
+## Ajuste entre áreas desplazadas (Ocarto v1.65)
 
 «Ajustar bordes» toma en cuenta la posición del objeto además de las coordenadas locales de sus vértices. Así funciona correctamente aunque hayas movido las áreas por separado. Ver [VERSION-v166.md](VERSION-v166.md).
+
+
+## Eliminación segura de vértices Bézier (Ocarto v1.66)
+
+La eliminación múltiple rechaza los vértices creados al dividir una curva Bézier, para poder quitarlos uno a uno y restaurar los manejadores originales. Ver [VERSION-v166.md](VERSION-v166.md).
+
+## Aprendizaje LiDAR con mapas OCAD grandes (Ocarto v1.67)
+
+El aprendizaje de vegetación acepta miles de áreas guía de un mapa OCAD. Usa un índice espacial para buscar las celdas LiDAR que caen dentro de cada área, en lugar de comparar cada área con toda la nube. El mapa OCAD puede aportar ejemplos sin ortofoto; la ortofoto georreferenciada añade color y textura cuando se dispone de ella. Las propuestas siguen pendientes de revisión. Ver [VERSION-v167.md](VERSION-v167.md).
+
+Prueba con datos reales: `npm run test:vegetation-real -- /ruta/archivo.laz /ruta/mapa.ocd`. El informe resume puntos, celdas válidas, clases guía con muestras, áreas candidatas y conflictos.
