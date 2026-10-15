@@ -48,7 +48,7 @@ async function main(){
    const{parsed,guide}=collectOcadGuides(path.resolve(mapFile)),model=Learn.train(rows,guide.polygons),learnedCells=rows.filter(r=>model.predict(r)).length;
    const candidates=Vector.vectorize(rows,cell,{minArea:100,minWidth:4,maxFeatures:10000,labeler:model.predict,includeUncertain:true});
    result.ocad={version:parsed.version,crs:parsed.setup.crs,georeferenced:parsed.setup.georeferenced,areaObjects:parsed.areaCount,guideAreas:guide.matchedFeatures,guideCounts:guide.labelCounts};
-   result.training={labels:model.labels,trainingCells:model.counts,prototypes:model.prototypes,conflicts:model.conflicts,predictedCells:learnedCells,candidateAreas:candidates.features.length,candidateCells:candidates.properties.counts,reviewRequired:true,orthophotoRequired:false};
+   result.training={labels:model.labels,trainingCells:model.counts,untrainedGuideLabels:Learn.missingLabels(model,guide.polygons),prototypes:model.prototypes,conflicts:model.conflicts,predictedCells:learnedCells,candidateAreas:candidates.features.length,candidateCells:candidates.properties.counts,reviewRequired:true,orthophotoRequired:false};
   }
   console.log(JSON.stringify(result,null,2));
  }finally{if(decoder)try{decoder.delete()}catch(_){}module._free(record);module._free(input)}
