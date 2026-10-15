@@ -15,6 +15,8 @@
       panel.append(heading); return panel;
     };
     const oldRightChildren=Array.from(right.children);
+    const oldLeftChildren=Array.from(left.children);
+    const toolGrid=left.querySelector('.tool-grid');
     const symbolPanel = makePanel('symbolsWorkspace', 'Símbolos');
     const layersPanel = makePanel('layersWorkspace', 'Capas');
     const propsPanel = makePanel('propertiesWorkspace', 'Propiedades');
@@ -35,12 +37,10 @@
     right.replaceChildren(document.getElementById('closeMobilePanels') || document.createElement('span'), tabs, ...panels);
     panels.forEach(p=>right.append(p));
 
-    const toolGrid=left.querySelector('.tool-grid');
-    if(toolGrid){ left.replaceChildren(toolGrid); toolGrid.setAttribute('aria-label','Herramientas de dibujo'); }
     const move=(node,panel)=>{if(node&&panel)panel.append(node)};
     // Panel de símbolos
     ['#symbolSearch','#symbolTypeFilter','#symbolList','#symbolContextMenu','#activeSymbolLabel','#symbolStatusSelect','#symbolScaleHint'].forEach(sel=>{
-      const node=left.querySelector(sel); if(node){
+      const node=document.querySelector(sel); if(node){
         let holder=node;
         if(node.id==='symbolSearch'||node.id==='symbolTypeFilter') holder=node.closest('.symbol-controls');
         if(node.id==='symbolStatusSelect') holder=node.closest('label');
@@ -51,7 +51,8 @@
     // Conserva la tarjeta de preparación y el editor de vértices en Propiedades.
     move(document.getElementById('mapPreparationCard'),propsPanel);
     move(document.getElementById('vertexEditor'),propsPanel);
-    left.querySelectorAll(':scope > *').forEach(node=>{if(node!==toolGrid)propsPanel.append(node)});
+    oldLeftChildren.forEach(node=>{if(node!==toolGrid&&node.parentElement===left)propsPanel.append(node)});
+    if(toolGrid){left.replaceChildren(toolGrid);toolGrid.setAttribute('aria-label','Herramientas de dibujo')}
 
     // Agrupa las secciones que ya existían en la columna de datos.
     oldRightChildren.forEach(node=>{
@@ -68,6 +69,8 @@
     const ensureMenu=(label)=>{let d=findMenu(label);if(d)return d;d=document.createElement('details');const s=document.createElement('summary');s.textContent=label;const box=document.createElement('div');box.className='oc-dropdown';d.append(s,box);menu.append(d);return d};
     const menuBox=(label)=>ensureMenu(label).querySelector('.oc-dropdown');
     const editBox=menuBox('EDICIÓN'), viewBox=menuBox('VER'), toolsBox=menuBox('HERRAMIENTAS'), fileBox=menuBox('ARCHIVO');
+    ['#extendDistance','#joinSelectedLines','#createParallel'].forEach(sel=>{const node=document.querySelector(sel);if(node)editBox.append(node.parentElement)});
+    ['ARCHIVO','EDICIÓN','VER','HERRAMIENTAS','LIDAR','CONFIGURACIÓN'].forEach(label=>{const item=findMenu(label);if(item)menu.append(item)});
     const keep=new Set(['undo','redo','cutSelected','copySelected','pasteSelected','finishDraft','deleteSelected','zoomIn','zoomOut']);
     const category=(el)=>{
       const id=el.id||'', text=(el.innerText||el.value||el.title||'').toLowerCase();
