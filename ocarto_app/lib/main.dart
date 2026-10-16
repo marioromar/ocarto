@@ -606,8 +606,67 @@ class _OcartoHomeState extends State<OcartoHome> {
       _dragHandleSide = 0; });
   }
 
+  MapElement? get _selectedEditable {
+    final index = _selectedElement;
+    final vertex = _selectedVertex;
+    if (tool != MapTool.select || index == null || vertex == null ||
+        index < 0 || index >= elements.length) return null;
+    final element = elements[index];
+    if (element.isGpsTrack || element.vertices.length <= vertex ||
+        element.tool == MapTool.point || vertex < 0) return null;
+    return element;
+  }
+
+  void _enableBezierHandles() {
+    final element = _selectedEditable;
+    final vertex = _selectedVertex;
+    if (element == null || vertex == null) return;
+    final points = element.vertices
+        .map((v) => VectorVertex(v.dx, v.dy)).toList();
+    setState(() {
+      element.bezier[vertex] = BezierControls.initialize(
+          points, vertex, closed: element.tool == MapTool.area);
+      _dragHandleSide = 0;
+    });
+    unawaited(_autosave().catchError((Object error) {
+      if (mounted) _snack('Error guardando tiradores: $error');
+    }));
+  }
+
+  void _changeBezierMode({required bool corner}) {
+    final element = _selectedEditable;
+    final vertex = _selectedVertex;
+    if (element == null || vertex == null) return;
+    setState(() {
+      element.bezier[vertex] = corner ? const BezierControls(corner: true) : null;
+      _dragHandleSide = 0;
+    });
+    unawaited(_autosave().catchError((Object error) {
+      if (mounted) _snack('Error guardando vértice: $error');
+    }));
+  }
+
   void _onMapDragStart(Offset position, Size size) {
     if (tool != MapTool.select || _recording) return;
+    // A handle belongs to the selected vertex, so test its hit target
+    // BEFORE selecting the nearest anchor.
+    final element = _selectedEditable;
+    final vertex = _selectedVertex;
+    if (element != null && vertex != null) {
+      final control = element.bezier[vertex];
+      if (control != null && !control.corner) {
+        for (final side in [-1, 1]) {
+          final p = side < 0 ? control.incoming : control.outgoing;
+          if (p == null) continue;
+          final screen = _screenPosition(Offset(p.x, p.y), size, element.geographic);
+          if (screen != null && (screen - position).distance <= 15) {
+            setState(() { _dragHandleSide = side; _movingVertex = true; });
+            return;
+          }
+        }
+      }
+    }
+    _dragHandleSide = 0;
     _selectAt(position, size);
     final index = _selectedElement;
     setState(() => _movingVertex = index != null && _selectedVertex != null);
@@ -628,7 +687,24 @@ class _OcartoHomeState extends State<OcartoHome> {
       final stored = _storePosition(position, size, element.geographic);
       setState(() {
         if (element.vertices.isNotEmpty && vertex < element.vertices.length) {
-          element.vertices[vertex] = stored;
+          if (_dragHandleSide != 0) {
+            final anchor = element.vertices[vertex];
+            final old = element.bezier[vertex];
+            final controls = old ?? const BezierControls();
+            element.bezier[vertex] = controls.moveHandle(
+              vertex: VectorVertex(anchor.dx, anchor.dy),
+              destination: VectorVertex(stored.dx, stored.dy),
+              outgoingSide: _dragHandleSide > 0,
+            );
+          } else {
+            final previous = element.vertices[vertex];
+            element.vertices[vertex] = stored;
+            final control = element.bezier[vertex];
+            if (control != null) {
+              element.bezier[vertex] = control.translated(
+                  stored.dx - previous.dx, stored.dy - previous.dy);
+            }
+          }
         } else if (element.tool == MapTool.point) {
           element.position = stored;
         }
