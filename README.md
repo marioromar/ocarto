@@ -1,10 +1,10 @@
 # Ocarto — editor cartográfico de orientación
 
-**Editor web: v249 con reparación LiDAR v258 · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
+**Editor profesional web: v259 (GPS + LiDAR v258) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
 
 ## Descargar la aplicación
 
-- **[Ocarto v249 — ZIP de la aplicación](versions/ocarto-v249-final.zip)**
+- **[Ocarto v259 — ZIP de la rama con GPS y LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v259.zip)**
 - **[Código y versiones de Ocarto](source/v234/index.html)**
 - **[Cambios y comprobaciones OCAD v249](source/v234/OCAD-v249.md)**
 
@@ -14,7 +14,7 @@ Para usar Ocarto desde un ordenador, descarga el ZIP, descomprímelo y abre el a
 
 En **Archivo → Revisar símbolos y tintas OCAD…** se puede abrir un archivo de Bobadilla y comprobar en modo **solo lectura** símbolos, colores CMYK y orden provisional de impresión. La auditoría permite descargar un informe JSON, y **no sustituye los símbolos, colores ni las prioridades actuales**. Falta verificar el resultado visualmente contra OCAD 2018 antes de aprobar nuevos predeterminados.
 
-El desarrollo sigue en la rama `ocarto-v249`, sincronizada con `main`. La versión del ZIP se construye a partir de los mismos archivos fuente del editor.
+La rama `ocarto-v259` incorpora el GPS al editor profesional sin sustituir sus herramientas. El ZIP enlazado es el archivo de esta misma rama GitHub.
 
 ## LiDAR v258 · Volver a poder importar LAS/LAZ
 
@@ -41,3 +41,14 @@ Se conservan los modos Simétricos, Alineados y Libres, la creación/edición de
 - [ZIP correspondiente exactamente a la rama v257](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v257.zip)
 
 El archivo ZIP corresponde al código fuente. El **paquete ejecutable Windows** solo puede confirmarse cuando GitHub Actions publica el resultado ocarto-windows-gps tras superar las pruebas y la compilación build-windows. La precisión práctica del GPS y el uso cartográfico profesional aún deben validarse sobre mapas reales.
+
+## GPS Bluetooth en el editor cartográfico profesional (v259)
+
+El menú independiente **GPS** se ha añadido a `source/v234/index.html`: conexión a receptores Bluetooth clásicos emparejados por COM mediante **Web Serial** (Chromium/Edge en contexto seguro), coordenadas NMEA GGA/RMC en directo, centrado en posición, grabación en el símbolo lineal predeterminado o elegido, copia local periódica y exportación de tracks originales GPX. Para dibujar el track directamente sobre el mapa, Ocarto necesita **plantilla georreferenciada y CRS válido**, y convierte coordenadas WGS84 al CRS del mapa. Sin georreferenciación evita crear geometrías mal alineadas.
+
+- [Manual GPS y límites de v259](source/v234/GPS-WINDOWS-v259.md)
+- [Código GPS Web Serial](source/v234/gps-webserial.js)
+- [Pruebas automáticas del GPS navegador](https://github.com/marioromar/ocarto/actions/workflows/gps-webserial.yml)
+- [ZIP v259 de exactamente esta rama](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v259.zip)
+
+Para usar el editor web en Windows, descomprime el ZIP y ejecuta `ABRIR-OCARTO.bat`: utiliza un servidor local y abre la app en el navegador compatible. El prototipo Flutter de Windows usa su **propia conexión COM nativa**, incluida en el código `ocarto_app`; no es la misma interfaz que el editor profesional. La comunicación física Bluetooth debe probarse con un receptor real.
