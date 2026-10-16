@@ -38,13 +38,13 @@ function makeWorker() {
  vm.runInContext(workerSource,context,{filename:'lidar-worker.js',timeout:20000});
  let id=0;
  async function send(data) {await context.onmessage({data});}
- async function load(name) {
+ async function load(name,sessionId) {
   const bytes=fs.readFileSync(path.join(root,'tests/fixtures',name));
-  return loadBytes(bytes);
+  return loadBytes(bytes,sessionId);
  }
- async function loadBytes(bytes) {
+ async function loadBytes(bytes,sessionId) {
   const id1=++id;
-  await send({type:'load-start',jobId:id1,fileSize:bytes.length});
+  await send({type:'load-start',jobId:id1,fileSize:bytes.length,sessionId});
   assert.equal(messages.at(-1).type,'load-ready');
   const data=Uint8Array.from(bytes);
   await send({type:'load-chunk',jobId:id1,sequence:1,offset:0,chunk:data});
@@ -278,4 +278,49 @@ test('una selección de 9 km² admite sesión con ventana pequeña de 0,5m',asyn
  const error=w.messages.findLast(m=>m.type==='error');
  assert(error);
  assert.match(error.message,/millón de celdas/);
+});
+
+test('mosaico LAZ solo lee cabecera en carga y descomprime al calcular el área',async()=>{
+ const w=makeWorker(),sessionId=273;
+ await w.send({type:'area-start',sessionId,terrainCell:4,vegetationCell:4});
+ const before=w.messages.length;
+ const loaded=await w.load('1815.laz',sessionId);
+ assert.equal(loaded.headerOnly,true);
+ assert.equal(loaded.preview.length,0);
+ assert(loaded.count>0);
+ assert(loaded.bounds.maxX>=loaded.bounds.minX);
+ assert.equal(w.messages.slice(before).filter(m=>m.stage==='decompress').length,0,
+   'El mosaico no debe descomprimir LAZ para generar una vista previa descartable');
+ assert.equal(w.messages.slice(before).filter(m=>m.stage==='read').length,0);
+ await w.send({type:'area-add',sessionId,jobId:275});
+ const tile=w.messages.findLast(m=>m.type==='area-tile-done');
+ assert(tile,'El segundo paso debe analizar la nube');
+ assert.equal(tile.points,loaded.count);
+ assert.equal(w.messages.filter(m=>m.stage==='area').length>0,true,
+   'La descompresión ocurre únicamente al procesar el área');
+ await w.send({type:'area-finish',sessionId,jobId:276});
+ const area=w.messages.findLast(m=>m.type==='area-finished');
+ assert(area&&area.points===loaded.count);
+});
+
+test('carga LiDAR independiente mantiene la vista previa tras optimizar mosaicos',async()=>{
+ const w=makeWorker(),loaded=await w.load('1815.laz');
+ assert.equal(loaded.headerOnly,undefined);
+ assert(loaded.preview.length>3);
+ assert(w.messages.some(m=>m.stage==='decompress'));
+});
+
+test('mosaico LAS omite la lectura preliminar aun con más de un archivo',async()=>{
+ const w=makeWorker(),sessionId=277;
+ await w.send({type:'area-start',sessionId,terrainCell:4,vegetationCell:4});
+ for(let i=0;i<2;i++){
+   const before=w.messages.length;
+   const loaded=await w.load('1815.las',sessionId);
+   assert.equal(loaded.headerOnly,true);
+   assert(!w.messages.slice(before).some(m=>m.type==='progress'));
+   await w.send({type:'area-add',sessionId,jobId:278+i});
+ }
+ await w.send({type:'area-finish',sessionId,jobId:280});
+ const area=w.messages.findLast(m=>m.type==='area-finished');
+ assert(area&&area.tiles===2);
 });
