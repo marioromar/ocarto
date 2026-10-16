@@ -1166,6 +1166,32 @@ class _OcartoHomeState extends State<OcartoHome> {
               _toolButton(MapTool.point, Icons.place, 'Punto'),
               _toolButton(MapTool.line, Icons.polyline, 'Línea'),
               _toolButton(MapTool.area, Icons.pentagon_outlined, 'Área'),
+              if (_selectedEditable != null) ...[
+                const Divider(height: 16),
+                Text('Vértice ${_selectedVertex! + 1} · edición Bézier',
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                FilledButton.tonalIcon(
+                  key: const ValueKey('enable-bezier-handles'),
+                  onPressed: _enableBezierHandles,
+                  icon: const Icon(Icons.tune),
+                  label: const Text('Editar tiradores Bézier'),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey('bezier-corner'),
+                  onPressed: () => _changeBezierMode(corner: true),
+                  icon: const Icon(Icons.change_history),
+                  label: const Text('Vértice de esquina'),
+                ),
+                TextButton.icon(
+                  key: const ValueKey('bezier-auto'),
+                  onPressed: () => _changeBezierMode(corner: false),
+                  icon: const Icon(Icons.auto_fix_high),
+                  label: const Text('Suavizado automático'),
+                ),
+                const Text('Arrastra un tirador para modificar la curva. El opuesto se refleja para conservar la tangente.',
+                    style: TextStyle(fontSize: 11.5, color: Color(0xffabc4ba))),
+              ],
               const SizedBox(height: 5),
               if (_draft != null) ...[
                 Text('Trazado: ${_draft!.vertices.length} ${_draft!.vertices.length == 1 ? 'vértice' : 'vértices'}',
@@ -1235,6 +1261,7 @@ class _OcartoHomeState extends State<OcartoHome> {
           onPanEnd: (_) {
             if (_movingVertex) {
               _movingVertex = false;
+              _dragHandleSide = 0;
               unawaited(_autosave().catchError((Object error) => _snack('Error guardando cambios: $error')));
             }
           },
@@ -1251,6 +1278,7 @@ class _OcartoHomeState extends State<OcartoHome> {
               metersPerPixel: _metersPerPixel,
               selectedElement: _selectedElement,
               selectedVertex: _selectedVertex,
+              selectedHandleSide: _dragHandleSide,
               rasterImage: _rasterImage,
               raster: _geoRaster,
               rasterWidth: _rasterWidth,
@@ -1281,6 +1309,7 @@ class MapPainter extends CustomPainter {
     required this.metersPerPixel,
     this.selectedElement,
     this.selectedVertex,
+    this.selectedHandleSide = 0,
     this.rasterImage,
     this.raster,
     this.rasterWidth = 0,
@@ -1297,6 +1326,7 @@ class MapPainter extends CustomPainter {
   final double metersPerPixel;
   final int? selectedElement;
   final int? selectedVertex;
+  final int selectedHandleSide;
   final ui.Image? rasterImage;
   final GeoRasterReference? raster;
   final int rasterWidth, rasterHeight;
