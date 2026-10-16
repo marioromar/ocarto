@@ -239,3 +239,43 @@ test('LAS 1.4 formato 6 obtiene suelo y vegetación de las nuevas posiciones',as
  assert.equal(pair.vegetation_points,1);
  assert.equal(pair.canopy_max_above_ground_m,3);
 });
+
+test('dos ventanas de un área admiten LAS 0,5m sin duplicar puntos en su frontera',async()=>{
+ const rectangle={rings:[[[990,1990],[1020,1990],[1020,2020],[990,2020]]]};
+ const windows=[{minX:990,maxX:1005,minY:1990,maxY:2020},
+   {minX:1005,maxX:1020,minY:1990,maxY:2020}];
+ const totals=[];
+ for(let k=0;k<windows.length;k++){
+   const w=makeWorker(),sessionId=850+k;
+   await w.send({type:'area-start',sessionId,terrainCell:.5,vegetationCell:1,
+     aoi:rectangle,window:windows[k]});
+   const ready=w.messages.findLast(m=>m.type==='area-ready');
+   assert(ready,'No se creó la tesela '+k);
+   assert(ready.capacity.terrainCells<1000000);
+   await w.loadBytes(syntheticLas());
+   await w.send({type:'area-add',sessionId,jobId:900+k});
+   const tile=w.messages.findLast(m=>m.jobId===900+k&&m.type==='area-tile-done');
+   assert(tile&&!tile.skipped);
+   await w.send({type:'area-finish',sessionId,jobId:920+k});
+   const result=w.messages.findLast(m=>m.type==='area-finished');
+   assert(result);
+   assert.equal(result.window.minX,windows[k].minX);
+   totals.push(result.points);
+ }
+ assert.deepEqual(totals,[3,1]);
+ assert.equal(totals.reduce((a,b)=>a+b,0),4);
+});
+
+test('una selección de 9 km² admite sesión con ventana pequeña de 0,5m',async()=>{
+ const w=makeWorker(),aoi={rings:[[[0,0],[3000,0],[3000,3000],[0,3000]]]};
+ await w.send({type:'area-start',sessionId:990,terrainCell:.5,vegetationCell:1,aoi,
+   window:{minX:500,maxX:800,minY:500,maxY:800}});
+ const ready=w.messages.findLast(m=>m.type==='area-ready');
+ assert(ready);
+ assert(ready.capacity.terrainCells<1000000);
+ await w.send({type:'area-abort',sessionId:990});
+ await w.send({type:'area-start',sessionId:991,terrainCell:.5,vegetationCell:1,aoi});
+ const error=w.messages.findLast(m=>m.type==='error');
+ assert(error);
+ assert.match(error.message,/millón de celdas/);
+});
