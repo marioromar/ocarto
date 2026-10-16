@@ -24,9 +24,10 @@ jobs:
         run: |
           node --check source/v234/lidar-worker.js
           node --check source/v234/lidar-tile-plan.js
+          node --check source/v234/lidar-tile-export.js
           node --check source/v234/lidar-source-index.js
       - name: Test real LAS / LAZ decoder
-        run: node --test source/v234/tests/lidar-worker.test.cjs source/v234/tests/lidar-reader-integration.test.cjs source/v234/tests/lidar-tiling.test.cjs source/v234/tests/lidar-source-index.test.cjs
+        run: node --test source/v234/tests/lidar-worker.test.cjs source/v234/tests/lidar-reader-integration.test.cjs source/v234/tests/lidar-tiling.test.cjs source/v234/tests/lidar-export.test.cjs source/v234/tests/lidar-source-index.test.cjs
       - name: Verify offline LAZ dependencies
         run: |
           test -s source/v234/vendor/laz-perf.js
