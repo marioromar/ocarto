@@ -48,7 +48,7 @@
       const cmyk = ['c', 'm', 'y', 'k'].map(key => Math.max(0, Math.min(100, Number(c[key]) || 0)) / 100);
       const [cy, ma, ye, bl] = cmyk;
       const rgb = [cy, ma, ye].map(v => Math.round(255 * (1 - v) * (1 - bl)));
-      return { number: Number(c.n), name: c.name, cmyk: cmyk.map(v => v * 100), rgb: '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join(''), order, overprint: c.o === '1', opacity: Number(c.t) || 100 };
+      return { number: Number(c.n), name: c.name, cmyk: cmyk.map(v => v * 100), rgb: '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join(''), order, overprint: c.o === '1', opacity: c.t === undefined ? 100 : Number(c.t) };
     }).filter(c => Number.isFinite(c.number));
     report.colors = colors.length;
     const byColor = new Map(colors.map(c => [c.number, c]));
