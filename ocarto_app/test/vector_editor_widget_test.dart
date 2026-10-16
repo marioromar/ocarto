@@ -31,9 +31,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Área'));
     await tester.pump();
-    await tester.tapAt(const Offset(300, 310));
-    await tester.pump();
-    await tester.tapAt(const Offset(435, 410));
+    expect(find.byKey(const ValueKey('drawing-0')), findsOneWidget);
+    await tester.tapAt(const Offset(310, 320));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const ValueKey('drawing-1')), findsOneWidget);
+    await tester.tapAt(const Offset(430, 380));
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byKey(const ValueKey('drawing-2')), findsOneWidget);
     await tester.tap(find.text('Terminar'));
