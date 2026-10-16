@@ -77,7 +77,10 @@ class MapProject {
     this.gpsMetersPerPixel = 2,
     this.gpsTrackSymbol = '506',
     this.geoRaster,
-  });
+    List<String>? favoriteSymbols,
+    this.selectedCatalogSymbol,
+    this.activeTool,
+  }) : favoriteSymbols = List.unmodifiable(favoriteSymbols ?? const <String>[]);
 
   final String name;
   final int version;
@@ -88,6 +91,9 @@ class MapProject {
   final double gpsMetersPerPixel;
   final String gpsTrackSymbol;
   final GeoRasterReference? geoRaster;
+  final List<String> favoriteSymbols;
+  final String? selectedCatalogSymbol;
+  final String? activeTool;
 
   String encode() => jsonEncode({
         'format': 'ocarto-project',
@@ -96,6 +102,9 @@ class MapProject {
         'layers': layers.map((e) => e.toJson()).toList(),
         'elements': elements.map((e) => e.toJson()).toList(),
         if (geoRaster != null) 'geoRaster': geoRaster!.toJson(),
+        'favoriteSymbols': favoriteSymbols,
+        if (selectedCatalogSymbol != null) 'selectedCatalogSymbol': selectedCatalogSymbol,
+        if (activeTool != null) 'activeTool': activeTool,
         'gps': {
           'centerLatitude': gpsCenterLatitude,
           'centerLongitude': gpsCenterLongitude,
@@ -129,6 +138,10 @@ class MapProject {
       geoRaster: json['geoRaster'] is Map<String, dynamic>
           ? GeoRasterReference.fromJson(json['geoRaster'] as Map<String, dynamic>)
           : null,
+      favoriteSymbols: (json['favoriteSymbols'] as List<dynamic>? ?? const [])
+          .whereType<String>().toList(),
+      selectedCatalogSymbol: json['selectedCatalogSymbol'] as String?,
+      activeTool: json['activeTool'] as String?,
     );
   }
 }
