@@ -24,3 +24,12 @@ jobs:
           test -s source/v234/vendor/laz-perf.js
           test -s source/v234/vendor/laz-perf.wasm
           test -s source/v234/vendor/LAZ-PERF-LICENSE.txt
+
+  windows-launch-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Launch Ocarto local server in Windows
+        shell: powershell
+        run: ./source/v234/tests/test-lidar-launcher.ps1
