@@ -875,5 +875,45 @@ canvas?.addEventListener('pointercancel',()=>{if(S.reshapeMode){S.reshapeMode=nu
 <script src="align-buildings-road-ui-v230.js"></script>
 <script src="interface-v229.js"></script>
 <script>document.querySelector('.top-status')?.replaceChildren(document.createTextNode('Ocarto · v234'))</script>
+<style id="ocarto-map-quicktools-style">
+#mapWrap{position:relative}
+#ocartoQuickTools{position:absolute;z-index:35;top:9px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:3px;padding:5px 7px;max-width:calc(100% - 24px);overflow-x:auto;scrollbar-width:thin;background:rgba(22,29,39,.94);border:1px solid #566475;border-radius:10px;box-shadow:0 4px 16px #0007;white-space:nowrap}
+#ocartoQuickTools button{flex:0 0 auto;display:grid;place-items:center;width:19px;height:19px;min-width:19px;min-height:19px;padding:0;border:0;border-radius:4px;background:transparent;color:#e5edf6;cursor:pointer;font-size:15px;line-height:1}
+#ocartoQuickTools button:hover:not(:disabled),#ocartoQuickTools button:focus-visible{background:#38516c;outline:1px solid #78b7f6}
+#ocartoQuickTools button:disabled{opacity:.35;cursor:not-allowed}
+#ocartoQuickTools .qt-sep{width:1px;height:16px;background:#536072;margin:0 3px;flex:0 0 auto}
+@media(max-width:700px){#ocartoQuickTools{top:5px;padding:4px;gap:2px}}
+</style>
+<script>
+(function(){
+ function install(){
+  const wrap=document.getElementById('mapWrap');
+  if(!wrap||document.getElementById('ocartoQuickTools'))return;
+  const bar=document.createElement('div');bar.id='ocartoQuickTools';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Herramientas rápidas del mapa');
+  const actions=[
+   ['Relleno','▨',null],
+   ['Cortar línea','✂','splitSelectedLine'],
+   ['Hacer agujero en área','◉','createAreaHole'],
+   ['Girar','↻','rotateSelected'],
+   ['Voltear 180°','⤾',null],
+   ['Duplicar','▢','duplicateSelected'],
+   ['Estampado','▦',null],
+   ['Dibujar varios elementos','✎',null],
+   ['Ver en Street View','◉',null]
+  ];
+  actions.forEach(([label,glyph,target],index)=>{
+   if(index===3||index===6){const sep=document.createElement('span');sep.className='qt-sep';sep.setAttribute('aria-hidden','true');bar.appendChild(sep)}
+   const b=document.createElement('button');b.type='button';b.textContent=glyph;b.title=label;b.setAttribute('aria-label',label);b.dataset.actionTarget=target||'';
+   if(!target)b.disabled=true;
+   else b.addEventListener('click',()=>{const source=document.getElementById(target);if(source&&!source.disabled)source.click();else if(typeof toast==='function')toast('Herramienta no disponible en este momento')});
+   bar.appendChild(b)
+  });
+  wrap.appendChild(bar);
+  const sync=()=>{bar.querySelectorAll('button[data-action-target]').forEach(b=>{const id=b.dataset.actionTarget;if(!id)return;const original=document.getElementById(id);b.disabled=!original||original.disabled})};
+  sync();const observer=new MutationObserver(sync);observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['disabled']});
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+</script>
 </body>
 </html>
