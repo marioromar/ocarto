@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'ocarto-v258'
+      - 'ocarto-v260'
   workflow_dispatch:
 
 jobs:
@@ -18,7 +19,7 @@ jobs:
       - name: Worker source syntax
         run: node --check source/v234/lidar-worker.js
       - name: Test real LAS / LAZ decoder
-        run: node --test source/v234/tests/lidar-worker.test.cjs
+        run: node --test source/v234/tests/lidar-worker.test.cjs source/v234/tests/lidar-reader-integration.test.cjs
       - name: Verify offline LAZ dependencies
         run: |
           test -s source/v234/vendor/laz-perf.js
