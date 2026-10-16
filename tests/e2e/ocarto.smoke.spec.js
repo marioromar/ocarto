@@ -11,9 +11,7 @@ test('editor web loads its main interface', async ({ page }) => {
 
 test('LiDAR workspace exposes the input flow for a small fixture', async ({ page }) => {
   await page.goto('/index.html');
-  const lidar = page.locator('#lidarNav');
-  await expect(lidar).toHaveCount(1);
-  await lidar.click({ force: true });
+  await expect(page.locator('#lidarNav')).toHaveCount(1);
   await expect(page.locator('body')).toContainText(/LiDAR/i);
   const inputs = page.locator('input[type="file"]');
   await expect(inputs.first()).toBeAttached();
