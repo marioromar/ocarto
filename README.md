@@ -1,20 +1,30 @@
 # Ocarto — editor cartográfico de orientación
 
-**Editor profesional web: v260 (GPS + LiDAR probado de extremo a extremo) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
+**Editor profesional web: v261 (GPS + LiDAR con recorte temprano de teselas) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
 
 ## Descargar la aplicación
 
-- **[Ocarto v260 — ZIP de la rama con GPS y LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v260.zip)**
+- **[Ocarto v261 — ZIP de la rama con GPS y LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v261.zip)**
 - **[Código y versiones de Ocarto](source/v234/index.html)**
 - **[Cambios y comprobaciones OCAD v249](source/v234/OCAD-v249.md)**
 
-**Para probar LiDAR en Windows:** descarga el ZIP de la rama v260, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v258.md).
+**Para probar LiDAR en Windows:** descarga el ZIP de la rama v261, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v258.md).
 
 ## Revisión OCAD 2018
 
 En **Archivo → Revisar símbolos y tintas OCAD…** se puede abrir un archivo de Bobadilla y comprobar en modo **solo lectura** símbolos, colores CMYK y orden provisional de impresión. La auditoría permite descargar un informe JSON, y **no sustituye los símbolos, colores ni las prioridades actuales**. Falta verificar el resultado visualmente contra OCAD 2018 antes de aprobar nuevos predeterminados.
 
-La rama `ocarto-v260` incorpora GPS y la reparación LiDAR en el mismo editor web profesional, sin sustituir sus herramientas. El ZIP enlazado es el archivo de esta misma rama GitHub.
+La rama `ocarto-v261` incorpora GPS y la reparación LiDAR en el mismo editor web profesional, sin sustituir sus herramientas. El ZIP enlazado es el archivo de esta misma rama GitHub.
+
+## LiDAR v261 · Saltar teselas fuera del área y abrir el panel correcto
+
+Si se selecciona un polígono de trabajo antes de importar varias teselas LAS/LAZ, el Worker ahora lee primero la cabecera (227 bytes) de cada archivo para comprobar sus límites. Si toda la tesela está **fuera del área**, omite el resto del archivo **antes de reservar memoria y descomprimir LAZ**. Si la tesela toca el área o la cabecera no permite descartar con seguridad, continúa la lectura normal. El recorte exacto de puntos se mantiene dentro de las teselas parcialmente coincidentes. Las pruebas verifican ambos casos con archivos reales.
+
+Se corrigieron los accesos **LiDAR, Capas y Símbolos**: ahora activan el espacio de trabajo del panel derecho, en vez de desplazar la página hacia tarjetas que estaban ocultas.
+
+[ZIP del mismo código GitHub v261](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v261.zip) · [Pruebas LiDAR y lanzador Windows](https://github.com/marioromar/ocarto/actions/workflows/lidar-worker.yml)
+
+**Límites:** no aumenta el límite de un millón de celdas por modelo ni habilita aún 4–9 km² continuos a 0,5 m; tampoco valida el LAZ PNOA de millones de puntos, ni implementa el procesado LiDAR nativo de Flutter. Para teselas **que intersectan** el área todavía se lee/descomprime el archivo entero y se conservan únicamente los puntos del polígono.
 
 ## LiDAR v260 · Validación de extremo a extremo
 
