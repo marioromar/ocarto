@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import 'core/map_project.dart';
 import 'core/project_storage.dart';
+import 'core/symbol_catalog.dart';
 import 'gps/gps_serial_service.dart';
 import 'gps/nmea_parser.dart';
 import 'geo/georeferenced_raster.dart';
@@ -168,7 +169,7 @@ class _OcartoHomeState extends State<OcartoHome> {
   String projectName = 'Mi mapa Ocarto';
   MapTool tool = MapTool.select;
   String symbol = 'Árbol';
-  static const symbols = ['Punto de control', 'Árbol', 'Roca', 'Agua', 'IOF-placeholder'];
+  final Set<String> _favoriteSymbols = <String>{};
   double opacity = 1;
 
   List<String> _ports = [];
@@ -304,6 +305,9 @@ class _OcartoHomeState extends State<OcartoHome> {
         gpsMetersPerPixel: _metersPerPixel,
         gpsTrackSymbol: _gpsLineSymbol,
         geoRaster: _geoRaster,
+        favoriteSymbols: _favoriteSymbols.toList()..sort(),
+        selectedCatalogSymbol: symbol,
+        activeTool: tool.name,
       );
 
   Future<void> _autosave() {
@@ -393,6 +397,15 @@ class _OcartoHomeState extends State<OcartoHome> {
         _geoRaster = rasterToLoad;
         if (rasterToLoad != null) _rasterEpsg = rasterToLoad.epsg;
         projectName = project!.name;
+        _favoriteSymbols
+          ..clear()
+          ..addAll(project.favoriteSymbols.where((id) => findCatalogSymbol(id) != null));
+        symbol = findCatalogSymbol(project.selectedCatalogSymbol ?? '') != null
+            ? project.selectedCatalogSymbol! : 'Árbol';
+        tool = MapTool.values.firstWhere(
+          (value) => value.name == project.activeTool,
+          orElse: () => MapTool.select,
+        );
         for (final layer in project.layers) {
           if (layers.containsKey(layer.id)) layers[layer.id] = layer.visible;
           if (layer.id == 'Plantilla georreferenciada') opacity = layer.opacity;
@@ -648,6 +661,150 @@ class _OcartoHomeState extends State<OcartoHome> {
     ], expanded: true);
   }
 
+  void _chooseCatalogSymbol(OcartoCatalogSymbol entry) {
+    setState(() {
+      symbol = entry.id;
+      tool = switch (entry.tool) {
+        CatalogTool.point => MapTool.point,
+        CatalogTool.line => MapTool.line,
+        CatalogTool.area => MapTool.area,
+      };
+      if (!_recording && gpsLineSymbols.any((item) => item.code == entry.id)) {
+        _gpsLineSymbol = entry.id;
+      }
+    });
+    _scheduleAutosave();
+  }
+
+  void _toggleFavorite(String id) {
+    setState(() {
+      if (!_favoriteSymbols.add(id)) _favoriteSymbols.remove(id);
+    });
+    _scheduleAutosave();
+  }
+
+  Widget _catalogTile(OcartoCatalogSymbol entry, double width) {
+    final isFavorite = _favoriteSymbols.contains(entry.id);
+    final isSelected = symbol == entry.id && tool != MapTool.select;
+    return Tooltip(
+      message: '${entry.name} · clic para dibujar; clic derecho o pulsación larga para favoritos',
+      child: SizedBox(
+        width: width,
+        height: 79,
+        child: Material(
+          color: isSelected ? const Color(0xff38544f) : const Color(0xff2a383c),
+          borderRadius: BorderRadius.circular(9),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(9),
+            onTap: () => _chooseCatalogSymbol(entry),
+            onSecondaryTap: () => _toggleFavorite(entry.id),
+            onLongPress: () => _toggleFavorite(entry.id),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(entry.icon, size: 32, color: entry.color),
+                      const SizedBox(height: 4),
+                      Text(entry.name, textAlign: TextAlign.center,
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ),
+                Positioned(
+                  top: 0, right: 0,
+                  child: SizedBox(
+                    width: 24, height: 24,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      iconSize: 16,
+                      tooltip: isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
+                      onPressed: () => _toggleFavorite(entry.id),
+                      icon: Icon(isFavorite ? Icons.star : Icons.star_border,
+                        color: isFavorite ? const Color(0xfff8cf64) :
+                            const Color(0xff93a4a5)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _symbolDock() {
+    final favoriteEntries = catalogSymbols
+        .where((entry) => _favoriteSymbols.contains(entry.id)).toList();
+    return LayoutBuilder(builder: (context, constraints) {
+      final columns = constraints.maxWidth >= 305 ? 4 : 3;
+      final width = (constraints.maxWidth - 22 - (columns - 1) * 4) / columns;
+      Widget tiles(Iterable<OcartoCatalogSymbol> entries) => Wrap(
+        spacing: 4, runSpacing: 4,
+        children: entries.map((entry) => _catalogTile(entry, width)).toList(),
+      );
+      Widget title(String text, IconData icon) => Padding(
+        padding: const EdgeInsets.only(bottom: 7, top: 5),
+        child: Row(children: [
+          Icon(icon, size: 18, color: const Color(0xfff5c95b)),
+          const SizedBox(width: 6),
+          Expanded(child: Text(text,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
+        ]),
+      );
+      return Material(
+        color: const Color(0xff202b2f),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(9, 11, 9, 9),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Row(children: [
+              Icon(Icons.palette, color: Color(0xff82d5bc), size: 22),
+              SizedBox(width: 8),
+              Expanded(child: Text('Símbolos', style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold))),
+            ]),
+            const SizedBox(height: 5),
+            Text('Seleccionado: ${findCatalogSymbol(symbol)?.name ?? symbol}',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11.5, color: Color(0xffb0cac2))),
+            const SizedBox(height: 8),
+            title('Símbolos favoritos', Icons.star),
+            if (favoriteEntries.isEmpty)
+              const Text('Marca la estrella o mantén pulsado un símbolo.',
+                style: TextStyle(fontSize: 11.5, color: Color(0xff9caeae)))
+            else
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 170),
+                child: SingleChildScrollView(child: tiles(favoriteEntries)),
+              ),
+            const Divider(height: 19),
+            Expanded(child: Scrollbar(
+              child: ListView(children: [
+                title('Puntos', Icons.place),
+                tiles(catalogSymbols.where((entry) =>
+                    entry.tool == CatalogTool.point)),
+                const SizedBox(height: 10),
+                title('Líneas', Icons.timeline),
+                tiles(catalogSymbols.where((entry) =>
+                    entry.tool == CatalogTool.line)),
+                const SizedBox(height: 10),
+                title('Áreas', Icons.crop_square),
+                tiles(catalogSymbols.where((entry) =>
+                    entry.tool == CatalogTool.area)),
+                const SizedBox(height: 10),
+                const Text('Catálogo visual provisional. La correspondencia completa con OCAD/ISOM y el trazado vectorial profesional están pendientes.',
+                  style: TextStyle(fontSize: 10.5, color: Color(0xffa8b9b9))),
+              ]),
+            )),
+          ]),
+        ),
+      );
+    });
+  }
+
   Widget _section(String title, IconData icon, List<Widget> children,
       {bool expanded = false}) {
     return ExpansionTile(
@@ -797,7 +954,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         SizedBox(width: 10),
         Text('Ocarto'),
         SizedBox(width: 10),
-        Text('v252', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
+        Text('v253', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
       ]),
       actions: [
         if (_recording)
@@ -810,7 +967,7 @@ class _OcartoHomeState extends State<OcartoHome> {
     ),
     body: Row(children: [
       SizedBox(
-        width: 315,
+        width: MediaQuery.sizeOf(context).width < 1100 ? 235 : 280,
         child: Material(
           color: const Color(0xff202b2f),
           child: ListView(children: [
@@ -822,14 +979,8 @@ class _OcartoHomeState extends State<OcartoHome> {
               _toolButton(MapTool.point, Icons.place, 'Punto'),
               _toolButton(MapTool.line, Icons.polyline, 'Línea'),
               _toolButton(MapTool.area, Icons.pentagon_outlined, 'Área'),
-              const SizedBox(height: 6),
-              DropdownButtonFormField<String>(
-                key: ValueKey('symbol-$symbol'),
-                initialValue: symbol,
-                decoration: const InputDecoration(labelText: 'Símbolo básico', isDense: true),
-                items: symbols.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                onChanged: (value) => setState(() => symbol = value ?? symbol),
-              ),
+              const Text('Elige los símbolos en la columna derecha.',
+                  style: TextStyle(fontSize: 11.5, color: Color(0xffa6c1b8))),
               const SizedBox(height: 8),
               Text('Seleccionar: toca un vértice de una línea GPS terminada y arrástralo para editarla.',
                   style: Theme.of(context).textTheme.bodySmall),
@@ -899,6 +1050,11 @@ class _OcartoHomeState extends State<OcartoHome> {
           ),
         );
       })),
+      const VerticalDivider(width: 1),
+      SizedBox(
+        width: MediaQuery.sizeOf(context).width < 1100 ? 245 : 324,
+        child: _symbolDock(),
+      ),
     ]),
   );
 }
@@ -1066,7 +1222,8 @@ class MapPainter extends CustomPainter {
           }
           continue;
         }
-        final paint = Paint()..color = const Color(0xff1f6f50)
+        final paint = Paint()..color =
+            (findCatalogSymbol(e.symbol)?.color ?? const Color(0xff1f6f50))
             ..style = PaintingStyle.fill;
         if (e.tool == MapTool.point) canvas.drawCircle(e.position, 8, paint);
         if (e.tool == MapTool.line) {
