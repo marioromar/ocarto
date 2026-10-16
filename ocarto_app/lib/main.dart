@@ -633,6 +633,27 @@ class _OcartoHomeState extends State<OcartoHome> {
     }));
   }
 
+  void _setHandleMode(BezierHandleMode mode) {
+    final element = _selectedEditable;
+    final vertex = _selectedVertex;
+    if (element == null || vertex == null) return;
+    final anchor = element.vertices[vertex];
+    final control = element.bezier[vertex];
+    final current = control == null || control.corner
+        ? BezierControls.initialize(
+            element.vertices.map((p) => VectorVertex(p.dx, p.dy)).toList(),
+            vertex, closed: element.tool == MapTool.area)
+        : control;
+    setState(() {
+      element.bezier[vertex] = current.withMode(
+        mode, VectorVertex(anchor.dx, anchor.dy));
+      _dragHandleSide = 0;
+    });
+    unawaited(_autosave().catchError((Object error) {
+      if (mounted) _snack('Error guardando modo Bézier: $error');
+    }));
+  }
+
   void _changeBezierMode({required bool corner}) {
     final element = _selectedEditable;
     final vertex = _selectedVertex;
@@ -648,18 +669,24 @@ class _OcartoHomeState extends State<OcartoHome> {
 
   void _onMapDragStart(Offset position, Size size) {
     if (tool != MapTool.select || _recording) return;
-    // A handle belongs to the selected vertex, so test its hit target
-    // BEFORE selecting the nearest anchor.
+    // A handle belongs to the selected vertex. Prefer the anchor when
+    // its hit target is nearer; otherwise small handles can make moving
+    // the anchor almost impossible on tightly curved lines.
     final element = _selectedEditable;
     final vertex = _selectedVertex;
     if (element != null && vertex != null) {
+      final anchor = _screenPosition(element.vertices[vertex],
+          size, element.geographic);
+      final anchorDistance = anchor == null
+          ? double.infinity : (anchor - position).distance;
       final control = element.bezier[vertex];
       if (control != null && !control.corner) {
         for (final side in [-1, 1]) {
           final p = side < 0 ? control.incoming : control.outgoing;
           if (p == null) continue;
           final screen = _screenPosition(Offset(p.x, p.y), size, element.geographic);
-          if (screen != null && (screen - position).distance <= 15) {
+          if (screen != null && (screen - position).distance <= 15 &&
+              (screen - position).distance < anchorDistance) {
             setState(() { _dragHandleSide = side; _movingVertex = true; });
             return;
           }
@@ -1141,7 +1168,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         SizedBox(width: 10),
         Text('Ocarto'),
         SizedBox(width: 10),
-        Text('v255', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
+        Text('v256', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
       ]),
       actions: [
         if (_recording)
@@ -1189,8 +1216,27 @@ class _OcartoHomeState extends State<OcartoHome> {
                   icon: const Icon(Icons.auto_fix_high),
                   label: const Text('Suavizado automático'),
                 ),
-                const Text('Arrastra un tirador para modificar la curva. El opuesto se refleja para conservar la tangente.',
-                    style: TextStyle(fontSize: 11.5, color: Color(0xffabc4ba))),
+                const SizedBox(height: 8),
+                const Text('Comportamiento de tiradores:',
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Wrap(spacing: 5, runSpacing: 5, children: [
+                  for (final mode in BezierHandleMode.values)
+                    ChoiceChip(
+                      key: ValueKey('bezier-mode-${mode.name}'),
+                      visualDensity: VisualDensity.compact,
+                      label: Text(switch (mode) {
+                        BezierHandleMode.mirrored => 'Simétricos',
+                        BezierHandleMode.aligned => 'Alineados',
+                        BezierHandleMode.free => 'Libres',
+                      }, style: const TextStyle(fontSize: 11)),
+                      selected: (_selectedEditable?.bezier[_selectedVertex!]?.
+                          mode ?? BezierHandleMode.mirrored) == mode,
+                      onSelected: (_) => _setHandleMode(mode),
+                    ),
+                ]),
+                const Text('Simétricos: misma longitud; alineados: longitudes distintas; libres: cada tirador se mueve por separado.',
+                    style: TextStyle(fontSize: 11, color: Color(0xffabc4ba))),
               ],
               const SizedBox(height: 5),
               if (_draft != null) ...[
