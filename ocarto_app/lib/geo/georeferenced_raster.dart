@@ -102,7 +102,7 @@ class RasterWorldFile {
   final double a, d, b, e, c, f;
 
   factory RasterWorldFile.parse(String source) {
-    final lines = source.split(RegExp(r'\\r?\\n'))
+    final lines = source.split(RegExp(r'\r?\n'))
         .map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
     if (lines.length != 6) {
       throw const FormatException('El PGW debe contener seis valores numéricos.');
@@ -128,7 +128,7 @@ class RasterWorldFile {
     if (values.length != 6 || values.any((v) => v is! num)) {
       throw const FormatException('Transformación PGW inválida en el proyecto.');
     }
-    return RasterWorldFile.parse(values.map((v) => (v as num).toString()).join('\\n'));
+    return RasterWorldFile.parse(values.map((v) => (v as num).toString()).join('\n'));
   }
 }
 
