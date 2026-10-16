@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $root = [System.IO.Path]::GetFullPath($PSScriptRoot)
 $rootPrefix = $root.TrimEnd('\') + '\'
 $port = 8787
-$server = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, $port)
+$server = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $port)
 try {
     $server.Start()
     Write-Host "OCARTO - servidor local (solo este ordenador)" -ForegroundColor Green
@@ -16,7 +16,7 @@ try {
             $client.ReceiveTimeout = 15000
             $client.SendTimeout = 15000
             $stream = $client.GetStream()
-            $reader = New-Object System.IO.StreamReader($stream, [Text.Encoding]::ASCII, $false, 1024, $true)
+            $reader = [System.IO.StreamReader]::new($stream, [Text.Encoding]::ASCII, $false, 1024, $true)
             $line = $reader.ReadLine()
             $lines = 0
             while (($header = $reader.ReadLine()) -ne $null -and $header.Length -gt 0 -and $lines -lt 60) {
