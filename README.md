@@ -15,3 +15,9 @@ Para usar Ocarto desde un ordenador, descarga el ZIP, descomprímelo y abre el a
 En **Archivo → Revisar símbolos y tintas OCAD…** se puede abrir un archivo de Bobadilla y comprobar en modo **solo lectura** símbolos, colores CMYK y orden provisional de impresión. La auditoría permite descargar un informe JSON, y **no sustituye los símbolos, colores ni las prioridades actuales**. Falta verificar el resultado visualmente contra OCAD 2018 antes de aprobar nuevos predeterminados.
 
 El desarrollo sigue en la rama `ocarto-v249`, sincronizada con `main`. La versión del ZIP se construye a partir de los mismos archivos fuente del editor.
+
+## Ocarto Windows — GPS Bluetooth (v250)
+
+La rama [ocarto-v250](https://github.com/marioromar/ocarto/tree/ocarto-v250) amplía la aplicación Flutter de Windows con un menú **GPS**: conexión a receptores Bluetooth SPP por COM, NMEA en tiempo real, seguimiento de posición, grabación automática de tracks como líneas con símbolo elegido y exportación GPX. [Código Windows](ocarto_app/) · [Instrucciones de GPS](ocarto_app/README-GPS-Windows.md).
+
+La versión web v249 y sus símbolos actuales siguen sin alterarse. Esta rama Windows v250 no incluye todavía un instalador listo para usar; el workflow intenta generar un paquete Windows verificable.

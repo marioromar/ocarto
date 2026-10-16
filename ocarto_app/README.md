@@ -1,17 +1,21 @@
-# ocarto_app
+# Ocarto para Windows (Flutter)
 
-A new Flutter project.
+Esta carpeta contiene la aplicación de escritorio del **mismo repositorio Ocarto**, con un nuevo menú **GPS** y soporte de receptores Bluetooth clásicos que Windows expone como puertos COM.
 
-## Getting Started
+**Funciones disponibles:** conexión COM/USB, lectura NMEA GGA/RMC con verificación de checksum, posición en directo, selección de símbolo lineal (506 por defecto), grabación de recorrido en línea editable, autoguardado y exportación GPX. Consulta [README-GPS-Windows.md](README-GPS-Windows.md) para las instrucciones y limitaciones.
 
-This project is a starting point for a Flutter application.
+## Compilar en un equipo Windows
 
-A few resources to get you started if this is your first Flutter project:
+Instala Flutter y Visual Studio con el componente de desarrollo de escritorio C++. Abre una terminal en esta carpeta y ejecuta:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```powershell
+flutter pub get
+flutter test
+flutter build windows --release
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+El ejecutable y sus bibliotecas aparecerán en `build/windows/x64/runner/Release/`. Debes copiar **toda** esa carpeta para distribuirlo (no solo el .exe). La compilación automatizada está definida en [el workflow Windows](../.github/workflows/flutter-windows-gps.yml), que adjunta el resultado cuando termina correctamente.
+
+La aplicación Flutter es todavía un prototipo cartográfico; no incorpora todas las herramientas del editor web profesional `source/v234/index.html`. El track GPS conserva latitud/longitud WGS84 y los detalles NMEA, pero el fondo cartográfico de este prototipo aún no dispone de carga avanzada georreferenciada. Para un GPS Bluetooth exclusivamente BLE sin COM se necesita otro módulo de conexión.
+
+La distribución debe conservar los avisos exigidos por la licencia LGPL de `libserialport` y las licencias del proyecto.
