@@ -45,4 +45,35 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byKey(const ValueKey('drawing-0')), findsOneWidget);
   });
+  testWidgets('selecciona vértice y permite activar, romper y restaurar Bézier',
+      (tester) async {
+    await tester.pumpWidget(const OcartoApp());
+    await tester.tap(find.text('Herramientas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Línea'));
+    await tester.pump();
+    await tester.tapAt(const Offset(310, 320));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tapAt(const Offset(430, 380));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Terminar'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Seleccionar / editar vértices'));
+    await tester.pump();
+    await tester.tapAt(const Offset(310, 320));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const ValueKey('enable-bezier-handles')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('enable-bezier-handles')));
+    await tester.tap(find.byKey(const ValueKey('enable-bezier-handles')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('bezier-corner')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('bezier-corner')));
+    await tester.tap(find.byKey(const ValueKey('bezier-corner')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('bezier-auto')));
+    await tester.tap(find.byKey(const ValueKey('bezier-auto')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('enable-bezier-handles')), findsOneWidget);
+  });
+
 }
