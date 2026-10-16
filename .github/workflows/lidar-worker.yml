@@ -6,6 +6,7 @@ on:
       - 'ocarto-v258'
       - 'ocarto-v260'
       - 'ocarto-v261'
+      - 'ocarto-v262'
   workflow_dispatch:
 
 jobs:
@@ -17,10 +18,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Worker source syntax
-        run: node --check source/v234/lidar-worker.js
+      - name: Worker and tile planner syntax
+        run: |
+          node --check source/v234/lidar-worker.js
+          node --check source/v234/lidar-tile-plan.js
       - name: Test real LAS / LAZ decoder
-        run: node --test source/v234/tests/lidar-worker.test.cjs source/v234/tests/lidar-reader-integration.test.cjs
+        run: node --test source/v234/tests/lidar-worker.test.cjs source/v234/tests/lidar-reader-integration.test.cjs source/v234/tests/lidar-tiling.test.cjs
       - name: Verify offline LAZ dependencies
         run: |
           test -s source/v234/vendor/laz-perf.js
