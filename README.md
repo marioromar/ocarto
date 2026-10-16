@@ -1,20 +1,30 @@
 # Ocarto — editor cartográfico de orientación
 
-**Editor profesional web: v261 (GPS + LiDAR con recorte temprano de teselas) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
+**Editor profesional web: v262 (GPS + LiDAR por ventanas exportadas a disco) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
 
 ## Descargar la aplicación
 
-- **[Ocarto v261 — ZIP de la rama con GPS y LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v261.zip)**
+- **[Ocarto v262 — ZIP de la rama con GPS y LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v262.zip)**
 - **[Código y versiones de Ocarto](source/v234/index.html)**
 - **[Cambios y comprobaciones OCAD v249](source/v234/OCAD-v249.md)**
 
-**Para probar LiDAR en Windows:** descarga el ZIP de la rama v261, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v261.md).
+**Para probar LiDAR en Windows:** descarga el ZIP de la rama v262, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v262.md).
 
 ## Revisión OCAD 2018
 
 En **Archivo → Revisar símbolos y tintas OCAD…** se puede abrir un archivo de Bobadilla y comprobar en modo **solo lectura** símbolos, colores CMYK y orden provisional de impresión. La auditoría permite descargar un informe JSON, y **no sustituye los símbolos, colores ni las prioridades actuales**. Falta verificar el resultado visualmente contra OCAD 2018 antes de aprobar nuevos predeterminados.
 
-La rama `ocarto-v261` incorpora GPS y la reparación LiDAR en el mismo editor web profesional, sin sustituir sus herramientas. El ZIP enlazado es el archivo de esta misma rama GitHub.
+La rama `ocarto-v262` incorpora GPS y el procesamiento LiDAR por ventanas en el mismo editor web profesional, sin sustituir sus herramientas. El ZIP enlazado es el archivo de esta misma rama GitHub.
+
+## LiDAR v262 · Procesamiento por ventanas con salida a disco
+
+Se añadió la herramienta **Área extensa · procesar por teselas**. Con un polígono georreferenciado seleccionado y varios archivos LAS/LAZ, Ocarto planifica bloques de tamaño controlado para superficies de hasta 4–9 km² a 0,5 m, procesa las celdas por ventana y escribe **CSV independientes de terreno y vegetación**, más un `manifest.json`, en la carpeta elegida en Chrome/Edge. Así se evita almacenar en memoria todas las celdas del área completa. Ahora también se corrigen errores previos de finalización de mosaico y del cálculo de extensión de un polígono.
+
+**No produce todavía un MDT continuo ni curvas unidas:** faltan halo, interpolación, unión entre teselas y pruebas de rendimiento con el LAZ PNOA grande. El origen LAS/LAZ puede volver a leerse varias veces. Se conservan límites de seguridad por ventana.
+
+- [Guía para abrir y usar LiDAR v262](PRUEBA-LIDAR-v262.md)
+- [ZIP idéntico al código de la rama v262](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v262.zip)
+- [Pruebas automáticas](https://github.com/marioromar/ocarto/actions/workflows/lidar-worker.yml)
 
 ## LiDAR v261 · Saltar teselas fuera del área y abrir el panel correcto
 
