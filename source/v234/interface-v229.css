@@ -122,3 +122,8 @@ html,body,.app{background:#101923;color:#e7edf3}
 @media(max-width:1100px){.layout{grid-template-columns:132px minmax(0,1fr) 286px}}
 @media(max-width:960px){.layout{grid-template-columns:110px minmax(0,1fr) 276px}.right{display:flex;position:static;width:auto;max-width:none}.left .tool-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.layout{grid-template-columns:65px minmax(0,1fr)}.right{display:none}.show-right .right{display:flex;position:fixed;inset:var(--app-topbar-height,82px) 0 30px auto;width:min(320px,90vw)}}
+
+/* v264: acciones principales siempre visibles como iconos compactos */
+.toolbar{display:flex!important;visibility:visible!important;min-height:48px;align-items:center}
+.toolbar .core-tool-icon{flex:0 0 34px!important;width:34px!important;height:32px;padding:0!important;display:inline-grid!important;place-items:center;font-size:20px;line-height:1;border-radius:7px;font-weight:700}
+.toolbar .core-tool-icon:disabled{opacity:.38}
