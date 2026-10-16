@@ -9,7 +9,7 @@ try {
     Write-Host "OCARTO - servidor local (solo este ordenador)" -ForegroundColor Green
     Write-Host "Editor: http://127.0.0.1:$port/"
     Write-Host "Deja esta ventana abierta para utilizar LiDAR. Ctrl+C para cerrar."
-    Start-Process "http://127.0.0.1:$port/"
+    if ($env:OCARTO_HEADLESS -ne "1") { Start-Process "http://127.0.0.1:$port/" }
     while ($true) {
         $client = $server.AcceptTcpClient()
         try {
