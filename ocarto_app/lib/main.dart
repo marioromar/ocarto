@@ -673,14 +673,18 @@ class _OcartoHomeState extends State<OcartoHome> {
         _gpsLineSymbol = entry.id;
       }
     });
-    _scheduleAutosave();
+    unawaited(_autosave().catchError((Object error) {
+      if (mounted) _snack('Error guardando selección: $error');
+    }));
   }
 
   void _toggleFavorite(String id) {
     setState(() {
       if (!_favoriteSymbols.add(id)) _favoriteSymbols.remove(id);
     });
-    _scheduleAutosave();
+    unawaited(_autosave().catchError((Object error) {
+      if (mounted) _snack('Error guardando favoritos: $error');
+    }));
   }
 
   Widget _catalogTile(OcartoCatalogSymbol entry, double width) {
