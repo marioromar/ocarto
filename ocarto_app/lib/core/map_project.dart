@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../gps/nmea_parser.dart';
 import '../geo/georeferenced_raster.dart';
 import 'vector_geometry.dart';
+import 'bezier_controls.dart';
 
 class ProjectLayer {
   ProjectLayer({
@@ -37,9 +38,16 @@ class ProjectElement {
     this.symbol = 'IOF-placeholder',
     List<GpsFix>? gpsPoints,
     List<VectorVertex>? vertices,
+    List<BezierControls?>? bezier,
     this.geographic = false,
     this.isGpsTrack = false,
-  }) : gpsPoints = gpsPoints ?? [], vertices = vertices ?? [];
+  }) : gpsPoints = gpsPoints ?? [],
+       vertices = vertices ?? [],
+       bezier = bezier ?? const <BezierControls?>[] {
+    if (this.bezier.isNotEmpty && this.bezier.length != this.vertices.length) {
+      throw const FormatException('Los tiradores Bézier no coinciden con los vértices.');
+    }
+  }
 
   final String tool;
   final double x;
@@ -48,6 +56,7 @@ class ProjectElement {
   final bool isGpsTrack;
   final List<GpsFix> gpsPoints;
   final List<VectorVertex> vertices;
+  final List<BezierControls?> bezier;
   final bool geographic;
 
   Map<String, Object> toJson() => {
@@ -56,6 +65,8 @@ class ProjectElement {
         'y': y,
         'symbol': symbol,
         if (vertices.isNotEmpty) 'vertices': vertices.map((v) => v.toJson()).toList(),
+        if (bezier.any((v) => v != null))
+          'bezier': bezier.map((v) => v?.toJson()).toList(),
         if (geographic) 'geographic': true,
         if (isGpsTrack) 'gpsTrack': true,
         if (isGpsTrack) 'gpsPoints': gpsPoints.map((p) => p.toJson()).toList(),
@@ -69,6 +80,9 @@ class ProjectElement {
         vertices: (json['vertices'] as List<dynamic>? ?? const [])
             .map((v) => VectorVertex.fromJson(v as Map<String, dynamic>)).toList(),
         geographic: json['geographic'] == true,
+        bezier: (json['bezier'] as List<dynamic>? ?? const [])
+            .map((v) => v == null ? null : BezierControls.fromJson(v as Map<String, dynamic>))
+            .toList(),
         isGpsTrack: json['gpsTrack'] == true,
         gpsPoints: (json['gpsPoints'] as List<dynamic>? ?? const [])
             .map((v) => GpsFix.fromJson(v as Map<String, dynamic>))
@@ -81,7 +95,7 @@ class MapProject {
     required this.name,
     required this.layers,
     required this.elements,
-    this.version = 5,
+    this.version = 6,
     this.gpsCenterLatitude,
     this.gpsCenterLongitude,
     this.gpsMetersPerPixel = 2,
