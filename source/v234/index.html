@@ -163,6 +163,22 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     ];
     const ocartoPrintOrder=()=>{try{const stored=JSON.parse(localStorage.getItem('ocarto.printColorOrder.v1')||'null');return Array.isArray(stored)&&stored.length===OCARTO_PRINT_COLORS.length&&stored.every(v=>OCARTO_PRINT_COLORS.some(c=>c.id===v.id))?stored:OCARTO_PRINT_COLORS.map(({id,priority})=>({id,priority}))}catch{return OCARTO_PRINT_COLORS.map(({id,priority})=>({id,priority}))}};
     const configuredPrintOrder=Object.fromEntries(ocartoPrintOrder().map(({id,priority})=>[id,Number(priority)||0]));
+    // Las entradas OCAD están almacenadas de arriba abajo en la tabla de impresión.
+    // Se utiliza su posición real, no el identificador numérico de la tinta.
+    const ocadPrintRank=Object.fromEntries(OCARTO_OCAD_REFERENCE_COLORS.map((c,i)=>[c.ocadNumber,OCARTO_OCAD_REFERENCE_COLORS.length-i]));
+    const ocadInkFor=(f,part,raw)=>{
+      const c=colorGroup(raw),area=f.type==='area',line=f.type==='line';
+      if(part==='road-center')return c==='white'?9:c==='brown'?8:7;
+      if(part==='road-base')return c==='black'?2:c==='brown'?15:14;
+      if(c==='white')return area?23:9;
+      if(c==='black')return area?30:line?2:2;
+      if(c==='blue')return area?16:line?14:4;
+      if(c==='brown')return area?19:line?15:5;
+      if(c==='green')return area?26:line?13:6;
+      if(c==='yellow')return area?32:20;
+      if(c==='purple')return 54;
+      return null;
+    };
     const colorGroup=(raw)=>{
       const color=String(raw||'').toLowerCase().trim();
       if(Object.hasOwn(configuredPrintOrder,color))return color;
@@ -185,7 +201,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       const raw=(f.heightBand?f.fillColor:null)||(f.layerId&&vectorLayerFor(f)?.id!=='cartography'?vectorLayerFor(f)?.color:null)||style.color||style.outline||style.fill||'';
       return configuredPrintOrder[colorGroup(raw)]??20;
     };
-    const printParts=(f)=>{const st=OcartoSymbolSpecs.symbolStyle(f.symbol,S.mapType)||{},layer=vectorLayerFor(f),override=f.heightBand?(f.fillColor||'#245940'):f.layerId&&layer?.id!=='cartography'?layer?.color:null;const parts=[];const add=(part,color)=>parts.push({part,priority:configuredPrintOrder[colorGroup(color)]??20});if(f.type==='area'){if(!f.transparent)add('fill',override||st.fill||'#b0c98b');if(st.pattern&&!override)add('pattern',st.patternColor||'#fff');if(st.outline||override||f.heightBand||!st.fill)add('outline',override||st.outline||st.color||'#597a48')}else if(f.type==='line'&&['double-road','double-black'].includes(st.pattern)){add('road-base',override||st.color||'#000');add('road-center',st.pattern==='double-road'?(st.secondary||'#ad5b00'):'#fff')}else add('full',override||st.color||st.outline||st.fill||'#245940');return parts};
+    const printParts=(f)=>{const st=OcartoSymbolSpecs.symbolStyle(f.symbol,S.mapType)||{},layer=vectorLayerFor(f),override=f.heightBand?(f.fillColor||'#245940'):f.layerId&&layer?.id!=='cartography'?layer?.color:null;const parts=[];const add=(part,color)=>{const ink=ocadInkFor(f,part,color);parts.push({part,priority:ink!=null&&ocadPrintRank[ink]!=null?ocadPrintRank[ink]:configuredPrintOrder[colorGroup(color)]??20,ocadInk:ink})};if(f.type==='area'){if(!f.transparent)add('fill',override||st.fill||'#b0c98b');if(st.pattern&&!override)add('pattern',st.patternColor||'#fff');if(st.outline||override||f.heightBand||!st.fill)add('outline',override||st.outline||st.color||'#597a48')}else if(f.type==='line'&&['double-road','double-black'].includes(st.pattern)){add('road-base',override||st.color||'#000');add('road-center',st.pattern==='double-road'?(st.secondary||'#ad5b00'):'#fff')}else add('full',override||st.color||st.outline||st.fill||'#245940');return parts};
     for(const referenceOnly of [true,false]){
       const ordered=S.features.flatMap((f,i)=>{const layer=vectorLayerFor(f);return !!layer?.referenceOnly===referenceOnly&&layer?.visible&&symbolStatus(f.symbol)!=='hidden'?printParts(f).map(({part,priority})=>({f,i,layer,part,priority})):[]})
         .sort((a,b)=>referenceOnly?a.i-b.i||a.priority-b.priority:a.priority-b.priority||a.i-b.i);
