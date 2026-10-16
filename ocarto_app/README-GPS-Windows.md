@@ -1,4 +1,4 @@
-# Ocarto Windows — GPS, edición vectorial y tiradores Bézier (v255)
+# Ocarto Windows — GPS y edición avanzada de tiradores Bézier (v256)
 
 Se añade **GPS** como menú desplegable de la aplicación de escritorio Flutter `ocarto_app`, sin proyecto paralelo. Funciona con receptores GNSS Bluetooth **SPP/NMEA** que Windows presenta como un puerto COM, así como receptores USB con puerto serie. Los dispositivos solo **BLE/GATT** no son compatibles con este modo.
 
@@ -62,3 +62,17 @@ La edición de los trazados vectoriales incorpora **dos tiradores por vértice**
 Cuando un vértice se mueve, sus controles manuales se trasladan la misma distancia, para no deformar la curva accidentalmente. Los tiradores se guardan como coordenadas absolutas en el **mismo sistema que el vértice** (lienzo local o longitud/latitud WGS84) dentro del archivo `.ocarto`, cuyo esquema pasa a **versión 6**. Los archivos de versiones anteriores sin tiradores continúan siendo legibles.
 
 **Limitaciones:** los tiradores manuales mantienen una tangente simétrica de entrada/salida; todavía faltan los tiradores independientes de longitud, control de ángulos y otros tratamientos avanzados de curvas del editor cartográfico profesional. Los recorridos grabados con GPS siguen siendo polilíneas editables por vértices, pero **no** utilizan estos tiradores Bézier. Se requieren pruebas visuales sobre cartografía real antes de darlo por terminado para producción.
+
+## Tiradores Bézier independientes — v256
+
+Al seleccionar un vértice de una línea/área editada, en **Herramientas → Edición Bézier**, además de crear tiradores, definir esquinas y restaurar el suavizado automático, se pueden seleccionar tres **modos de acoplamiento**:
+
+- **Simétricos:** ambos tiradores mantienen la misma longitud y dirección opuesta. Era el comportamiento de v255.
+- **Alineados:** conservan la misma dirección tangencial, pero la longitud del tirador opuesto se mantiene al arrastrar uno. Permite suavizar sin hacer simétrica la distancia a cada lado.
+- **Libres:** cada tirador se mueve independientemente, tanto en ángulo como en longitud. El opuesto no cambia al arrastrar.
+
+Al cambiar a Simétricos o Alineados, el tirador saliente determina la dirección; el modo Alineados conserva la longitud previa del entrante. Al seleccionar una esquina no se aplican tiradores. Mover el vértice desplaza los controles con él. El sistema guarda los modos en cada vértice en el esquema **7** de `.ocarto`; los mapas anteriores sin modo se leen como **Simétricos**, sin perder sus controles.
+
+También se ha corregido la selección de un vértice cuando sus tiradores se encuentran muy cerca: se da preferencia a arrastrar el vértice si está más cerca del cursor que un tirador.
+
+**Compatibilidad:** versiones nuevas leen proyectos anteriores, pero un editor anterior a v256 podría ignorar los nuevos modos al abrirlos; conserva un respaldo antes de usar un editor más antiguo. Las curvas Bézier aún no reproducen todos los detalles de OCAD/OMAP y deben revisarse visualmente con ejemplos cartográficos reales.
