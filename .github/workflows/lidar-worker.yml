@@ -5,6 +5,7 @@ on:
     branches:
       - 'ocarto-v258'
       - 'ocarto-v260'
+      - 'ocarto-v261'
   workflow_dispatch:
 
 jobs:
