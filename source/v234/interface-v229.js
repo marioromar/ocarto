@@ -176,3 +176,60 @@
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
 })();
+
+
+/* v235: paleta compacta, favoritos arriba y pulsación larga. */
+(() => {
+  const boot=()=>{
+    const list=document.getElementById('symbolList'),panel=document.getElementById('symbolsWorkspace');
+    if(!list||!panel)return;
+    const key='ocarto.symbolFavorites.v1';
+    let favorites=[];
+    try{favorites=JSON.parse(localStorage.getItem(key)||'[]');if(!Array.isArray(favorites))favorites=[]}catch{}
+    const box=document.createElement('section');box.className='oc-favorites';box.setAttribute('aria-label','Símbolos favoritos');
+    const heading=document.createElement('div');heading.className='oc-favorites-title';heading.textContent='★ Favoritos';
+    const grid=document.createElement('div');grid.className='oc-favorites-grid';box.append(heading,grid);
+    list.before(box);
+    const save=()=>{try{localStorage.setItem(key,JSON.stringify(favorites))}catch{}};
+    let updating=false;
+    function refresh(){
+      if(updating)return;updating=true;
+      const buttons=[...list.querySelectorAll('.symbol-option[data-symbol-id]')];
+      grid.replaceChildren();
+      for(const id of favorites){
+        const original=buttons.find(b=>b.dataset.symbolId===id);
+        if(!original)continue;
+        const clone=original.cloneNode(true);clone.classList.add('oc-favorite-symbol');
+        clone.onclick=()=>original.click();
+        clone.addEventListener('contextmenu',e=>{e.preventDefault();original.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:e.clientX,clientY:e.clientY}))});
+        grid.append(clone);
+      }
+      box.hidden=!grid.children.length;
+      buttons.forEach(b=>{b.classList.toggle('is-favorite',favorites.includes(b.dataset.symbolId));b.title+=(favorites.includes(b.dataset.symbolId)?' ★':'')});
+      updating=false;
+    }
+    new MutationObserver(()=>queueMicrotask(refresh)).observe(list,{childList:true});
+    refresh();
+    const context=document.getElementById('symbolContextMenu');
+    if(context){
+      const star=document.createElement('button');star.type='button';star.className='oc-favorite-action';star.textContent='★ Añadir a favoritos';star.setAttribute('role','menuitem');context.append(star);
+      let target=null;
+      document.addEventListener('contextmenu',e=>{const b=e.target.closest?.('[data-symbol-id]');if(b){target=b.dataset.symbolId;star.textContent=favorites.includes(target)?'★ Quitar de favoritos':'★ Añadir a favoritos'}},true);
+      star.addEventListener('click',()=>{if(!target)return;favorites=favorites.includes(target)?favorites.filter(x=>x!==target):[...favorites,target];save();context.hidden=true;refresh()});
+      let timer=null,startX=0,startY=0;
+      const clear=()=>{if(timer){clearTimeout(timer);timer=null}};
+      panel.addEventListener('pointerdown',e=>{
+        const b=e.target.closest?.('[data-symbol-id]');if(!b||e.button!==0)return;
+        clear();startX=e.clientX;startY=e.clientY;
+        timer=setTimeout(()=>{
+          timer=null;target=b.dataset.symbolId;
+          star.textContent=favorites.includes(target)?'★ Quitar de favoritos':'★ Añadir a favoritos';
+          b.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:startX,clientY:startY}));
+        },650);
+      });
+      panel.addEventListener('pointerup',clear);panel.addEventListener('pointercancel',clear);
+      panel.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-startX,e.clientY-startY)>12)clear()});
+    }
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
