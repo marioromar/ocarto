@@ -71,7 +71,7 @@ class MapProject {
     required this.name,
     required this.layers,
     required this.elements,
-    this.version = 2,
+    this.version = 3,
     this.gpsCenterLatitude,
     this.gpsCenterLongitude,
     this.gpsMetersPerPixel = 2,
