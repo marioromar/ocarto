@@ -188,3 +188,54 @@ test('HTML integra el worker y tiene JavaScript de interfaz sintácticamente vá
  for(const [i,script] of inline.entries())
    assert.doesNotThrow(()=>new vm.Script(script,{filename:'inline-'+i+'.js'}));
 });
+
+test('LAZ 1.4 real usa recuento extendido y el descompresor WebAssembly',async()=>{
+ const w=makeWorker();
+ const result=await w.load('point-time-1.4.las.laz');
+ assert.equal(result.version,'1.4 LAZ');
+ assert.equal(result.count,1065);
+ assert.equal(result.format,1);
+ assert(result.preview.length>=3);
+});
+function syntheticLas14Format6() {
+ const bytes=new Uint8Array(375+3*30);
+ const d=new DataView(bytes.buffer);
+ d.setUint32(0,0x4653414c,true); // LASF
+ d.setUint8(24,1);d.setUint8(25,4);
+ d.setUint16(94,375,true);d.setUint32(96,375,true);
+ d.setUint8(104,6);d.setUint16(105,30,true);
+ d.setUint32(107,0,true); // LAS 1.4 moderno: recuento antiguo cero
+ d.setBigUint64(247,3n,true); // recuento extendido
+ for(const off of [131,139,147])d.setFloat64(off,.01,true);
+ const points=[
+  {x:1000,y:2000,z:100,cls:2},
+  {x:1000,y:2000,z:103,cls:3},
+  {x:1005,y:2005,z:99,cls:2},
+ ];
+ for(let i=0;i<points.length;i++) {
+   const p=points[i],at=375+i*30;
+   d.setInt32(at,p.x*100,true);d.setInt32(at+4,p.y*100,true);
+   d.setInt32(at+8,p.z*100,true);d.setUint8(at+14,1);
+   d.setUint8(at+16,p.cls); // Clase LAS 1.4 formato 6 (no offset +15)
+ }
+ return bytes;
+}
+test('LAS 1.4 formato 6 obtiene suelo y vegetación de las nuevas posiciones',async()=>{
+ const w=makeWorker(), result=await w.loadBytes(syntheticLas14Format6());
+ assert.equal(result.version,'1.4');
+ assert.equal(result.format,6);
+ assert.equal(result.count,3);
+ await w.send({type:'terrain',jobId:500,options:{cell:1,minCount:1}});
+ const terrain=w.messages.findLast(m=>m.jobId===500 && (m.type==='terrain'||m.type==='error'));
+ assert.equal(terrain.type,'terrain',JSON.stringify(terrain));
+ assert.equal(terrain.matchingPoints,2);
+ await w.send({type:'vegetation',jobId:501,options:{cell:1}});
+ const veg=w.messages.findLast(m=>m.jobId===501 && (m.type==='vegetation'||m.type==='error'));
+ assert.equal(veg.type,'vegetation',JSON.stringify(veg));
+ assert.equal(veg.classifiedPoints,3);
+ const pair=veg.rows.find(row=>row.x===1000.5&&row.y===2000.5);
+ assert(pair);
+ assert.equal(pair.ground_points,1);
+ assert.equal(pair.vegetation_points,1);
+ assert.equal(pair.canopy_max_above_ground_m,3);
+});
