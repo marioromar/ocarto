@@ -79,6 +79,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <script src="ocarto-runtime-v248-4.js"></script>
 <script src="ocarto-runtime-v248-5.js"></script>
 <script src="lidar-tile-plan.js"></script>
+<script src="lidar-tile-export.js"></script>
 <script src="lidar-source-index.js"></script>
 <script src="ocad-editable.js"></script>
 <script src="gps-webserial.js"></script>
@@ -485,24 +486,10 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
   // El explorador solicita la carpeta de destino al usuario; no sube nubes.
   let tiledAreaStopped=false,tiledAreaBusy=false,tiledSelectedFiles=null;
   async function writeTiledCsv(folder,name,headers,rows,convert){
-    const file=await folder.getFileHandle(name,{create:true});
-    const writer=await file.createWritable();
-    try {
-      await writer.write(headers.join(',')+'\n');
-      const block=[];
-      for(let i=0;i<rows.length;i++){
-        block.push(convert(rows[i]).map(v=>v==null||!Number.isFinite(Number(v))?'':v).join(','));
-        if(block.length>=4096){await writer.write(block.join('\n')+'\n');block.length=0;}
-      }
-      if(block.length)await writer.write(block.join('\n')+'\n');
-      await writer.close();
-    }catch(err){try{await writer.abort()}catch(_){}throw err;}
+    return OcartoLidarTileExport.writeCsv(folder,name,headers,rows,convert);
   }
   async function writeTiledManifest(folder,data){
-    const file=await folder.getFileHandle('manifest.json',{create:true});
-    const writer=await file.createWritable();
-    try{await writer.write(JSON.stringify(data,null,2));await writer.close();}
-    catch(err){try{await writer.abort()}catch(_){}throw err;}
+    return OcartoLidarTileExport.writeManifest(folder,data);
   }
   async function processLargeAreaTiles(files,baseDirectory){
     if(tiledAreaBusy)throw Error('Ya hay un procesamiento por teselas en marcha');
@@ -561,14 +548,17 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
           : {points:0,terrain:[],vegetationRows:[],terrainCells:0,vegetationCells:0,tiles:0};
         if(!result)throw Error('No se obtuvo el resultado de '+label);
         const terrainName=label+'_mdt.csv',vegetationName=label+'_vegetacion.csv';
-        await writeTiledCsv(folder,terrainName,['x_utm','y_utm','min_ground_z_m'],result.terrain,
+        const writtenTerrain=await writeTiledCsv(folder,terrainName,['x_utm','y_utm','min_ground_z_m'],result.terrain,
           row=>row);
-        await writeTiledCsv(folder,vegetationName,
+        const writtenVegetation=await writeTiledCsv(folder,vegetationName,
           ['x_utm','y_utm','ground_points','vegetation_points','building_points','wire_points','tower_points','ground_min_z_m','canopy_max_above_ground_m','canopy_mean_above_ground_m','vegetation_return_fraction'],
           result.vegetationRows,
           row=>[row.x,row.y,row.ground_points,row.vegetation_points,row.building_points,row.wire_points,
             row.tower_points,row.ground_min_z,row.canopy_max_above_ground_m,
             row.canopy_mean_above_ground_m,row.vegetation_return_fraction]);
+        if(writtenTerrain!==result.terrainCells ||
+           writtenVegetation!==result.vegetationCells)
+          throw Error('Exportación de '+label+' incompleta: las celdas no coinciden con los CSV');
         manifest.completed.push({name:label,window:tile.window,
           sources:matching.selected.map(f=>f.name),omittedSources:matching.skipped.length,
           points:result.points,terrainCells:result.terrainCells,
