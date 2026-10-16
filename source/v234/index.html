@@ -479,6 +479,135 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     }catch(err){areaTileQueueActive=false;lidarOperation='idle';areaReady=!!(terrainGrid.length||vegetationRows.length);cloudReadController=null;try{lasWorker?.postMessage({type:'area-abort',sessionId:areaSessionId})}catch(_){}if(areaWorkerSessionStarted&&lasWorker){lasWorker.terminate();lasWorker=null}$('lidarProgress').style.display='none';$('lidarStatus').textContent=err.name==='AbortError'?'Mosaico cancelado; se mantienen los modelos anteriores':'Error en mosaico: '+err.message;if(err.name!=='AbortError')toast('LiDAR: '+err.message);updateLidarButtons();if(options.throwOnError)throw err}
     finally{$('pointFile').value=''}
   }
+  // Area extensa: nunca construir el mapa completo en arrays JS. Cada
+  // ventana se analiza y escribe al disco antes de continuar con la siguiente.
+  // El explorador solicita la carpeta de destino al usuario; no sube nubes.
+  let tiledAreaStopped=false,tiledAreaBusy=false;
+  async function writeTiledCsv(folder,name,headers,rows,convert){
+    const file=await folder.getFileHandle(name,{create:true});
+    const writer=await file.createWritable();
+    try {
+      await writer.write(headers.join(',')+'\n');
+      const block=[];
+      for(let i=0;i<rows.length;i++){
+        block.push(convert(rows[i]).map(v=>v==null||!Number.isFinite(Number(v))?'':v).join(','));
+        if(block.length>=4096){await writer.write(block.join('\n')+'\n');block.length=0;}
+      }
+      if(block.length)await writer.write(block.join('\n')+'\n');
+      await writer.close();
+    }catch(err){try{await writer.abort()}catch(_){}throw err;}
+  }
+  async function writeTiledManifest(folder,data){
+    const file=await folder.getFileHandle('manifest.json',{create:true});
+    const writer=await file.createWritable();
+    try{await writer.write(JSON.stringify(data,null,2));await writer.close();}
+    catch(err){try{await writer.abort()}catch(_){}throw err;}
+  }
+  async function processLargeAreaTiles(files,baseDirectory){
+    if(tiledAreaBusy)throw Error('Ya hay un procesamiento por teselas en marcha');
+    if(!files.length || files.some(f=>!/\.(las|laz)$/i.test(f.name)))
+      throw Error('Elige únicamente archivos LAS/LAZ convencionales');
+    if(lidarOperation!=='idle')throw Error('Ya hay un análisis LiDAR en curso');
+    const aoi=currentLidarPolygon();
+    if(!aoi?.bounds)throw Error('Antes de procesar un área extensa selecciona un polígono georreferenciado del mapa');
+    if(typeof OcartoLidarTilePlan?.plan!=='function')throw Error('No se encuentra el planificador de teselas LiDAR');
+    const cellTerrain=Number($('cellSize').value)||.5;
+    const cellVegetation=Number($('vegetationCell').value)||1;
+    const plan=OcartoLidarTilePlan.plan(aoi.bounds,cellTerrain,cellVegetation);
+    const folder=await baseDirectory.getDirectoryHandle('ocarto_teselas_'+new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14),{create:true});
+    const manifest={
+      format:'Ocarto LiDAR tiled CSV v1',created:new Date().toISOString(),
+      sourceFiles:files.map(f=>({name:f.name,bytes:f.size})),
+      cellTerrain,cellVegetation,selectedArea:aoi,plan,
+      state:'incomplete',completed:[],warnings:[
+        'Celdas medidas; NO se han interpolado los datos ni unido curvas entre teselas',
+        'Las ventanas son semiabiertas y no duplican celdas en la frontera',
+        'Las teselas vecinas requieren halo para el suavizado profesional posterior',
+        'La clase 2 se usa como suelo y las clases 3–5 para vegetación',
+        'Los archivos LAS/LAZ que intersectan cada ventana se vuelven a leer por ella'
+      ]
+    };
+    tiledAreaBusy=true;tiledAreaStopped=false;
+    $('tiledAreaBtn').disabled=true;
+    $('tiledAreaCancel').hidden=false;
+    $('tiledAreaCancel').disabled=false;
+    try{
+      await writeTiledManifest(folder,manifest);
+      for(let i=0;i<plan.tiles.length;i++){
+        if(tiledAreaStopped)throw Object.assign(Error('Procesamiento detenido por el usuario'),{name:'AbortError'});
+        const tile=plan.tiles[i],label=tile.name;
+        $('tiledAreaStatus').textContent='Procesando bloque '+(i+1)+' de '+plan.total+' · '+label+
+          ' · se repetirán las lecturas de LAS/LAZ que intersecten esta ventana';
+        const result=await processAreaFiles(files,{
+          window:tile.window,aoi,throwOnError:true
+        });
+        if(!result)throw Error('No se obtuvo el resultado de '+label);
+        const terrainName=label+'_mdt.csv',vegetationName=label+'_vegetacion.csv';
+        await writeTiledCsv(folder,terrainName,['x_utm','y_utm','min_ground_z_m'],result.terrain,
+          row=>row);
+        await writeTiledCsv(folder,vegetationName,
+          ['x_utm','y_utm','ground_points','vegetation_points','building_points','wire_points','tower_points','ground_min_z_m','canopy_max_above_ground_m','canopy_mean_above_ground_m','vegetation_return_fraction'],
+          result.vegetationRows,
+          row=>[row.x,row.y,row.ground_points,row.vegetation_points,row.building_points,row.wire_points,
+            row.tower_points,row.ground_min_z,row.canopy_max_above_ground_m,
+            row.canopy_mean_above_ground_m,row.vegetation_return_fraction]);
+        manifest.completed.push({name:label,window:tile.window,
+          points:result.points,terrainCells:result.terrainCells,
+          vegetationCells:result.vegetationCells,terrainFile:terrainName,vegetationFile:vegetationName});
+        await writeTiledManifest(folder,manifest);
+        terrainGrid=[];vegetationRows=[];lasTotal=0;areaReady=false;
+        $('tiledAreaStatus').textContent='Bloques escritos: '+manifest.completed.length+'/'+plan.total+
+          ' · archivos CSV de terreno y vegetación en la carpeta seleccionada';
+        await new Promise(resolve=>setTimeout(resolve,0));
+      }
+      manifest.state='complete';await writeTiledManifest(folder,manifest);
+      $('tiledAreaStatus').textContent='Área procesada: '+plan.total+
+        ' bloques exportados a la subcarpeta Ocarto. Comprueba manifest.json y los CSV.';
+      toast('Área extensa procesada por '+plan.total+' teselas. Falta unión de modelos/curvas entre bloques.');
+      return manifest;
+    }catch(err){
+      manifest.state=tiledAreaStopped||err.name==='AbortError'?'cancelled':'error';
+      manifest.error=String(err.message||err);
+      try{await writeTiledManifest(folder,manifest)}catch(_){}
+      $('tiledAreaStatus').textContent='Procesamiento '+(manifest.state==='cancelled'?'cancelado':'incompleto')+
+        ': '+manifest.completed.length+'/'+plan.total+' bloques guardados. '+manifest.error;
+      if(manifest.state!=='cancelled')toast('LiDAR por bloques: '+manifest.error);
+      return manifest;
+    }finally{
+      tiledAreaBusy=false;tiledAreaStopped=false;
+      $('tiledAreaBtn').disabled=false;$('tiledAreaCancel').hidden=true;
+      $('tiledPointFile').value='';
+    }
+  }
+  $('tiledAreaBtn').onclick=()=>{
+    try{
+      if(tiledAreaBusy)throw Error('Ya se están procesando bloques');
+      if(!currentLidarPolygon())throw Error('Selecciona primero un polígono del mapa');
+      if(typeof window.showDirectoryPicker!=='function')
+        throw Error('Esta función necesita Chrome o Edge en Windows con acceso a carpetas locales');
+      $('tiledPointFile').value='';
+      $('tiledPointFile').click();
+    }catch(err){$('tiledAreaStatus').textContent=err.message;toast('LiDAR: '+err.message);}
+  };
+  $('tiledPointFile').onchange=async event=>{
+    const files=Array.from(event.target.files||[]);
+    if(!files.length)return;
+    try{
+      const folder=await window.showDirectoryPicker({mode:'readwrite'});
+      await processLargeAreaTiles(files,folder);
+    }catch(err){
+      if(err.name!=='AbortError'){toast('No se pudo iniciar LiDAR por teselas: '+err.message);
+        $('tiledAreaStatus').textContent=err.message;}
+    }finally{event.target.value='';}
+  };
+  $('tiledAreaCancel').onclick=()=>{
+    tiledAreaStopped=true;
+    $('tiledAreaStatus').textContent='Deteniendo el proceso: los bloques ya guardados se conservarán';
+    if(cloudReadController)cloudReadController.abort();
+    if(lasWorker&&lidarOperation==='area')
+      lasWorker.postMessage({type:'cancel',jobId:lidarJobId});
+  };
+
   function installLASWorker(){
     if(lasWorker)return;
     try{lasWorker=new Worker('lidar-worker.js')}catch(err){throw Error('No se pudo iniciar LiDAR. Abre ABRIR-OCARTO.bat y comprueba que existe lidar-worker.js. Detalle: '+err.message)}
