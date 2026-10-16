@@ -80,7 +80,7 @@ void main() {
       ],
     );
     final recovered = MapProject.decode(original.encode());
-    expect(recovered.version, 6);
+    expect(recovered.version, 7);
     final geometry = recovered.elements.single;
     expect(geometry.geographic, isTrue);
     expect(geometry.bezier.length, points.length);
@@ -112,4 +112,128 @@ void main() {
       bezier: [const BezierControls(corner: true)],
     ), throwsFormatException);
   });
+  test('modo libre conserva exactamente el otro tirador al arrastrar', () {
+    const current = BezierControls(
+      incoming: VectorVertex(25, 35),
+      outgoing: VectorVertex(60, 50),
+      mode: BezierHandleMode.free,
+    );
+    final edited = current.moveHandle(
+      vertex: const VectorVertex(40, 40),
+      destination: const VectorVertex(80, 65),
+      outgoingSide: true,
+    );
+    expect(edited.incoming?.x, 25);
+    expect(edited.incoming?.y, 35);
+    expect(edited.outgoing?.x, 80);
+    expect(edited.outgoing?.y, 65);
+    expect(edited.mode, BezierHandleMode.free);
+    final incomingMoved = edited.moveHandle(
+      vertex: const VectorVertex(40, 40),
+      destination: const VectorVertex(0, 20),
+      outgoingSide: false,
+    );
+    expect(incomingMoved.outgoing?.x, 80);
+    expect(incomingMoved.outgoing?.y, 65);
+  });
+
+  test('modo alineado respeta longitud propia del otro tirador', () {
+    const anchor = VectorVertex(100, 100);
+    const current = BezierControls(
+      incoming: VectorVertex(80, 100),
+      outgoing: VectorVertex(140, 100),
+      mode: BezierHandleMode.aligned,
+    );
+    final edited = current.moveHandle(
+      vertex: anchor,
+      destination: const VectorVertex(100, 160),
+      outgoingSide: true,
+    );
+    expect(edited.outgoing?.x, 100);
+    expect(edited.outgoing?.y, 160);
+    expect(edited.incoming?.x, closeTo(100, 0.0000001));
+    expect(edited.incoming?.y, closeTo(80, 0.0000001));
+    expect(edited.mode, BezierHandleMode.aligned);
+  });
+
+  test('cambiar de libres a alineados conserva longitudes relativas', () {
+    const current = BezierControls(
+      incoming: VectorVertex(90, 90),
+      outgoing: VectorVertex(130, 100),
+      mode: BezierHandleMode.free,
+    );
+    final aligned = current.withMode(
+        BezierHandleMode.aligned, const VectorVertex(100, 100));
+    expect(aligned.mode, BezierHandleMode.aligned);
+    expect(aligned.incoming?.x, closeTo(85.857864, 0.0001));
+    expect(aligned.incoming?.y, closeTo(100, 0.0001));
+    expect(aligned.outgoing?.x, 130);
+  });
+
+  test('pasar a simétricos iguala longitudes', () {
+    const current = BezierControls(
+      incoming: VectorVertex(90, 90),
+      outgoing: VectorVertex(130, 100),
+      mode: BezierHandleMode.free,
+    );
+    final mirrored = current.withMode(
+      BezierHandleMode.mirrored, const VectorVertex(100, 100));
+    expect(mirrored.incoming?.x, 70);
+    expect(mirrored.incoming?.y, 100);
+    expect(mirrored.mode, BezierHandleMode.mirrored);
+  });
+
+  test('modo alineado evita valores no finitos con tirador cero', () {
+    const current = BezierControls(
+      incoming: VectorVertex(90, 100),
+      outgoing: VectorVertex(100, 100),
+      mode: BezierHandleMode.aligned,
+    );
+    final edited = current.moveHandle(
+      vertex: const VectorVertex(100, 100),
+      destination: const VectorVertex(100, 100),
+      outgoingSide: true,
+    );
+    expect(edited.incoming?.x, 90);
+    expect(edited.incoming?.y, 100);
+    expect(edited.outgoing?.x, 100);
+  });
+
+  test('proyecto v7 conserva el modo libre al volver a abrirlo', () {
+    const controls = BezierControls(
+      incoming: VectorVertex(10, 20),
+      outgoing: VectorVertex(50, 80),
+      mode: BezierHandleMode.free,
+    );
+    final project = MapProject(
+      name: 'Tiradores libres', layers: [],
+      elements: [ProjectElement(tool: 'line', x: 0, y: 0,
+        vertices: [const VectorVertex(0, 0), const VectorVertex(40, 40)],
+        bezier: [null, controls])],
+    );
+    final reopened = MapProject.decode(project.encode());
+    expect(reopened.version, 7);
+    expect(reopened.elements.single.bezier[1]?.mode, BezierHandleMode.free);
+    expect(reopened.elements.single.bezier[1]?.incoming?.y, 20);
+  });
+
+  test('proyecto v6 sin campo mode mantiene simetría de tiradores', () {
+    final previous = MapProject(name: 'v6', version: 6, layers: [],
+      elements: [ProjectElement(tool: 'line', x: 0, y: 0,
+        vertices: [const VectorVertex(0, 0), const VectorVertex(50, 50)],
+        bezier: [null, const BezierControls(
+          incoming: VectorVertex(30, 30),
+          outgoing: VectorVertex(70, 70),
+        )])],
+    );
+    final restored = MapProject.decode(previous.encode());
+    expect(restored.version, 6);
+    expect(restored.elements.single.bezier[1]?.mode, BezierHandleMode.mirrored);
+  });
+
+  test('rechaza modo de tirador Bézier desconocido en archivo', () {
+    expect(() => BezierControls.fromJson({'mode': 'unstable'}),
+        throwsFormatException);
+  });
+
 }
