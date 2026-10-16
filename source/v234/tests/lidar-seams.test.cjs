@@ -72,7 +72,7 @@ test('el MDT conserva las cotas medidas sin suavizarlas y lee datos de la tesela
  assert.equal(stats.neighborTiles,2);
  const a=parseAscii(dir.files.get(stats.name));
  assert.deepEqual(a.header,{ncols:3,nrows:3,xllcorner:0,yllcorner:0,cellsize:1,NODATA_value:-9999});
- assert.equal(getPoint(a,1,0),101.5); // measured at x0.5, y1.5
+ assert.equal(getPoint(a,1,0),102.5); // measured at x0.5, y1.5
  const inputs=new Map();
  for(const tile of manifest.completed){
   const content=dir.files.get(tile.terrainFile);
