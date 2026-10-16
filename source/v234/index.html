@@ -27,7 +27,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 .left,.right{background:#fbfcfd;padding:18px 16px}.left{border-right:1px solid var(--line)}.right{border-left:1px solid var(--line)}
 .section-label{color:#8a96a3;font-size:10px;margin:9px 8px 11px}.nav-list{gap:4px}.nav-item{padding:10px 12px;color:#526170;border-radius:10px}.nav-item.active{background:#e6f3ee;color:#145b49}.nav-item:hover{background:#edf3f5}
 .card{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;box-shadow:0 2px 7px #15253408}.card-title{font-size:12px;color:#263746}.toolbar{height:52px;padding:0 16px;gap:7px;background:#fff;box-shadow:0 1px 5px #15253408}.action{border:1px solid #d8e0e6;background:#fff;border-radius:8px;padding:8px 11px;color:#40505e}.action:hover{background:#eef7f3;border-color:#b9d7cb}.action.primary,.primary-wide{background:#176b58;border-color:#176b58}.map-wrap{background:#e6ecea}.tool{border:1px solid #dce4e9;border-radius:10px;background:#fff}.tool:hover{border-color:#9dc6b7;box-shadow:0 3px 10px #173c2e10}.right .card{background:#fff}
-.oc-menu{margin-left:8px}.oc-menu summary{font-weight:650;letter-spacing:.02em;color:#e5edf2}.oc-dropdown{border-radius:10px;box-shadow:0 12px 32px #14212b26;padding:6px}.oc-dropdown button{padding:9px 11px;color:#394b5a}.oc-dropdown button:hover{background:#e6f3ee;color:#145b49}
+.oc-menu{margin-left:8px}.oc-menu summary{font-weight:650;letter-spacing:.02em;color:#e5edf2}.oc-dropdown{min-width:235px;border-radius:10px;box-shadow:0 12px 32px #14212b26;padding:6px}.oc-dropdown button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:8px 11px;color:#394b5a;text-align:left}.oc-dropdown button:hover{background:#e6f3ee;color:#145b49}.oc-dropdown hr{border:0;border-top:1px solid #d8e0e4;margin:6px 2px}.menu-note{padding:5px 11px 3px;color:#7a8891;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.menu-shortcut{margin-left:auto;color:#89959d;font-size:11px;white-space:nowrap}
 .coords{height:40px;background:#fff}.toast{background:#17232f;border-radius:10px}
 </style>
 <style>.tool-icon{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:6px;color:#176b58;font-size:16px;font-weight:700;vertical-align:-3px}.tool .tool-icon{display:block;width:auto;height:24px;margin:0 auto 3px;font-size:20px}.oc-dropdown .tool-icon{font-size:14px}</style>
@@ -36,13 +36,83 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <body>
 <div class="app">
 <header class="topbar"><div class="brand"><span class="brand-mark">O</span>ocarto</div><nav class="oc-menu" aria-label="Menú principal">
-<details><summary>MAPA</summary><div class="oc-dropdown"><button data-menu-target="newProject">Nuevo proyecto</button><hr><button data-menu-target="openProject">Abrir proyecto</button><button data-menu-target="restoreLocalBackup">Restaurar copia local</button><hr><button data-menu-target="saveProject">Guardar proyecto</button><button data-menu-target="exportMap">Exportar mapa</button></div></details>
-<details><summary>EDICIÓN</summary><div class="oc-dropdown"><div class="menu-note">Historial</div><button data-menu-target="undo">Deshacer</button><button data-menu-target="redo">Rehacer</button><hr><div class="menu-note">Selección</div><button data-menu-target="selectAllObjects">Seleccionar todo</button><button data-menu-target="duplicateSelected">Duplicar</button><button data-menu-target="copySelected">Copiar</button><button data-menu-target="cutSelected">Cortar</button><button data-menu-target="pasteSelected">Pegar</button><button data-menu-target="deleteSelected">Eliminar selección</button><hr><button data-menu-target="clearMap">Limpiar elementos del mapa</button></div></details>
-<details><summary>VER</summary><div class="oc-dropdown"><button data-menu-target="zoomIn">Acercar</button><button data-menu-target="zoomOut">Alejar</button><button data-menu-target="layersNav">Capas</button><button data-menu-target="symbolsNav">Símbolos</button></div></details>
-<details><summary>HERRAMIENTAS</summary><div class="oc-dropdown"><div class="menu-note">Geometría</div><button data-menu-target="selectMode">Herramienta seleccionar</button><button data-menu-target="smoothConservative">Suavizar conservador</button><button data-menu-target="smoothGeometric">Suavizar geométrico</button><button data-menu-target="validateGeometry">Validar geometría</button><button data-menu-target="measureSelection">Medir longitudes y áreas</button></div></details>
-<details><summary>LIDAR</summary><div class="oc-dropdown"><div class="menu-note">Datos y terreno</div><button data-menu-target="lidarNav">Abrir panel LiDAR e IA</button><button data-menu-target="prepareAddLidar">Cargar LiDAR</button><button data-menu-target="tiledAreaBtn">Procesar área extensa por teselas</button><button data-menu-target="terrainBtn">Preparar MDT</button><button data-menu-target="rebuildMdtBtn">Unir bordes del MDT preliminar</button><hr><div class="menu-note">Detección y cartografía</div><button data-menu-target="detectBtn">Detectar elementos</button><button data-menu-target="detectAllLidarElements">Detectar elementos LiDAR</button><button data-menu-target="vectorizeStructures">Vectorizar edificios, muros y rocas</button><button data-menu-target="vectorizeWalls">Vectorizar muros</button><button data-menu-target="vectorizeRocks">Vectorizar rocas</button><button data-menu-target="vectorizeVegetation">Vectorizar vegetación</button><button data-menu-target="detectTreeCrowns">Detectar copas de árboles</button><button data-menu-target="exportContours">Exportar curvas de nivel</button><button data-menu-target="exportMDT">Exportar MDT</button><button data-menu-target="exportDetections">Exportar detecciones</button></div></details>
-<details><summary>PLANTILLAS</summary><div class="oc-dropdown"><div class="menu-note">Fondos y referencias</div><button data-menu-target="templateFile">Abrir plantilla</button><button data-menu-target="prepareAddOrtho">Ortofoto / imagen</button><button data-menu-target="prepareAddMap">Mapa de referencia</button><button data-menu-target="prepareAddOcad">Importar mapa OCAD guía</button><button data-menu-target="addWmsTemplate">Añadir plantilla WMS</button><button data-menu-target="sendReferenceToMap">Enviar objetos de plantilla al mapa</button></div></details><details><summary>GPS</summary><div class="oc-dropdown"><div class="menu-note">Funciones GPS disponibles al conectar un receptor compatible</div><button data-menu-target="gpsConnect">Conectar GPS</button><button data-menu-target="gpsCenter">Centrar en posición GPS</button></div></details>
-<details><summary>CONFIGURACIÓN</summary><div class="oc-dropdown"><button data-menu-target="projectSettings">Ajustes del proyecto</button><button data-menu-target="mapCrs">Sistema de coordenadas</button></div></details>
+<details><summary>MAPA</summary><div class="oc-dropdown">
+<div class="menu-note">Archivo</div>
+<button type="button" data-menu-target="newProject">Nuevo proyecto <span class="menu-shortcut">Ctrl+N</span></button>
+<button type="button" data-menu-target="openProject">Abrir proyecto <span class="menu-shortcut">Ctrl+O</span></button>
+<button type="button" data-menu-target="restoreLocalBackup">Abrir copia local reciente</button>
+<hr>
+<button type="button" data-menu-target="saveProject">Guardar proyecto <span class="menu-shortcut">Ctrl+S</span></button>
+<hr>
+<button type="button" data-menu-target="exportMap">Exportar mapa</button>
+</div></details>
+<details><summary>EDICIÓN</summary><div class="oc-dropdown">
+<div class="menu-note">Historial</div>
+<button type="button" data-menu-target="undo">Deshacer <span class="menu-shortcut">Ctrl+Z</span></button>
+<button type="button" data-menu-target="redo">Rehacer <span class="menu-shortcut">Ctrl+Y</span></button>
+<hr>
+<div class="menu-note">Selección</div>
+<button type="button" data-menu-target="selectAllObjects">Seleccionar todo</button>
+<button type="button" data-menu-target="duplicateSelected">Duplicar</button>
+<button type="button" data-menu-target="copySelected">Copiar</button>
+<button type="button" data-menu-target="cutSelected">Cortar</button>
+<button type="button" data-menu-target="pasteSelected">Pegar</button>
+<button type="button" data-menu-target="deleteSelected">Eliminar selección</button>
+<hr>
+<button type="button" data-menu-target="clearMap">Limpiar elementos del mapa</button>
+</div></details>
+<details><summary>VER</summary><div class="oc-dropdown">
+<button type="button" data-menu-target="zoomIn">Acercar</button>
+<button type="button" data-menu-target="zoomOut">Alejar</button>
+<button type="button" data-menu-target="layersNav">Capas</button>
+<button type="button" data-menu-target="symbolsNav">Símbolos</button>
+</div></details>
+<details><summary>HERRAMIENTAS</summary><div class="oc-dropdown">
+<div class="menu-note">Geometría</div>
+<button type="button" data-menu-target="selectMode">Herramienta seleccionar</button>
+<button type="button" data-menu-target="smoothConservative">Suavizar conservador</button>
+<button type="button" data-menu-target="smoothGeometric">Suavizar geométrico</button>
+<button type="button" data-menu-target="validateGeometry">Validar geometría</button>
+<button type="button" data-menu-target="measureSelection">Medir longitudes y áreas</button>
+</div></details>
+<details><summary>LIDAR</summary><div class="oc-dropdown">
+<div class="menu-note">Datos y terreno</div>
+<button type="button" data-menu-target="lidarNav">Abrir panel LiDAR e IA</button>
+<button type="button" data-menu-target="prepareAddLidar">Cargar LiDAR</button>
+<button type="button" data-menu-target="tiledAreaBtn">Procesar área extensa por teselas</button>
+<button type="button" data-menu-target="terrainBtn">Preparar MDT</button>
+<button type="button" data-menu-target="rebuildMdtBtn">Unir bordes del MDT preliminar</button>
+<hr>
+<div class="menu-note">Detección y cartografía</div>
+<button type="button" data-menu-target="detectBtn">Detectar elementos</button>
+<button type="button" data-menu-target="detectAllLidarElements">Detectar elementos LiDAR</button>
+<button type="button" data-menu-target="vectorizeStructures">Vectorizar edificios, muros y rocas</button>
+<button type="button" data-menu-target="vectorizeWalls">Vectorizar muros</button>
+<button type="button" data-menu-target="vectorizeRocks">Vectorizar rocas</button>
+<button type="button" data-menu-target="vectorizeVegetation">Vectorizar vegetación</button>
+<button type="button" data-menu-target="detectTreeCrowns">Detectar copas de árboles</button>
+<button type="button" data-menu-target="exportContours">Exportar curvas de nivel</button>
+<button type="button" data-menu-target="exportMDT">Exportar MDT</button>
+<button type="button" data-menu-target="exportDetections">Exportar detecciones</button>
+</div></details>
+<details><summary>PLANTILLAS</summary><div class="oc-dropdown">
+<div class="menu-note">Fondos y referencias</div>
+<button type="button" data-menu-target="templateFile">Abrir plantilla</button>
+<button type="button" data-menu-target="prepareAddOrtho">Ortofoto / imagen</button>
+<button type="button" data-menu-target="prepareAddMap">Mapa de referencia</button>
+<button type="button" data-menu-target="prepareAddOcad">Importar mapa OCAD guía</button>
+<button type="button" data-menu-target="addWmsTemplate">Añadir plantilla WMS</button>
+<button type="button" data-menu-target="sendReferenceToMap">Enviar objetos de plantilla al mapa</button>
+</div></details>
+<details><summary>GPS</summary><div class="oc-dropdown">
+<div class="menu-note">Funciones GPS disponibles al conectar un receptor compatible</div>
+<button type="button" data-menu-target="gpsConnect">Conectar GPS</button>
+<button type="button" data-menu-target="gpsCenter">Centrar en posición GPS</button>
+</div></details>
+<details><summary>CONFIGURACIÓN</summary><div class="oc-dropdown">
+<button type="button" data-menu-target="projectSettings">Ajustes del proyecto</button>
+<button type="button" data-menu-target="mapCrs">Sistema de coordenadas</button>
+</div></details>
 </nav><div class="project-name" id="projectName">Proyecto · Mapa nuevo</div><div class="top-status">Módulo central · v1.61</div><div class="save-state"><span class="dot"></span><span id="backupStatus" role="status" aria-live="polite" title="Estado de la copia local">Copia local automática</span></div></header>
   <div class="layout">
     <aside class="left">
