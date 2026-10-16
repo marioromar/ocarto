@@ -111,8 +111,10 @@ class BezierControls {
     switch (mode) {
       case BezierHandleMode.free:
         opposite = unchanged;
+        break;
       case BezierHandleMode.mirrored:
         opposite = VectorVertex(vertex.x - dx, vertex.y - dy);
+        break;
       case BezierHandleMode.aligned:
         if (length == 0) {
           opposite = unchanged;
@@ -125,6 +127,7 @@ class BezierControls {
             vertex.y - dy * preservedLength / length,
           );
         }
+        break;
     }
     return BezierControls(
       incoming: outgoingSide ? opposite : destination,
