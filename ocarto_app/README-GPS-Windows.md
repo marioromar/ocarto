@@ -1,4 +1,4 @@
-# Ocarto Windows — GPS Bluetooth, tracks y plantilla georreferenciada (v252)
+# Ocarto Windows — GPS Bluetooth, georreferenciación y símbolos favoritos (v253)
 
 Se añade **GPS** como menú desplegable de la aplicación de escritorio Flutter `ocarto_app`, sin proyecto paralelo. Funciona con receptores GNSS Bluetooth **SPP/NMEA** que Windows presenta como un puerto COM, así como receptores USB con puerto serie. Los dispositivos solo **BLE/GATT** no son compatibles con este modo.
 
@@ -30,3 +30,13 @@ La plantilla se visualiza **bajo los tracks** y conserva el deslizador de opacid
 La referencia del PNG, la transformación PGW y el EPSG quedan guardados en el proyecto `.ocarto` (formato versión 3). El proyecto **no incrusta el PNG**: si se mueve a otra carpeta u ordenador hay que conservar o reubicar la imagen. Al reabrir un proyecto cuya plantilla no está disponible se avisa del problema, sin inventar un mapa de fondo.
 
 **Limitaciones:** esta función muestra una plantilla ráster; no importa GeoTIFF ni vectores OCAD/OMAP a Flutter, ni sustituye el editor cartográfico web. La conversión usa el elipsoide WGS84 para visualización UTM; no ejecuta transformaciones geodésicas oficiales de alta precisión. La visualización y la grabación sobre cartografía deben comprobarse con un mapa de coordenadas conocidas y con un receptor GNSS físico antes de uso profesional.
+
+## Columna de símbolos y favoritos — v253
+
+El prototipo Windows recupera una **columna derecha de símbolos**, con iconos grandes, sólidos y coloreados. Los favoritos ocupan el área superior, independientemente del desplazamiento del catálogo general. Para añadir o quitar un favorito, pulsa la **estrella** de su ficha, haz **clic derecho** o mantén la **pulsación larga**. Toca un símbolo para activar la herramienta de punto, línea o área de su categoría. La selección y los favoritos se conservan en el archivo de proyecto `.ocarto` (esquema versión 4), incluidos en el autoguardado.
+
+**Importante:** el catálogo incorporado a Flutter es aún **preliminar**. Contiene representaciones visuales de categorías cartográficas, pero **NO** sustituye el catálogo completo OCAD/ISOM ni reproduce todavía grosores, patrones y prioridades de impresión oficiales. Los nombres de categoría sin código numérico son identificadores internos. La aplicación Windows sigue sin implementar las herramientas completas de dibujo Bézier y áreas del editor web.
+
+Al seleccionar uno de los símbolos lineales admitidos por el GPS (506, 504, 101, 304, 416 o GPS) también se actualiza la selección para una siguiente grabación GPS. Un track ya iniciado conserva su símbolo.
+
+**Compatibilidad:** los proyectos antiguos sin favoritos permanecen legibles; la v249 del editor web y la v252 de Windows siguen conservadas en sus respectivas ramas.
