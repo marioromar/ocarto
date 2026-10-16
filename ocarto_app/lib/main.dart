@@ -1182,6 +1182,7 @@ class MapPainter extends CustomPainter {
     required this.opacity,
     required this.elements,
     required this.tool,
+    this.draft,
     required this.gpsCenter,
     required this.currentFix,
     required this.metersPerPixel,
@@ -1196,6 +1197,7 @@ class MapPainter extends CustomPainter {
   final Map<String, bool> layers;
   final double opacity;
   final List<MapElement> elements;
+  final MapElement? draft;
   final MapTool tool;
   final GpsFix? gpsCenter;
   final GpsFix? currentFix;
@@ -1236,6 +1238,109 @@ class MapPainter extends CustomPainter {
       ..colorFilter = ColorFilter.mode(
           Colors.white.withValues(alpha: opacity), BlendMode.modulate));
     canvas.restore();
+  }
+
+  Offset? _vectorToScreen(Offset stored, bool geographic, Size size) {
+    if (!geographic) return stored;
+    if (gpsCenter == null) return null;
+    final fix = GpsFix(latitude: stored.dy, longitude: stored.dx,
+        timestamp: gpsCenter!.timestamp);
+    return gpsToScreen(fix, gpsCenter!, size, metersPerPixel,
+        epsg: _projection);
+  }
+
+  /// Curvas Catmull-Rom convertidas a cúbicas Bézier: controles acotados
+  /// por los vecinos para evitar la inversión de la curva en extremos.
+  /// Edificios, vallados y muros respetan las esquinas explícitas.
+  Path _shapePath(List<Offset> points, {required bool closed,
+      required bool angular}) {
+    final path = Path();
+    if (points.isEmpty) return path;
+    path.moveTo(points.first.dx, points.first.dy);
+    if (points.length == 1) return path;
+    final n = points.length;
+    if (angular || n == 2) {
+      for (final p in points.skip(1)) { path.lineTo(p.dx, p.dy); }
+      if (closed) path.close();
+      return path;
+    }
+    final segments = closed ? n : n - 1;
+    for (var i = 0; i < segments; i++) {
+      final p0 = points[closed ? (i - 1 + n) % n : math.max(0, i - 1)];
+      final p1 = points[i];
+      final p2 = points[(i + 1) % n];
+      final p3 = points[closed ? (i + 2) % n : math.min(n - 1, i + 2)];
+      // Para extremos abiertos, tangentes de un solo segmento.
+      final c1 = p1 + (p2 - p0) * (1 / 6);
+      final c2 = p2 - (p3 - p1) * (1 / 6);
+      path.cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, p2.dx, p2.dy);
+    }
+    if (closed) path.close();
+    return path;
+  }
+
+  void _paintVector(Canvas canvas, Size size, MapElement element,
+      int index, {bool inProgress = false}) {
+    final baseColor = findCatalogSymbol(element.symbol)?.color
+        ?? const Color(0xff1f6f50);
+    final raw = element.vertices.isEmpty
+        ? <Offset>[element.position] : element.vertices;
+    final points = <Offset>[];
+    for (final vertex in raw) {
+      final p = _vectorToScreen(vertex, element.geographic, size);
+      if (p == null) return;
+      points.add(p);
+    }
+    if (points.isEmpty) return;
+    if (element.tool == MapTool.point) {
+      canvas.drawCircle(points.first, 6.5, Paint()..color = baseColor);
+      canvas.drawCircle(points.first, 6.5, Paint()
+        ..color = const Color(0xfff5f5f1)..style = PaintingStyle.stroke
+        ..strokeWidth = 1.3);
+    } else if (element.vertices.isNotEmpty) {
+      final closed = element.tool == MapTool.area && !inProgress;
+      final angular = <String>{
+        'Edificio area', 'Edificio', 'Muro', 'Valla', 'Privado',
+      }.contains(element.symbol);
+      final path = _shapePath(points, closed: closed, angular: angular);
+      if (closed && points.length >= 3) {
+        canvas.drawPath(path, Paint()
+          ..color = baseColor.withValues(alpha: .60)
+          ..style = PaintingStyle.fill);
+      }
+      final outline = Paint()
+        ..color = inProgress ? const Color(0xffefb657) : baseColor
+        ..strokeWidth = 2.8
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..style = PaintingStyle.stroke;
+      if (points.length == 1) {
+        canvas.drawCircle(points.first, 3.5, Paint()..color = outline.color);
+      } else if (inProgress) {
+        _dashed(canvas, path, outline);
+      } else {
+        canvas.drawPath(path, outline);
+      }
+    } else if (element.tool == MapTool.line) {
+      // Compatibilidad con los prototipos: conserva el trazo antiguo.
+      canvas.drawLine(element.position - const Offset(35, 0),
+          element.position + const Offset(35, 0),
+          Paint()..color = baseColor..strokeWidth = 3);
+    } else if (element.tool == MapTool.area) {
+      canvas.drawRect(Rect.fromCenter(center: element.position,
+          width: 70, height: 45), Paint()..color = baseColor);
+    }
+    if (inProgress || selectedElement == index) {
+      for (var j = 0; j < points.length; j++) {
+        final selected = !inProgress && selectedVertex == j;
+        canvas.drawCircle(points[j], selected ? 5.8 : 4.1,
+          Paint()..color = selected
+            ? const Color(0xffe9aa37) : Colors.white);
+        canvas.drawCircle(points[j], selected ? 5.8 : 4.1,
+          Paint()..color = const Color(0xff147d98)
+            ..strokeWidth = 1.5..style = PaintingStyle.stroke);
+      }
+    }
   }
 
   void _grid(Canvas canvas, Size size) {
@@ -1339,17 +1444,11 @@ class MapPainter extends CustomPainter {
           }
           continue;
         }
-        final paint = Paint()..color =
-            (findCatalogSymbol(e.symbol)?.color ?? const Color(0xff1f6f50))
-            ..style = PaintingStyle.fill;
-        if (e.tool == MapTool.point) canvas.drawCircle(e.position, 8, paint);
-        if (e.tool == MapTool.line) {
-          canvas.drawRect(Rect.fromCenter(center: e.position, width: 70, height: 8), paint);
-        }
-        if (e.tool == MapTool.area) {
-          canvas.drawRect(Rect.fromCenter(center: e.position, width: 70, height: 45), paint);
-        }
+        _paintVector(canvas, size, e, i);
       }
+    }
+    if (layers['Mapa editable'] == true && draft != null) {
+      _paintVector(canvas, size, draft!, elements.length, inProgress: true);
     }
     if (gpsCenter != null && currentFix != null) {
       final pos = gpsToScreen(currentFix!, gpsCenter!, size, metersPerPixel,
