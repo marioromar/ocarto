@@ -37,7 +37,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('Terminar'));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Trazado: 2 vértices'), findsOneWidget);
+    expect(find.byKey(const ValueKey('drawing-2')), findsOneWidget);
     await tester.tap(find.byTooltip('Cancelar trazado en curso'));
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byKey(const ValueKey('drawing-0')), findsOneWidget);
