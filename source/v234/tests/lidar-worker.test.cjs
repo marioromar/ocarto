@@ -178,6 +178,10 @@ test('HTML integra el worker y tiene JavaScript de interfaz sintácticamente vá
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert(html.includes("new Worker('lidar-worker.js')"));
  assert(html.includes('ABRIR-OCARTO.bat'));
+ assert(html.includes("openEditorWorkspace('lidarWorkspace',$('lidarCard'))"),
+   'El botón LiDAR debe abrir la pestaña y no desplazar contenido oculto');
+ assert(html.includes("openEditorWorkspace('layersWorkspace'"),
+   'El botón Capas debe activar su pestaña');
  const inline=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
      .map(m=>m[1]).filter(Boolean);
  assert(inline.length>0);
