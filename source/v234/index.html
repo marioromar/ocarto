@@ -79,6 +79,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <script src="ocarto-runtime-v248-4.js"></script>
 <script src="ocarto-runtime-v248-5.js"></script>
 <script src="lidar-tile-plan.js"></script>
+<script src="lidar-source-index.js"></script>
 <script src="ocad-editable.js"></script>
 <script src="gps-webserial.js"></script>
 <script>
@@ -514,17 +515,29 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     const cellTerrain=Number($('cellSize').value)||.5;
     const cellVegetation=Number($('vegetationCell').value)||1;
     const plan=OcartoLidarTilePlan.plan(aoi.bounds,cellTerrain,cellVegetation);
+    if(typeof OcartoLidarSourceIndex?.indexFiles!=='function')
+      throw Error('No se ha cargado el indexador de archivos LiDAR');
+    $('tiledAreaStatus').textContent='Leyendo solo las cabeceras de '+files.length+' LAS/LAZ para localizar las teselas…';
+    const sourceIndex=await OcartoLidarSourceIndex.indexFiles(files,{
+      onProgress:(done,total)=>{$('tiledAreaStatus').textContent=
+        'Indexando extensiones LAS/LAZ: '+done+'/'+total+' archivos';}
+    });
+    const unknownHeaders=sourceIndex.filter(entry=>!entry.verified).length;
     const folder=await baseDirectory.getDirectoryHandle('ocarto_teselas_'+new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14),{create:true});
     const manifest={
       format:'Ocarto LiDAR tiled CSV v1',created:new Date().toISOString(),
       sourceFiles:files.map(f=>({name:f.name,bytes:f.size})),
       cellTerrain,cellVegetation,selectedArea:aoi,plan,
+      sourceIndex:{files:files.length,verified:files.length-unknownHeaders,
+        unknown:unknownHeaders,bytesInspectedPerFile:227},
       state:'incomplete',completed:[],warnings:[
         'Celdas medidas; NO se han interpolado los datos ni unido curvas entre teselas',
         'Las ventanas son semiabiertas y no duplican celdas en la frontera',
         'Las teselas vecinas requieren halo para el suavizado profesional posterior',
         'La clase 2 se usa como suelo y las clases 3–5 para vegetación',
-        'Los archivos LAS/LAZ que intersectan cada ventana se vuelven a leer por ella'
+        'Las cabeceras se indexan una vez y se omiten archivos fuera de cada ventana',
+        'Los archivos LAS/LAZ que intersectan varias ventanas se leen una vez por cada una',
+        'Los archivos cuya cabecera no se pueda interpretar NO se descartan por el índice'
       ]
     };
     tiledAreaBusy=true;tiledAreaStopped=false;
@@ -536,11 +549,16 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       for(let i=0;i<plan.tiles.length;i++){
         if(tiledAreaStopped)throw Object.assign(Error('Procesamiento detenido por el usuario'),{name:'AbortError'});
         const tile=plan.tiles[i],label=tile.name;
-        $('tiledAreaStatus').textContent='Procesando bloque '+(i+1)+' de '+plan.total+' · '+label+
-          ' · se repetirán las lecturas de LAS/LAZ que intersecten esta ventana';
-        const result=await processAreaFiles(files,{
-          window:tile.window,aoi,throwOnError:true
-        });
+        const matching=OcartoLidarSourceIndex.forWindow(sourceIndex,tile.window);
+        $('tiledAreaStatus').textContent='Bloque '+(i+1)+'/'+plan.total+' · '+label+
+          ' · LAS/LAZ necesarios '+matching.selected.length+'/'+files.length;
+        // Windows without intersecting point-cloud files still get explicit
+        // CSV files, so the output mosaic layout has no missing windows.
+        const result=matching.selected.length
+          ? await processAreaFiles(matching.selected,{
+              window:tile.window,aoi,throwOnError:true
+            })
+          : {points:0,terrain:[],vegetationRows:[],terrainCells:0,vegetationCells:0,tiles:0};
         if(!result)throw Error('No se obtuvo el resultado de '+label);
         const terrainName=label+'_mdt.csv',vegetationName=label+'_vegetacion.csv';
         await writeTiledCsv(folder,terrainName,['x_utm','y_utm','min_ground_z_m'],result.terrain,
@@ -552,6 +570,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
             row.tower_points,row.ground_min_z,row.canopy_max_above_ground_m,
             row.canopy_mean_above_ground_m,row.vegetation_return_fraction]);
         manifest.completed.push({name:label,window:tile.window,
+          sources:matching.selected.map(f=>f.name),omittedSources:matching.skipped.length,
           points:result.points,terrainCells:result.terrainCells,
           vegetationCells:result.vegetationCells,terrainFile:terrainName,vegetationFile:vegetationName});
         await writeTiledManifest(folder,manifest);
