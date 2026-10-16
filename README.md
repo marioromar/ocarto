@@ -16,15 +16,15 @@ En **Archivo → Revisar símbolos y tintas OCAD…** se puede abrir un archivo 
 
 El desarrollo sigue en la rama `ocarto-v249`, sincronizada con `main`. La versión del ZIP se construye a partir de los mismos archivos fuente del editor.
 
-## Ocarto Windows — GPS, plantilla georreferenciada y símbolos (v253)
+## Ocarto Windows — objetos vectoriales editables (v254)
 
-La [rama ocarto-v253](https://github.com/marioromar/ocarto/tree/ocarto-v253) continúa la aplicación Flutter **dentro del mismo proyecto**, incorporando una columna derecha de símbolos de colores, favoritos fijados arriba y selección de herramientas de punto/línea/área. La estrella, clic derecho y pulsación larga permiten marcar favoritos; las preferencias de símbolo se conservan en el archivo `.ocarto`.
+La [rama ocarto-v254](https://github.com/marioromar/ocarto/tree/ocarto-v254) sigue el desarrollo Flutter en **el mismo repositorio Ocarto**, ahora con **líneas y áreas formadas por varios vértices**, terminadas con doble clic o botón, y **vértices seleccionables y desplazables**. Los trazados naturales usan curvas Bézier automáticas; elementos angulares como edificios conservan esquinas. Las coordenadas geográficas WGS84 se conservan cuando existe un origen GPS/cartográfico y se diferencian de las coordenadas locales de un lienzo sin georreferencia.
 
-Mantiene los avances de v252 (GPS Bluetooth COM, grabación GPX, PNG+PGW con EPSG UTM y autoguardado protegido). **El catálogo Flutter aún es provisional y no reemplaza el catálogo completo OCAD/ISOM ni el editor cartográfico web.**
+La v254 mantiene GPS Bluetooth COM, tracks editables, GPX, PNG+PGW con EPSG, autoguardado protegido y símbolos favoritos fijados en la columna derecha.
 
-- [Código Windows v253](ocarto_app/)
-- [Instrucciones, georreferenciación y símbolos](ocarto_app/README-GPS-Windows.md)
-- [Compilaciones y pruebas Windows](https://github.com/marioromar/ocarto/actions/workflows/flutter-windows-gps.yml)
-- [ZIP del código fuente de la rama v253](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v253.zip)
+- [Código Windows v254](ocarto_app/)
+- [Instrucciones de edición y limitaciones](ocarto_app/README-GPS-Windows.md)
+- [Pruebas y compilaciones Windows](https://github.com/marioromar/ocarto/actions/workflows/flutter-windows-gps.yml)
+- [ZIP del código de la misma rama v254](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v254.zip)
 
-La versión web **v249** y su ZIP original siguen separados e intactos. Un ejecutable Windows solo debe darse por listo cuando las pruebas y el job build-windows pasen; en ese caso aparecerá en el apartado **Artifacts** de GitHub Actions. Falta comprobación con receptor GNSS físico.
+El editor cartográfico web **v249** y las versiones Windows anteriores están intactos. El catálogo Flutter sigue siendo provisional. Falta implementar los tiradores Bézier profesionales, la edición CART completa y pruebas de hardware GNSS. El paquete ejecutable Windows se publica solo si GitHub Actions termina sus pruebas y su compilación con éxito.
