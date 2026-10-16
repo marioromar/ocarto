@@ -1,4 +1,4 @@
-# Ocarto Windows — GPS y edición avanzada de tiradores Bézier (v256)
+# Ocarto Windows — GPS y precisión geográfica Bézier (v257)
 
 Se añade **GPS** como menú desplegable de la aplicación de escritorio Flutter `ocarto_app`, sin proyecto paralelo. Funciona con receptores GNSS Bluetooth **SPP/NMEA** que Windows presenta como un puerto COM, así como receptores USB con puerto serie. Los dispositivos solo **BLE/GATT** no son compatibles con este modo.
 
@@ -76,3 +76,16 @@ Al cambiar a Simétricos o Alineados, el tirador saliente determina la direcció
 También se ha corregido la selección de un vértice cuando sus tiradores se encuentran muy cerca: se da preferencia a arrastrar el vértice si está más cerca del cursor que un tirador.
 
 **Compatibilidad:** versiones nuevas leen proyectos anteriores, pero un editor anterior a v256 podría ignorar los nuevos modos al abrirlos; conserva un respaldo antes de usar un editor más antiguo. Las curvas Bézier aún no reproducen todos los detalles de OCAD/OMAP y deben revisarse visualmente con ejemplos cartográficos reales.
+
+## Corrección métrica de curvas georreferenciadas — v257
+
+Cuando hay una **plantilla PNG/PGW cargada con EPSG UTM correcto**, las siguientes operaciones Bézier calculan las distancias en **metros UTM**, aunque los vértices y tiradores se sigan almacenando en longitud/latitud WGS84 en el proyecto:
+
+- Inicialización de tiradores al activar la edición manual.
+- Ajuste de dirección/longitud mediante los modos Simétricos, Alineados y Libres.
+- Arrastre de cualquiera de los dos tiradores.
+- Desplazamiento del vértice, trasladando con él sus tiradores sin alterar la forma en metros.
+
+Las zonas admitidas siguen siendo **ETRS89/UTM 29N–31N (25829–25831)** y **WGS84/UTM 29N–31N (32629–32631)**. Se conserva la posibilidad de trabajar sin imagen georreferenciada; en ese caso los dibujos con coordenadas locales usan sus unidades de lienzo habituales. **Los proyectos .ocarto mantienen el esquema 7** porque no cambia la forma de almacenamiento; la actualización corrige cómo se calculan las operaciones.
+
+La transformación utiliza la aproximación existente WGS84/ETRS89 del proyecto, no sustituye una transformación geodésica profesional con rejillas oficiales, ni demuestra por sí sola la precisión de un receptor GNSS o del PGW usado. Una plantilla trasladada o con EPSG incorrecto seguirá dando un desplazamiento cartográfico erróneo. Se han añadido pruebas para distintas zonas y para desplazamientos de tiradores en metros.
