@@ -4,14 +4,14 @@ const path = require('path');
 test('editor web loads its main interface', async ({ page }) => {
   await page.goto('/index.html');
   await expect(page).toHaveTitle(/Ocarto/i);
-  await expect(page.getByText('ocarto', { exact: true })).toBeVisible();
-  await expect(page.getByText('LiDAR e IA', { exact: true })).toBeVisible();
+  await expect(page.locator('.brand')).toContainText('ocarto');
+  await expect(page.locator('#lidarNav')).toContainText('LiDAR e IA');
   await expect(page.getByText('Mapa editable', { exact: true })).toBeVisible();
 });
 
 test('LiDAR workspace exposes the input flow for a small fixture', async ({ page }) => {
   await page.goto('/index.html');
-  const lidar = page.getByText('LiDAR e IA', { exact: true });
+  const lidar = page.locator('#lidarNav');
   await expect(lidar).toBeVisible();
   await lidar.click();
   await expect(page.getByText(/LiDAR/i).first()).toBeVisible();
