@@ -375,7 +375,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         _metersPerPixel = [0.5, 1.0, 2.0, 5.0, 10.0, 20.0]
                 .contains(project.gpsMetersPerPixel)
             ? project.gpsMetersPerPixel : 2;
-        _gpsLineSymbol = gpsLineSymbols.any((s) => s.code == project.gpsTrackSymbol)
+        _gpsLineSymbol = gpsLineSymbols.any((s) => s.code == project!.gpsTrackSymbol)
             ? project.gpsTrackSymbol : '506';
         _selectedElement = null;
         _selectedVertex = null;
