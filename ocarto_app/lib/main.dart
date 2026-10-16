@@ -494,24 +494,46 @@ class _OcartoHomeState extends State<OcartoHome> {
     }
   }
 
+  /// Con un origen GPS válido, almacena lon/lat WGS84.
+  /// Sin referencia espacial conserva las coordenadas del lienzo local.
+  Offset _storePosition(Offset screen, Size size, bool geographic) {
+    if (!geographic || _gpsCenter == null) return screen;
+    final fix = screenToGps(screen, _gpsCenter!, size, _metersPerPixel,
+        _gpsCenter!, epsg: _rasterImage == null ? null : _geoRaster?.epsg);
+    return Offset(fix.longitude, fix.latitude);
+  }
+
+  Offset? _screenPosition(Offset stored, Size size, bool geographic) {
+    if (!geographic) return stored;
+    if (_gpsCenter == null) return null;
+    return gpsToScreen(GpsFix(latitude: stored.dy, longitude: stored.dx,
+        timestamp: _gpsCenter!.timestamp), _gpsCenter!, size, _metersPerPixel,
+        epsg: _rasterImage == null ? null : _geoRaster?.epsg);
+  }
+
   void _selectAt(Offset position, Size size) {
-    final center = _gpsCenter;
-    if (center == null) return;
     const maxDistance = 16.0;
     var best = maxDistance * maxDistance;
     int? bestElement;
     int? bestVertex;
     for (var i = 0; i < elements.length; i++) {
-      final feature = elements[i];
-      if (!feature.isGpsTrack || feature.gpsPoints.isEmpty) continue;
-      for (var j = 0; j < feature.gpsPoints.length; j++) {
-        final candidate = gpsToScreen(feature.gpsPoints[j], center, size, _metersPerPixel,
-            epsg: _rasterImage == null ? null : _geoRaster?.epsg);
-        final squared = (candidate - position).distanceSquared;
-        if (squared < best) {
-          best = squared;
-          bestElement = i;
-          bestVertex = j;
+      final element = elements[i];
+      if (element.isGpsTrack && _gpsCenter != null) {
+        for (var j = 0; j < element.gpsPoints.length; j++) {
+          final candidate = gpsToScreen(element.gpsPoints[j], _gpsCenter!,
+              size, _metersPerPixel,
+              epsg: _rasterImage == null ? null : _geoRaster?.epsg);
+          final squared = (candidate - position).distanceSquared;
+          if (squared < best) { best = squared; bestElement = i; bestVertex = j; }
+        }
+      } else if (!element.isGpsTrack) {
+        final vertices = element.vertices.isEmpty ?
+            <Offset>[element.position] : element.vertices;
+        for (var j = 0; j < vertices.length; j++) {
+          final candidate = _screenPosition(vertices[j], size, element.geographic);
+          if (candidate == null) continue;
+          final squared = (candidate - position).distanceSquared;
+          if (squared < best) { best = squared; bestElement = i; bestVertex = j; }
         }
       }
     }
@@ -520,29 +542,85 @@ class _OcartoHomeState extends State<OcartoHome> {
 
   void _onMapTap(Offset position, Size size) {
     if (tool == MapTool.select) { _selectAt(position, size); return; }
-    setState(() { elements.add(MapElement(tool, position, symbol)); });
-    _scheduleAutosave();
+    final geographic = _gpsCenter != null;
+    final stored = _storePosition(position, size, geographic);
+    if (tool == MapTool.point) {
+      setState(() => elements.add(MapElement(tool, stored, symbol,
+          geographic: geographic)));
+      _scheduleAutosave();
+      return;
+    }
+    if (_draft == null) {
+      setState(() => _draft = MapElement(tool, stored, symbol,
+          vertices: <Offset>[stored], geographic: geographic));
+    } else {
+      final prev = _screenPosition(_draft!.vertices.last, size, _draft!.geographic);
+      if (prev != null && (prev - position).distance < 3) return;
+      setState(() => _draft!.vertices.add(
+          _storePosition(position, size, _draft!.geographic)));
+    }
+  }
+
+  /// Doble clic para terminar: el último vértice no se duplica.
+  bool _finishDrawing() {
+    final draft = _draft;
+    if (draft == null) return true;
+    final vertices = draft.vertices.map((v) => VectorVertex(v.dx, v.dy)).toList();
+    if (!VectorGeometry.valid(draft.tool.name, vertices)) {
+      _snack(draft.tool == MapTool.area
+          ? 'El área necesita tres vértices distintos.'
+          : 'La línea necesita dos vértices distintos.');
+      return false;
+    }
+    setState(() {
+      elements.add(draft);
+      _selectedElement = elements.length - 1;
+      _selectedVertex = null;
+      _draft = null;
+    });
+    unawaited(_autosave().catchError((Object error) {
+      if (mounted) _snack('No se pudo guardar el trazado: $error');
+    }));
+    return true;
+  }
+
+  void _cancelDrawing() {
+    if (_draft != null) setState(() => _draft = null);
+  }
+
+  void _changeTool(MapTool value) {
+    if (!_finishDrawing()) return;
+    setState(() { tool = value; _selectedElement = null; _selectedVertex = null; });
   }
 
   void _onMapDragStart(Offset position, Size size) {
     if (tool != MapTool.select || _recording) return;
     _selectAt(position, size);
     final index = _selectedElement;
-    setState(() => _movingVertex = index != null &&
-        elements[index].isGpsTrack && _selectedVertex != null);
+    setState(() => _movingVertex = index != null && _selectedVertex != null);
   }
 
   void _onMapDrag(Offset position, Size size) {
-    if (!_movingVertex || _gpsCenter == null) return;
+    if (!_movingVertex) return;
     final index = _selectedElement;
     final vertex = _selectedVertex;
-    if (index == null || vertex == null) return;
+    if (index == null || vertex == null || index >= elements.length) return;
     final element = elements[index];
-    if (vertex >= element.gpsPoints.length) return;
-    setState(() => element.gpsPoints[vertex] = screenToGps(
-      position, _gpsCenter!, size, _metersPerPixel, element.gpsPoints[vertex],
-      epsg: _rasterImage == null ? null : _geoRaster?.epsg,
-    ));
+    if (element.isGpsTrack) {
+      if (_gpsCenter == null || vertex >= element.gpsPoints.length) return;
+      setState(() => element.gpsPoints[vertex] = screenToGps(
+          position, _gpsCenter!, size, _metersPerPixel, element.gpsPoints[vertex],
+          epsg: _rasterImage == null ? null : _geoRaster?.epsg));
+    } else {
+      final stored = _storePosition(position, size, element.geographic);
+      setState(() {
+        if (element.vertices.isNotEmpty && vertex < element.vertices.length) {
+          element.vertices[vertex] = stored;
+        } else if (element.tool == MapTool.point) {
+          element.position = stored;
+        }
+      });
+    }
     _scheduleAutosave();
   }
 
