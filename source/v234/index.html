@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#132d27">
-  <title>Ocarto v249 · Edición cartográfica</title>
+  <title>Ocarto v259 · Edición cartográfica y GPS</title>
   <style>
     :root{--ink:#17221f;--muted:#66736d;--line:#dce3dd;--paper:#f5f7f2;--panel:#fff;--green:#1e5544;--lime:#d9f36c;--orange:#ed8950;--shadow:0 8px 28px #12261b12}
     *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.4 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select{font:inherit}button{cursor:pointer;color:inherit}.app{min-height:100vh;display:grid;grid-template-rows:58px 1fr}.topbar{background:#132d27;color:white;display:flex;align-items:center;gap:20px;padding:0 20px;box-shadow:0 2px 12px #0002;z-index:2}.brand{display:flex;align-items:center;gap:10px;font-weight:760;letter-spacing:.02em;font-size:17px}.brand-mark{height:29px;width:29px;border-radius:9px;background:var(--lime);color:#173c2e;display:grid;place-items:center;font-weight:900}.project-name{border-left:1px solid #ffffff35;padding-left:18px;color:#dbe5df}.top-status{margin-left:auto;color:#d0ded6;font-size:12px}.save-state{border-radius:99px;background:#ffffff12;padding:7px 11px;display:flex;gap:7px;align-items:center}.dot{height:7px;width:7px;background:#a9d969;border-radius:50%}.layout{display:grid;grid-template-columns:238px minmax(360px,1fr) 302px;min-height:0;height:calc(100vh - 58px)}.left,.right{background:var(--panel);overflow:auto}.left{border-right:1px solid var(--line);padding:17px 13px}.right{border-left:1px solid var(--line);padding:17px 15px}.section-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.11em;color:#8b9790;margin:6px 7px 10px}.nav-list{display:grid;gap:5px}.nav-item{width:100%;border:0;background:transparent;text-align:left;border-radius:9px;padding:10px 11px;display:flex;align-items:center;gap:10px;color:#56635c}.nav-item.active{background:#eaf2e9;color:#173e31;font-weight:700}.nav-item:hover{background:#f0f4ef}.ico{width:20px;text-align:center;font-size:16px}.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:4px 3px 16px}.tool{border:1px solid var(--line);background:#fff;border-radius:9px;padding:10px 5px;min-height:68px;text-align:center;color:#536159;font-size:11px}.tool b{display:block;font-size:19px;color:#244e3e;margin-bottom:3px}.tool.selected{border-color:#579271;background:#eef6ef;box-shadow:inset 0 0 0 1px #579271;color:#1b4835}.divider{border-top:1px solid var(--line);margin:14px 0}.canvas-area{min-width:0;display:grid;grid-template-rows:48px 1fr 37px;background:#e9ede6}.toolbar{background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 14px;overflow-x:auto;white-space:nowrap}.action{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 10px;font-size:12px}.action:hover{background:#f5f8f3}.action.primary{background:#1e5544;color:#fff;border-color:#1e5544}.zoom-label{font-size:12px;color:var(--muted);margin-left:auto}.map-wrap{position:relative;overflow:hidden;background:#e8ece4;min-height:300px}.map-wrap:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;background-image:linear-gradient(#9eaa9e 1px,transparent 1px),linear-gradient(90deg,#9eaa9e 1px,transparent 1px);background-size:54px 54px}.map-wrap:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,#fff0 40%,#cfd7cd55 100%)}canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}canvas:focus-visible{outline:2px solid #e97738;outline-offset:-3px}.canvas-context-menu{position:absolute;z-index:6;min-width:190px;max-height:calc(100% - 8px);overflow:auto;padding:5px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px #12261b30}.symbol-context-menu{position:fixed;z-index:20}.canvas-context-menu[hidden]{display:none}.canvas-context-menu button{display:block;width:100%;border:0;border-radius:6px;background:transparent;text-align:left;padding:9px 10px;font-size:12px}.canvas-context-menu button:hover:not(:disabled){background:#eef5ed}.canvas-context-menu button:disabled{color:#a0aaa3;cursor:not-allowed}.map-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,85%);padding:19px 20px;text-align:center;background:#ffffffdf;border:1px solid #ffffff;border-radius:13px;box-shadow:var(--shadow);color:#5c6961;pointer-events:none}.map-hint strong{display:block;color:#294d3e;font-size:15px;margin-bottom:5px}.map-hint span{font-size:12px}.map-hint.hidden{display:none}.coords{border-top:1px solid var(--line);background:#fff;display:flex;align-items:center;gap:15px;padding:0 15px;color:#78847c;font-size:11px}.coords .live{margin-left:auto}.card{border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:12px;background:#fff}.card-title{font-weight:730;font-size:12px;display:flex;align-items:center;gap:7px;margin-bottom:11px}.field{display:grid;gap:5px;margin:9px 0;color:#647168;font-size:11px}.field input[type=text],.field input[type=number],.field select{width:100%;border:1px solid var(--line);border-radius:7px;padding:8px;background:white;color:var(--ink)}.field input[type=range]{accent-color:#1e5544;width:100%}.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.toggle{width:30px;height:17px;border:0;border-radius:20px;background:#d5ddd6;position:relative}.toggle:after{content:"";position:absolute;left:2px;top:2px;background:white;width:13px;height:13px;border-radius:50%;transition:.16s}.toggle.on{background:#4a906c}.toggle.on:after{left:15px}.layer{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid #eef1ed;font-size:11px}.layer:first-of-type{border:0}.layer-name{flex:1}.layer input{accent-color:#1e5544}.file-drop{border:1px dashed #b7c8bb;background:#f7faf6;border-radius:8px;padding:12px;text-align:center;color:#63736a;font-size:11px;cursor:pointer}.file-drop:hover{border-color:#427557;background:#f0f7f0}.file-drop b{color:#28553e;display:block;margin-bottom:3px}.small{color:#829087;font-size:10px;line-height:1.4}.notice{background:#fff8e9;border:1px solid #f4dfac;color:#755f2c;padding:9px;border-radius:8px;font-size:10px;line-height:1.45}.lidar-stat{display:flex;justify-content:space-between;color:#718078;font-size:10px;padding:3px 0}.lidar-stat b{color:#203a2d}.primary-wide{width:100%;border:0;border-radius:8px;padding:10px;background:#1e5544;color:#fff;font-weight:700;font-size:11px;margin-top:8px}.primary-wide:disabled{opacity:.45;cursor:not-allowed}.iof-chip{font-family:ui-monospace,monospace;color:#315d48;background:#eef5ed;border-radius:5px;padding:2px 5px;font-size:10px}.toast{position:fixed;bottom:48px;left:50%;transform:translateX(-50%);background:#152b24;color:white;border-radius:8px;padding:10px 14px;font-size:12px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.2s;z-index:8}.toast.show{opacity:1;pointer-events:none;transition:.2s;z-index:8}.hidden-input{display:none}
@@ -75,6 +75,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <script src="ocarto-runtime-v248-4.js"></script>
 <script src="ocarto-runtime-v248-5.js"></script>
 <script src="ocad-editable.js"></script>
+<script src="gps-webserial.js"></script>
 <script>
 (()=>{
   
@@ -164,7 +165,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     }
     // Los controles de edición deben quedar por encima de todas las tintas.
     for(let i=0;i<S.features.length;i++){const f=S.features[i];if(isSelected('feature',i)&&vectorLayerFor(f)?.visible&&symbolStatus(f.symbol)!=='hidden'){ctx.save();ctx.translate(f.x||0,f.y||0);ctx.strokeStyle='#1681c4';ctx.fillStyle='#fff';ctx.lineWidth=1.5/S.zoom;ctx.setLineDash([4/S.zoom,3/S.zoom]);if(f.points?.length){tracePoints(f.points,f.type==='area');ctx.stroke();ctx.setLineDash([]);for(let j=0;j<f.points.length;j++)drawVertexHandle(f.points[j],j,f.points.length,S.selection?.vertexIndex===j||S.selectedVertices?.includes(j));for(const q of f.points)for(const[,t]of tangentHandles(q)){ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.lineTo(q.x+t.x,q.y+t.y);ctx.stroke();ctx.beginPath();ctx.arc(q.x+t.x,q.y+t.y,4/S.zoom,0,Math.PI*2);ctx.fill();ctx.stroke()}}ctx.restore()}}
-    for(let i=0;i<S.candidates.length;i++)drawFeature(S.candidates[i],true,isSelected('candidate',i));drawVegetationPreview();if(S.draft)drawFeature(S.draft);if(S.traceGesture?.previewPoints?.length>1)drawFeature({type:S.traceGesture.type,points:S.traceGesture.previewPoints,symbol:S.symbol});drawAreaClosePreview();if(S.selectionBox){const b=S.selectionBox,x=Math.min(b.start.x,b.current.x),y=Math.min(b.start.y,b.current.y),ww=Math.abs(b.current.x-b.start.x),hh=Math.abs(b.current.y-b.start.y);ctx.save();ctx.fillStyle='#1681c41a';ctx.strokeStyle='#1681c4';ctx.lineWidth=1/S.zoom;ctx.setLineDash([5/S.zoom,3/S.zoom]);ctx.fillRect(x,y,ww,hh);ctx.strokeRect(x,y,ww,hh);ctx.restore()}if(S.snapTarget){const q=S.snapTarget;ctx.save();ctx.strokeStyle='#e05b35';ctx.fillStyle='#fff';ctx.lineWidth=1.8/S.zoom;ctx.setLineDash([]);ctx.beginPath();ctx.arc(q.x,q.y,8/S.zoom,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(q.x-12/S.zoom,q.y);ctx.lineTo(q.x+12/S.zoom,q.y);ctx.moveTo(q.x,q.y-12/S.zoom);ctx.lineTo(q.x,q.y+12/S.zoom);ctx.stroke();ctx.restore()}if(S.template?.georef?.localMap&&S.controlPoints.length){ctx.save();ctx.strokeStyle='#e97738';ctx.lineWidth=1.5/S.zoom;for(const cp of S.controlPoints){const q={x:cp.x,y:cp.y};ctx.beginPath();ctx.arc(q.x,q.y,5/S.zoom,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(q.x-7/S.zoom,q.y);ctx.lineTo(q.x+7/S.zoom,q.y);ctx.moveTo(q.x,q.y-7/S.zoom);ctx.lineTo(q.x,q.y+7/S.zoom);ctx.stroke()}ctx.restore()}else if(S.georef&&S.controlPoints.length){ctx.save();ctx.strokeStyle='#e97738';ctx.lineWidth=1.5/S.zoom;for(const cp of S.controlPoints){const q=worldToLocal(worldAtPixel(cp.u,cp.v).x,worldAtPixel(cp.u,cp.v).y);ctx.beginPath();ctx.arc(q.x,q.y,5/S.zoom,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(q.x-7/S.zoom,q.y);ctx.lineTo(q.x+7/S.zoom,q.y);ctx.moveTo(q.x,q.y-7/S.zoom);ctx.lineTo(q.x,q.y+7/S.zoom);ctx.stroke()}ctx.restore()}
+    for(let i=0;i<S.candidates.length;i++)drawFeature(S.candidates[i],true,isSelected('candidate',i));if(S.gpsMarker){ctx.save();const q=S.gpsMarker;ctx.beginPath();ctx.arc(q.x,q.y,11/S.zoom,0,Math.PI*2);ctx.fillStyle='rgba(38,137,233,.24)';ctx.fill();ctx.beginPath();ctx.arc(q.x,q.y,5/S.zoom,0,Math.PI*2);ctx.fillStyle='#2689e9';ctx.fill();ctx.lineWidth=2/S.zoom;ctx.strokeStyle='#fff';ctx.stroke();ctx.restore()}drawVegetationPreview();if(S.draft)drawFeature(S.draft);if(S.traceGesture?.previewPoints?.length>1)drawFeature({type:S.traceGesture.type,points:S.traceGesture.previewPoints,symbol:S.symbol});drawAreaClosePreview();if(S.selectionBox){const b=S.selectionBox,x=Math.min(b.start.x,b.current.x),y=Math.min(b.start.y,b.current.y),ww=Math.abs(b.current.x-b.start.x),hh=Math.abs(b.current.y-b.start.y);ctx.save();ctx.fillStyle='#1681c41a';ctx.strokeStyle='#1681c4';ctx.lineWidth=1/S.zoom;ctx.setLineDash([5/S.zoom,3/S.zoom]);ctx.fillRect(x,y,ww,hh);ctx.strokeRect(x,y,ww,hh);ctx.restore()}if(S.snapTarget){const q=S.snapTarget;ctx.save();ctx.strokeStyle='#e05b35';ctx.fillStyle='#fff';ctx.lineWidth=1.8/S.zoom;ctx.setLineDash([]);ctx.beginPath();ctx.arc(q.x,q.y,8/S.zoom,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(q.x-12/S.zoom,q.y);ctx.lineTo(q.x+12/S.zoom,q.y);ctx.moveTo(q.x,q.y-12/S.zoom);ctx.lineTo(q.x,q.y+12/S.zoom);ctx.stroke();ctx.restore()}if(S.template?.georef?.localMap&&S.controlPoints.length){ctx.save();ctx.strokeStyle='#e97738';ctx.lineWidth=1.5/S.zoom;for(const cp of S.controlPoints){const q={x:cp.x,y:cp.y};ctx.beginPath();ctx.arc(q.x,q.y,5/S.zoom,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(q.x-7/S.zoom,q.y);ctx.lineTo(q.x+7/S.zoom,q.y);ctx.moveTo(q.x,q.y-7/S.zoom);ctx.lineTo(q.x,q.y+7/S.zoom);ctx.stroke()}ctx.restore()}else if(S.georef&&S.controlPoints.length){ctx.save();ctx.strokeStyle='#e97738';ctx.lineWidth=1.5/S.zoom;for(const cp of S.controlPoints){const q=worldToLocal(worldAtPixel(cp.u,cp.v).x,worldAtPixel(cp.u,cp.v).y);ctx.beginPath();ctx.arc(q.x,q.y,5/S.zoom,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(q.x-7/S.zoom,q.y);ctx.lineTo(q.x+7/S.zoom,q.y);ctx.moveTo(q.x,q.y-7/S.zoom);ctx.lineTo(q.x,q.y+7/S.zoom);ctx.stroke()}ctx.restore()}
     ctx.restore();$('featureCount').textContent=`${S.features.length+S.candidates.length} elementos`;$('drawnCount').textContent=S.features.length+S.candidates.length;
     $('mapHint').classList.toggle('hidden',!!(S.template||S.features.length||S.points.length||S.vegetationPreview?.features.length));$('crsStatus').textContent=S.georef?`CRS: ${$('mapCrs').value||'sin indicar'} · georreferenciada`:S.cloudTransform?`CRS: ${$('mapCrs').value||'nube LiDAR'} · coordenadas de la nube`:'CRS: local · configuración pendiente';renderControlPointStatus();$('zoomLabel').textContent=`${Math.round(S.zoom*100)} %`;const sel=S.selection,collection=sel?.collection==='candidate'?S.candidates:S.features,item=sel?collection[sel.index]:null;if(sel&&!item){S.selection=null;S.multiSelection=[]}const selectedCount=S.multiSelection?.length|| (item?1:0);$('selectionLabel').textContent=selectedCount>1?`${selectedCount} elementos seleccionados`:item?(sel.vertexIndex!==undefined?`Vértice ${sel.vertexIndex+1} seleccionado`:sel.collection==='candidate'?'Candidato LiDAR seleccionado':item.locked?'Elemento bloqueado':'Elemento seleccionado'):'Sin selección';$('deleteSelected').disabled=!selectedCount||!(S.multiSelection?.length?S.multiSelection:[sel]).some(ref=>ref.collection==='candidate'||(ref.collection==='feature'&&!S.features[ref.index]?.locked&&!vectorLayerFor(S.features[ref.index])?.referenceOnly));$('cutSelected').disabled=!selectedCount||(S.multiSelection?.length?S.multiSelection:[sel]).some(ref=>ref.collection==='feature'&&(!!S.features[ref.index]?.locked||vectorLayerFor(S.features[ref.index])?.referenceOnly));const hasDraftHistory=!!(S.draft||S.draftHistory.undo.length||S.draftHistory.redo.length);$('undo').disabled=hasDraftHistory?!S.draftHistory.undo.length:!S.mapHistory.undo.length;$('redo').disabled=hasDraftHistory?!S.draftHistory.redo.length:!S.mapHistory.redo.length;const canFinishDraft=!!S.draft&&S.draft.drawingMode!=='freehand';$('finishDraft').disabled=!canFinishDraft;$('finishDraftFloating').hidden=!canFinishDraft;const canConvert=selectedCount===1&&sel?.collection==='feature'&&item&&['line','area'].includes(item.type)&&!item.locked&&!vectorLayerFor(item)?.referenceOnly;$('convertToBezier').disabled=!canConvert||item.curve==='bezier';$('convertToPolyline').disabled=!canConvert||item.curve!=='bezier';$('linePattern').disabled=selectedCount!==1||sel?.collection!=='feature'||item?.type!=='line'||!!item?.locked||!!vectorLayerFor(item)?.referenceOnly;$('linePattern').textContent=item?.type==='line'&&item.linePattern==='dashed'?'Línea continua':'Línea discontinua';renderVertexEditor();
   }
@@ -727,6 +728,86 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
   /* API interna para las herramientas adicionales que se cargan después del editor principal. */
   Object.assign(window,{S,symbolStatus,vectorLayerFor,activeVectorLayer,snapshotMap,recordMapEdit,renderVectorLayers,updateLidarButtons,draw,local,hitTest,localToWorld,worldToLocal,moveItem,toast,updateActiveSymbolLabel,syncSymbolControls,renderSymbols,isSimpleRing,sampledPoints});
   if('ResizeObserver'in window)new ResizeObserver(resize).observe(wrap);else window.addEventListener('resize',resize);renderSymbols();syncSymbolControls();updateActiveSymbolLabel();renderVectorLayers();renderTemplateLayers();renderControlPointStatus();resize();setTool('select');
+  // Menú GPS: mismo editor cartográfico profesional; Web Serial en Chromium/Edge.
+  // Los puntos WGS84 se transforman al CRS REAL del mapa antes de insertar líneas.
+  let activeGpsFeature=null,gpsUndoBefore=null,gpsLastAccepted=null,gpsLastBackupAt=0;
+  let gpsLastDrawAt=0,gpsFollow=true;
+  const gpsMapPoint=fix=>{
+    const target=normalizeCrsName($('mapCrs').value);
+    if(!target || !(S.georef&&S.renderGeo) && !S.cloudTransform?.scale)return null;
+    const projected=OcartoGeoCrs.transformCoordinate(fix.lon,fix.lat,'EPSG:4326',target);
+    if(!Number.isFinite(projected?.x)||!Number.isFinite(projected?.y))return null;
+    const local=S.georef&&S.renderGeo?worldToLocal(projected.x,projected.y):{
+      x:(projected.x-S.cloudTransform.centerX)*S.cloudTransform.scale,
+      y:-(projected.y-S.cloudTransform.centerY)*S.cloudTransform.scale
+    };
+    if(!Number.isFinite(local.x)||!Number.isFinite(local.y))return null;
+    return {...local,rawX:projected.x,rawY:projected.y};
+  };
+  function gpsAutosave(force=false){
+    const now=Date.now();
+    if(!force&&now-gpsLastBackupAt<6000)return;
+    gpsLastBackupAt=now;
+    void saveLocalBackup(createProjectSnapshot());
+  }
+  function gpsStopRecord(){
+    if(!activeGpsFeature)return;
+    if(S.features.includes(activeGpsFeature)&&gpsUndoBefore)recordMapEdit(gpsUndoBefore);
+    activeGpsFeature=null;gpsLastAccepted=null;gpsUndoBefore=null;
+    gpsAutosave(true);draw();
+  }
+  const gpsBrowser=OcartoWebGps.create({
+    symbols:SYMBOL_CATALOG.filter(item=>item.geometry==='line'&&OcartoSymbolSpecs.symbolStyle(item.id,S.mapType)?.code!==null).map(item=>({id:item.id,code:item.code,name:item.name})),
+    onFix:(fix,config)=>{
+      let q=null;
+      try{q=gpsMapPoint(fix)}catch(err){if(activeGpsFeature)throw err}
+      if(q){
+        S.gpsMarker=q;
+        if(config.follow&&gpsFollow){S.panX=-q.x*S.zoom;S.panY=-q.y*S.zoom}
+      }else S.gpsMarker=null;
+      if(config.recording&&activeGpsFeature){
+        // No se incorpora un punto que carezca de posición georreferenciada.
+        if(!S.features.includes(activeGpsFeature)){gpsStopRecord();throw Error('El mapa cambió durante la grabación: track detenido')}
+        if(!q)throw Error('No se puede transformar la posición GPS al mapa: comprueba CRS y plantilla');
+        if(OcartoWebGps.acceptTrackFix(fix,gpsLastAccepted)){
+          activeGpsFeature.points.push(q);
+          activeGpsFeature.gpsPositions.push({...fix});
+          gpsLastAccepted=fix;
+          gpsAutosave();
+        }
+      }
+      if(Date.now()-gpsLastDrawAt>250){gpsLastDrawAt=Date.now();draw()}
+    },
+    onStart:(fix,symbol)=>{
+      if(activeGpsFeature)gpsStopRecord();
+      if(!gpsMapPoint(fix))return false;
+      gpsUndoBefore=snapshotMap();
+      activeGpsFeature={
+        x:0,y:0,type:'line',curve:'polyline',linePattern:'solid',
+        symbol,layerId:activeVectorLayer()?.id||'cartography',
+        points:[],gpsTrack:true,gpsPositions:[],gpsSource:'WebSerial-NMEA',
+        gpsTrackStarted:new Date().toISOString()
+      };
+      S.features.push(activeGpsFeature);gpsLastAccepted=null;
+      gpsAutosave(true);draw();
+      return true;
+    },
+    onStop:gpsStopRecord,
+    onFollow:enabled=>{gpsFollow=enabled},
+    onExport:()=>{
+      const tracks=S.features.filter(f=>f.gpsTrack&&Array.isArray(f.gpsPositions)&&f.gpsPositions.length);
+      if(!tracks.length){toast('Todavía no hay tracks GPS que exportar');return}
+      const safe=text=>String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      const tracksXml=tracks.map((f,i)=>'<trk><name>Ocarto '+(i+1)+' · '+safe(f.symbol)+'</name><trkseg>'+f.gpsPositions.map(p=>
+        `<trkpt lat="${p.lat.toFixed(8)}" lon="${p.lon.toFixed(8)}">${p.altitude==null?'':`<ele>${p.altitude}</ele>`}<time>${safe(p.time)}</time></trkpt>`
+      ).join('')+'</trkseg></trk>').join('');
+      const xml='<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Ocarto" xmlns="http://www.topografix.com/GPX/1/1">'+tracksXml+'</gpx>';
+      download(new Blob([xml],{type:'application/gpx+xml'}),'ocarto-gps-'+new Date().toISOString().slice(0,10)+'.gpx','application/gpx+xml');
+      toast(tracks.length+' track GPS original exportado a GPX');
+    }
+  });
+  // El estado GPS es transitorio, las líneas finales se guardan con el proyecto CART.
+  window.addEventListener('beforeunload',()=>{if(gpsBrowser.recording)gpsAutosave(true)});
 })();
 document.getElementById('createParallel')?.addEventListener('click',()=>{try{const sel=S.selection,f=sel?.collection==='feature'?S.features[sel.index]:null;if(!f||f.locked||f.type!=='line'||!Array.isArray(f.points)||f.points.length<2)throw Error('Selecciona primero una línea');const d=Number(document.getElementById('parallelDistance').value),side=Number(document.getElementById('parallelSide').value);if(!Number.isFinite(d)||d<0)throw Error('Indica una distancia válida');const before=snapshotMap(),points=OcartoLineTools.parallel(f.points.map(p=>[p.x,p.y]),d,side).map(([x,y])=>({x,y}));S.features.push({type:'line',points,symbol:f.symbol,layerId:f.layerId,properties:{derivedFrom:'parallel',offset:d,side}});recordMapEdit(before);draw();toast('Paralela creada')}catch(err){toast('Paralela: '+err.message)}});
 document.getElementById('joinSelectedLines')?.addEventListener('click',()=>{try{const refs=S.multiSelection?.length?S.multiSelection:(S.selection?[S.selection]:[]),lines=refs.filter(r=>r.collection==='feature').map(r=>S.features[r.index]).filter(f=>f?.type==='line'&&!f?.locked);if(lines.length!==2)throw Error('Selecciona exactamente dos líneas');const before=snapshotMap(),joined=OcartoLineTools.join(lines[0].points.map(p=>[p.x,p.y]),lines[1].points.map(p=>[p.x,p.y]),24/S.zoom);const first=S.features.indexOf(lines[0]),second=S.features.indexOf(lines[1]);S.features[first]={...lines[0],points:joined,properties:{...(lines[0].properties||{}),joined:true}};S.features.splice(second,1);S.selection={collection:'feature',index:first};S.multiSelection=[];recordMapEdit(before);renderVectorLayers();draw();toast('Líneas unidas')}catch(err){toast('Unir líneas: '+err.message)}});

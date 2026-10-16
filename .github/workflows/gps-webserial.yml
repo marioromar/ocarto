@@ -1,0 +1,24 @@
+name: GPS navegador · pruebas Web Serial
+on:
+  push:
+    paths:
+      - 'source/v234/gps-webserial.js'
+      - 'source/v234/index.html'
+      - 'source/v234/tests/gps-webserial.test.cjs'
+      - '.github/workflows/gps-webserial.yml'
+  workflow_dispatch:
+jobs:
+  gps-webserial-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar sintaxis GPS
+        run: node --check source/v234/gps-webserial.js
+      - name: Tests NMEA y filtros de track
+        run: node --test source/v234/tests/gps-webserial.test.cjs
+      - name: Verificar sintaxis de editor Ocarto
+        run: |
+          node -e "const fs=require('node:fs'); const html=fs.readFileSync('source/v234/index.html','utf8'); const m=html.match(/<script>\s*\(\(\)=>\{[\s\S]*?<\/script>/); if(!m)throw Error('Sin editor');new Function(m[0].slice(8,-9));"
