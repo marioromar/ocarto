@@ -4,6 +4,7 @@ window.OCARTO_SOURCE_REGISTRY = Object.freeze([
   {id:'pnoa',scope:'state',provider:'PNOA',types:['orthophoto','lidar'],formats:['WMS','WMTS','LAZ'],regions:['ES']},
   {id:'cartociudad',scope:'state',provider:'CartoCiudad',types:['topography','roads','addresses'],formats:['WMS','WFS'],regions:['ES']},
   {id:'osm',scope:'community',provider:'OpenStreetMap',types:['roads','buildings','landuse','water'],formats:['Overpass','GeoJSON'],regions:['ES']},
+  {id:'mapant-es',scope:'community',provider:'mapant.es',types:['orienteering-map','topography','roads','landuse'],formats:['web-map','vector-data'],regions:['ES'],url:'https://mapant.es/'}
   {id:'ide-andalucia',scope:'autonomous',provider:'IDE Andalucía',types:['orthophoto','lidar','dem','topography'],formats:['WMS','WMTS','WFS'],regions:['AN']},
   {id:'ide-aragon',scope:'autonomous',provider:'IDE Aragón',types:['orthophoto','lidar','dem','topography'],formats:['WMS','WMTS','WFS'],regions:['AR']},
   {id:'ide-asturias',scope:'autonomous',provider:'IDE Asturias',types:['orthophoto','lidar','dem','topography'],formats:['WMS','WFS'],regions:['AS']},
