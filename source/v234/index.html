@@ -632,7 +632,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       for(let k=0;k<256;k++){
         const e=block+4+k*40,pos=u32(e+16),length=u32(e+20);
         if(!pos||length<64||pos+length>n){if(pos)invalid++;continue}
-        const code=i32(pos),type=v.getUint8(pos+4),count=u32(pos+40);
+        const code=i32(pos),type=v.getUint8(pos+4),count=u32(pos+44);
         if(![1,2,3].includes(type)||!count||count>100000||56+count*8>length){invalid++;continue}
         const points=[];for(let j=0;j<count;j++){
           const x=i32(pos+56+j*8),y=i32(pos+60+j*8);
