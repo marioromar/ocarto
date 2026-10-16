@@ -482,7 +482,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
   // Area extensa: nunca construir el mapa completo en arrays JS. Cada
   // ventana se analiza y escribe al disco antes de continuar con la siguiente.
   // El explorador solicita la carpeta de destino al usuario; no sube nubes.
-  let tiledAreaStopped=false,tiledAreaBusy=false;
+  let tiledAreaStopped=false,tiledAreaBusy=false,tiledSelectedFiles=null;
   async function writeTiledCsv(folder,name,headers,rows,convert){
     const file=await folder.getFileHandle(name,{create:true});
     const writer=await file.createWritable();
@@ -576,29 +576,43 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     }finally{
       tiledAreaBusy=false;tiledAreaStopped=false;
       $('tiledAreaBtn').disabled=false;$('tiledAreaCancel').hidden=true;
-      $('tiledPointFile').value='';
+      $('tiledPointFile').value='';tiledSelectedFiles=null;
+      $('tiledAreaBtn').textContent='▦ Área extensa · procesar por teselas';
     }
   }
-  $('tiledAreaBtn').onclick=()=>{
+  // DOS gestos explícitos: primero seleccionar archivos; después pulsar otra
+  // vez para abrir la carpeta. Chrome exige activación de usuario distinta
+  // para ambos cuadros del sistema operativo.
+  $('tiledAreaBtn').onclick=async()=>{
     try{
       if(tiledAreaBusy)throw Error('Ya se están procesando bloques');
       if(!currentLidarPolygon())throw Error('Selecciona primero un polígono del mapa');
       if(typeof window.showDirectoryPicker!=='function')
         throw Error('Esta función necesita Chrome o Edge en Windows con acceso a carpetas locales');
-      $('tiledPointFile').value='';
-      $('tiledPointFile').click();
-    }catch(err){$('tiledAreaStatus').textContent=err.message;toast('LiDAR: '+err.message);}
+      if(!tiledSelectedFiles){
+        $('tiledPointFile').value='';
+        $('tiledPointFile').click();
+      }else {
+        const folder=await window.showDirectoryPicker({mode:'readwrite'});
+        await processLargeAreaTiles(tiledSelectedFiles,folder);
+      }
+    }catch(err){
+      if(err.name!=='AbortError'){
+        $('tiledAreaStatus').textContent=err.message;
+        toast('LiDAR: '+err.message);
+      }
+    }
   };
-  $('tiledPointFile').onchange=async event=>{
+  $('tiledPointFile').onchange=event=>{
     const files=Array.from(event.target.files||[]);
     if(!files.length)return;
-    try{
-      const folder=await window.showDirectoryPicker({mode:'readwrite'});
-      await processLargeAreaTiles(files,folder);
-    }catch(err){
-      if(err.name!=='AbortError'){toast('No se pudo iniciar LiDAR por teselas: '+err.message);
-        $('tiledAreaStatus').textContent=err.message;}
-    }finally{event.target.value='';}
+    if(files.some(f=>!/\\.(las|laz)$/i.test(f.name))){
+      $('tiledAreaStatus').textContent='Selecciona exclusivamente LAS/LAZ';
+      tiledSelectedFiles=null;return;
+    }
+    tiledSelectedFiles=files;
+    $('tiledAreaBtn').textContent='▦ Elegir carpeta y procesar '+files.length+' archivo(s)';
+    $('tiledAreaStatus').textContent='Seleccionados '+files.length+' LAS/LAZ. Pulsa «Elegir carpeta» para guardar el resultado, por bloques independientes.';
   };
   $('tiledAreaCancel').onclick=()=>{
     tiledAreaStopped=true;
