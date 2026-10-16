@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../gps/nmea_parser.dart';
+import '../geo/georeferenced_raster.dart';
 
 class ProjectLayer {
   ProjectLayer({
@@ -75,6 +76,7 @@ class MapProject {
     this.gpsCenterLongitude,
     this.gpsMetersPerPixel = 2,
     this.gpsTrackSymbol = '506',
+    this.geoRaster,
   });
 
   final String name;
@@ -85,6 +87,7 @@ class MapProject {
   final double? gpsCenterLongitude;
   final double gpsMetersPerPixel;
   final String gpsTrackSymbol;
+  final GeoRasterReference? geoRaster;
 
   String encode() => jsonEncode({
         'format': 'ocarto-project',
@@ -92,6 +95,7 @@ class MapProject {
         'name': name,
         'layers': layers.map((e) => e.toJson()).toList(),
         'elements': elements.map((e) => e.toJson()).toList(),
+        if (geoRaster != null) 'geoRaster': geoRaster!.toJson(),
         'gps': {
           'centerLatitude': gpsCenterLatitude,
           'centerLongitude': gpsCenterLongitude,
@@ -122,6 +126,9 @@ class MapProject {
       gpsMetersPerPixel:
           (gps['metersPerPixel'] as num?)?.toDouble() ?? 2,
       gpsTrackSymbol: gps['defaultLineSymbol'] as String? ?? '506',
+      geoRaster: json['geoRaster'] is Map<String, dynamic>
+          ? GeoRasterReference.fromJson(json['geoRaster'] as Map<String, dynamic>)
+          : null,
     );
   }
 }
