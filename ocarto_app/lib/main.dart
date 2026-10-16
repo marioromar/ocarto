@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +11,7 @@ import 'core/map_project.dart';
 import 'core/project_storage.dart';
 import 'gps/gps_serial_service.dart';
 import 'gps/nmea_parser.dart';
+import 'geo/georeferenced_raster.dart';
 
 void main() => runApp(const OcartoApp());
 
@@ -58,7 +61,14 @@ GpsLineSymbol styleFor(String symbol) {
 
 /// Proyección plana LOCAL para visualizar un GNSS WGS84 sobre una cuadrícula.
 /// Cada vértice se guarda siempre en latitud/longitud, no en píxeles.
-Offset gpsToScreen(GpsFix point, GpsFix origin, Size size, double metersPerPixel) {
+Offset gpsToScreen(GpsFix point, GpsFix origin, Size size, double metersPerPixel,
+    {int? epsg}) {
+  if (epsg != null) {
+    final p = UtmProjection.forward(point.latitude, point.longitude, epsg);
+    final o = UtmProjection.forward(origin.latitude, origin.longitude, epsg);
+    return Offset(size.width / 2 + (p.easting - o.easting) / metersPerPixel,
+        size.height / 2 - (p.northing - o.northing) / metersPerPixel);
+  }
   const metersPerDegree = 111319.49079327358;
   final east = (point.longitude - origin.longitude) *
       metersPerDegree * math.cos(origin.latitude * math.pi / 180);
@@ -68,7 +78,25 @@ Offset gpsToScreen(GpsFix point, GpsFix origin, Size size, double metersPerPixel
 }
 
 GpsFix screenToGps(Offset screen, GpsFix origin, Size size, double metersPerPixel,
-    GpsFix original) {
+    GpsFix original, {int? epsg}) {
+  if (epsg != null) {
+    final o = UtmProjection.forward(origin.latitude, origin.longitude, epsg);
+    final p = UtmProjection.inverse(
+        o.easting + (screen.dx - size.width / 2) * metersPerPixel,
+        o.northing - (screen.dy - size.height / 2) * metersPerPixel,
+        epsg);
+    return GpsFix(
+      latitude: p.latitude,
+      longitude: p.longitude,
+      timestamp: original.timestamp,
+      altitudeMeters: original.altitudeMeters,
+      hdop: original.hdop,
+      satellites: original.satellites,
+      fixQuality: original.fixQuality,
+      speedKmh: original.speedKmh,
+      courseDegrees: original.courseDegrees,
+    );
+  }
   const metersPerDegree = 111319.49079327358;
   final lonFactor = metersPerDegree *
       math.cos(origin.latitude * math.pi / 180);
@@ -154,6 +182,13 @@ class _OcartoHomeState extends State<OcartoHome> {
   bool _followGps = true;
   double _metersPerPixel = 2;
   String _gpsLineSymbol = '506';
+  GeoRasterReference? _geoRaster;
+  ui.Image? _rasterImage;
+  int _rasterWidth = 0;
+  int _rasterHeight = 0;
+  int _rasterEpsg = 25830;
+  bool _rasterLoading = false;
+
   MapElement? _activeTrack;
   GpsFix? _lastRecordedFix;
   int? _selectedElement;
@@ -190,6 +225,7 @@ class _OcartoHomeState extends State<OcartoHome> {
     unawaited(_gpsSubscription.cancel());
     unawaited(_errorSubscription.cancel());
     unawaited(gps.dispose());
+    _rasterImage?.dispose();
     super.dispose();
   }
 
@@ -267,6 +303,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         gpsCenterLongitude: _gpsCenter?.longitude,
         gpsMetersPerPixel: _metersPerPixel,
         gpsTrackSymbol: _gpsLineSymbol,
+        geoRaster: _geoRaster,
       );
 
   Future<void> _autosave() {
@@ -348,7 +385,13 @@ class _OcartoHomeState extends State<OcartoHome> {
       }
       if (project == null) { _snack('No hay copia de recuperación.'); return; }
       if (_recording) await _stopRecording();
+      final rasterToLoad = project.geoRaster;
       setState(() {
+        final oldRasterImage = _rasterImage;
+        _rasterImage = null;
+        oldRasterImage?.dispose();
+        _geoRaster = rasterToLoad;
+        if (rasterToLoad != null) _rasterEpsg = rasterToLoad.epsg;
         projectName = project!.name;
         for (final layer in project.layers) {
           if (layers.containsKey(layer.id)) layers[layer.id] = layer.visible;
@@ -363,6 +406,7 @@ class _OcartoHomeState extends State<OcartoHome> {
             isGpsTrack: element.isGpsTrack,
             gpsPoints: List<GpsFix>.from(element.gpsPoints),
           )));
+        _gpsCenter = null;
         if (project.gpsCenterLatitude != null &&
             project.gpsCenterLongitude != null) {
           _gpsCenter = GpsFix(
@@ -380,6 +424,13 @@ class _OcartoHomeState extends State<OcartoHome> {
         _selectedElement = null;
         _selectedVertex = null;
       });
+      if (rasterToLoad != null) {
+        try {
+          await _showRaster(rasterToLoad, recenter: _gpsCenter == null);
+        } catch (error) {
+          _snack('Proyecto abierto, pero falta la plantilla PNG: $error');
+        }
+      }
       _snack('Proyecto cargado: ${project.name}');
     } catch (error) {
       _snack('Error al cargar el proyecto: $error');
@@ -429,7 +480,8 @@ class _OcartoHomeState extends State<OcartoHome> {
       final feature = elements[i];
       if (!feature.isGpsTrack || feature.gpsPoints.isEmpty) continue;
       for (var j = 0; j < feature.gpsPoints.length; j++) {
-        final candidate = gpsToScreen(feature.gpsPoints[j], center, size, _metersPerPixel);
+        final candidate = gpsToScreen(feature.gpsPoints[j], center, size, _metersPerPixel,
+            epsg: _rasterImage == null ? null : _geoRaster?.epsg);
         final squared = (candidate - position).distanceSquared;
         if (squared < best) {
           best = squared;
@@ -464,8 +516,136 @@ class _OcartoHomeState extends State<OcartoHome> {
     if (vertex >= element.gpsPoints.length) return;
     setState(() => element.gpsPoints[vertex] = screenToGps(
       position, _gpsCenter!, size, _metersPerPixel, element.gpsPoints[vertex],
+      epsg: _rasterImage == null ? null : _geoRaster?.epsg,
     ));
     _scheduleAutosave();
+  }
+
+  /// Decodifica una vista previa limitada a 4096 px por lado para no
+  /// ocupar cientos de megabytes con imágenes LiDAR de alta resolución.
+  Future<void> _showRaster(GeoRasterReference ref, {bool recenter = true}) async {
+    final file = File(ref.imagePath);
+    final bytes = await file.readAsBytes();
+    const pngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
+    if (bytes.length < 24 ||
+        !List.generate(8, (i) => bytes[i] == pngSignature[i]).every((valid) => valid)) {
+      throw const FormatException('La plantilla seleccionada no es un PNG válido.');
+    }
+    final data = ByteData.sublistView(bytes);
+    final width = data.getUint32(16, Endian.big);
+    final height = data.getUint32(20, Endian.big);
+    if (width <= 0 || height <= 0 || width > 100000 || height > 100000) {
+      throw const FormatException('Dimensiones PNG no válidas.');
+    }
+    final maxDimension = math.max(width, height);
+    final desired = math.min(4096, maxDimension);
+    final codec = await ui.instantiateImageCodec(bytes,
+      targetWidth: width >= height ? desired : null,
+      targetHeight: height > width ? desired : null,
+      allowUpscaling: false);
+    late ui.Image image;
+    try {
+      image = (await codec.getNextFrame()).image;
+    } finally {
+      codec.dispose();
+    }
+    if (!mounted) { image.dispose(); return; }
+    final center = ref.center(width, height);
+    setState(() {
+      final old = _rasterImage;
+      _geoRaster = ref;
+      _rasterImage = image;
+      _rasterWidth = width;
+      _rasterHeight = height;
+      _rasterEpsg = ref.epsg;
+      if (recenter || _gpsCenter == null) {
+        _gpsCenter = GpsFix(latitude: center.latitude,
+            longitude: center.longitude, timestamp: DateTime.now().toUtc());
+        _followGps = false;
+      }
+      old?.dispose();
+    });
+  }
+
+  Future<void> _importRaster() async {
+    if (_rasterLoading) return;
+    try {
+      final image = await openFile(acceptedTypeGroups: [
+        const XTypeGroup(label: 'Plantilla PNG', extensions: ['png']),
+      ]);
+      if (image == null) return;
+      final path = image.path;
+      final dot = path.lastIndexOf('.');
+      final stem = dot < 0 ? path : path.substring(0, dot);
+      File? worldFile;
+      for (final candidate in ['$stem.pgw', '$stem.PGW', '$path' 'w', '$path' 'W']) {
+        final file = File(candidate);
+        if (await file.exists()) { worldFile = file; break; }
+      }
+      if (worldFile == null) {
+        throw const FormatException('No se encuentra el PGW junto al PNG con el mismo nombre.');
+      }
+      if (mounted) setState(() => _rasterLoading = true);
+      final world = RasterWorldFile.parse(await worldFile.readAsString());
+      final ref = GeoRasterReference(imagePath: path, epsg: _rasterEpsg, world: world);
+      await _showRaster(ref);
+      await _autosave();
+      _snack('Plantilla PNG/PGW georreferenciada cargada (EPSG:${ref.epsg}).');
+    } catch (error) {
+      _snack('No se pudo importar la plantilla: $error');
+    } finally {
+      if (mounted) setState(() => _rasterLoading = false);
+    }
+  }
+
+  Widget _rasterMenu() {
+    return _section('Plantilla georreferenciada', Icons.map_rounded, [
+      const Text('PNG con archivo PGW en la misma carpeta. El PGW no define EPSG.'),
+      const SizedBox(height: 8),
+      DropdownButtonFormField<int>(
+        key: ValueKey('raster-epsg-$_rasterEpsg'),
+        initialValue: _rasterEpsg,
+        decoration: const InputDecoration(labelText: 'Sistema de coordenadas', isDense: true),
+        isExpanded: true,
+        items: const [
+          DropdownMenuItem(value: 25829, child: Text('ETRS89 / UTM 29N · 25829')),
+          DropdownMenuItem(value: 25830, child: Text('ETRS89 / UTM 30N · 25830')),
+          DropdownMenuItem(value: 25831, child: Text('ETRS89 / UTM 31N · 25831')),
+          DropdownMenuItem(value: 32629, child: Text('WGS84 / UTM 29N · 32629')),
+          DropdownMenuItem(value: 32630, child: Text('WGS84 / UTM 30N · 32630')),
+          DropdownMenuItem(value: 32631, child: Text('WGS84 / UTM 31N · 32631')),
+        ],
+        onChanged: _geoRaster != null ? null :
+            (v) => setState(() => _rasterEpsg = v ?? 25830),
+      ),
+      const SizedBox(height: 8),
+      FilledButton.icon(
+        onPressed: _rasterLoading ? null : _importRaster,
+        icon: const Icon(Icons.add_photo_alternate_outlined),
+        label: Text(_rasterLoading ? 'Cargando PNG…' : 'Importar PNG + PGW'),
+      ),
+      if (_geoRaster != null) ...[
+        const SizedBox(height: 6),
+        Text(_geoRaster!.imagePath.split(Platform.pathSeparator).last,
+            style: Theme.of(context).textTheme.bodySmall),
+        if (_rasterImage == null)
+          const Text('No se ha podido mostrar el archivo de plantilla.'),
+        TextButton.icon(
+          onPressed: () {
+            setState(() {
+              _rasterImage?.dispose();
+              _rasterImage = null;
+              _geoRaster = null;
+            });
+            _scheduleAutosave();
+          },
+          icon: const Icon(Icons.layers_clear),
+          label: const Text('Quitar plantilla'),
+        ),
+      ],
+      const Text('Solo vista previa ráster: no modifica el original. Para cambiar de EPSG, quita la plantilla y vuelve a importarla.',
+          style: TextStyle(fontSize: 11.5, color: Color(0xffa9bdbe))),
+    ], expanded: true);
   }
 
   Widget _section(String title, IconData icon, List<Widget> children,
@@ -653,6 +833,7 @@ class _OcartoHomeState extends State<OcartoHome> {
                   style: Theme.of(context).textTheme.bodySmall),
             ]),
             _gpsMenu(),
+            _rasterMenu(),
             _section('Capas', Icons.layers_outlined, [
               ...layers.keys.map((name) => CheckboxListTile(
                 dense: true,
@@ -707,6 +888,10 @@ class _OcartoHomeState extends State<OcartoHome> {
               metersPerPixel: _metersPerPixel,
               selectedElement: _selectedElement,
               selectedVertex: _selectedVertex,
+              rasterImage: _rasterImage,
+              raster: _geoRaster,
+              rasterWidth: _rasterWidth,
+              rasterHeight: _rasterHeight,
             ),
             child: const SizedBox.expand(),
           ),
@@ -727,6 +912,10 @@ class MapPainter extends CustomPainter {
     required this.metersPerPixel,
     this.selectedElement,
     this.selectedVertex,
+    this.rasterImage,
+    this.raster,
+    this.rasterWidth = 0,
+    this.rasterHeight = 0,
   });
 
   final Map<String, bool> layers;
@@ -738,6 +927,41 @@ class MapPainter extends CustomPainter {
   final double metersPerPixel;
   final int? selectedElement;
   final int? selectedVertex;
+  final ui.Image? rasterImage;
+  final GeoRasterReference? raster;
+  final int rasterWidth, rasterHeight;
+
+  int? get _projection => rasterImage == null ? null : raster?.epsg;
+
+  void _paintRaster(Canvas canvas, Size size) {
+    if (rasterImage == null || raster == null || gpsCenter == null ||
+        rasterWidth == 0 || rasterHeight == 0 ||
+        layers['Plantilla georreferenciada'] != true) return;
+    final origin = UtmProjection.forward(
+        gpsCenter!.latitude, gpsCenter!.longitude, raster!.epsg);
+    final firstCorner = raster!.world.atPixel(-0.5, -0.5);
+    final colScale = rasterWidth / rasterImage!.width;
+    final rowScale = rasterHeight / rasterImage!.height;
+    final world = raster!.world;
+    final matrix = Float64List.fromList([
+      world.a * colScale / metersPerPixel,
+      -world.d * colScale / metersPerPixel, 0, 0,
+      world.b * rowScale / metersPerPixel,
+      -world.e * rowScale / metersPerPixel, 0, 0,
+      0, 0, 1, 0,
+      size.width / 2 + (firstCorner.easting - origin.easting) / metersPerPixel,
+      size.height / 2 - (firstCorner.northing - origin.northing) / metersPerPixel,
+      0, 1,
+    ]);
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    canvas.transform(matrix);
+    canvas.drawImage(rasterImage!, Offset.zero, Paint()
+      ..filterQuality = FilterQuality.medium
+      ..colorFilter = ColorFilter.mode(
+          Colors.white.withValues(alpha: opacity), BlendMode.modulate));
+    canvas.restore();
+  }
 
   void _grid(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xffe9eeeb));
@@ -758,7 +982,9 @@ class MapPainter extends CustomPainter {
       Paint()..color = const Color(0xffa5c4b5)..strokeWidth = 1.4);
     _label(canvas, 'GPS · WGS84  |  Cuadrícula local ${step.toInt()} m',
         const Offset(16, 14));
-    _label(canvas, 'El fondo cartográfico de este prototipo no está georreferenciado.',
+    _label(canvas, rasterImage == null
+        ? 'Sin plantilla PNG/PGW importada.'
+        : 'Plantilla georreferenciada EPSG:${raster!.epsg}',
         const Offset(16, 36));
   }
 
@@ -786,6 +1012,7 @@ class MapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (gpsCenter != null) {
       _grid(canvas, size);
+      _paintRaster(canvas, size);
     } else {
       canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xffedf0e7));
       if (layers['Plantilla georreferenciada'] == true) {
@@ -810,6 +1037,7 @@ class MapPainter extends CustomPainter {
           if (gpsCenter == null || e.gpsPoints.isEmpty) continue;
           final points = e.gpsPoints.map((fix) => gpsToScreen(
             fix, gpsCenter!, size, metersPerPixel,
+            epsg: _projection,
           )).toList();
           final style = styleFor(e.symbol);
           final paint = Paint()..color = style.color
@@ -848,7 +1076,8 @@ class MapPainter extends CustomPainter {
       }
     }
     if (gpsCenter != null && currentFix != null) {
-      final pos = gpsToScreen(currentFix!, gpsCenter!, size, metersPerPixel);
+      final pos = gpsToScreen(currentFix!, gpsCenter!, size, metersPerPixel,
+          epsg: _projection);
       canvas.drawCircle(pos, 13, Paint()..color = const Color(0xff2486db).withValues(alpha: .2));
       canvas.drawCircle(pos, 6, Paint()..color = const Color(0xff1978c5));
       canvas.drawCircle(pos, 6, Paint()..color = Colors.white
