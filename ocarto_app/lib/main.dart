@@ -752,6 +752,7 @@ class _OcartoHomeState extends State<OcartoHome> {
   }
 
   void _chooseCatalogSymbol(OcartoCatalogSymbol entry) {
+    if (!_finishDrawing()) return;
     setState(() {
       symbol = entry.id;
       tool = switch (entry.tool) {
@@ -918,11 +919,11 @@ class _OcartoHomeState extends State<OcartoHome> {
       padding: const EdgeInsets.only(bottom: 5),
       child: selected
           ? FilledButton.icon(
-              onPressed: () => setState(() => tool = value),
+              onPressed: () => _changeTool(value),
               icon: Icon(icon), label: Text(text),
             )
           : OutlinedButton.icon(
-              onPressed: () => setState(() => tool = value),
+              onPressed: () => _changeTool(value),
               icon: Icon(icon), label: Text(text),
             ),
     );
@@ -1048,7 +1049,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         SizedBox(width: 10),
         Text('Ocarto'),
         SizedBox(width: 10),
-        Text('v253', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
+        Text('v254', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
       ]),
       actions: [
         if (_recording)
@@ -1073,10 +1074,30 @@ class _OcartoHomeState extends State<OcartoHome> {
               _toolButton(MapTool.point, Icons.place, 'Punto'),
               _toolButton(MapTool.line, Icons.polyline, 'Línea'),
               _toolButton(MapTool.area, Icons.pentagon_outlined, 'Área'),
+              const SizedBox(height: 5),
+              if (_draft != null) ...[
+                Text('Trazado: ${_draft!.vertices.length} vértices',
+                  style: const TextStyle(color: Color(0xffe6c879))),
+                Row(children: [
+                  Expanded(child: FilledButton.tonalIcon(
+                    onPressed: _finishDrawing,
+                    icon: const Icon(Icons.done, size: 18),
+                    label: const Text('Terminar'),
+                  )),
+                  const SizedBox(width: 5),
+                  IconButton(
+                    tooltip: 'Cancelar trazado en curso',
+                    onPressed: _cancelDrawing,
+                    icon: const Icon(Icons.close),
+                  ),
+                ]),
+              ],
+              const Text('Línea/área: clic para añadir vértices, doble clic para terminar; seleccionar y arrastrar para corregir.',
+                  style: TextStyle(fontSize: 11.5, color: Color(0xffa6c1b8))),
               const Text('Elige los símbolos en la columna derecha.',
                   style: TextStyle(fontSize: 11.5, color: Color(0xffa6c1b8))),
               const SizedBox(height: 8),
-              Text('Seleccionar: toca un vértice de una línea GPS terminada y arrástralo para editarla.',
+              Text('Seleccionar: toca un vértice de una línea, área o track terminado para editarlo.',
                   style: Theme.of(context).textTheme.bodySmall),
             ]),
             _gpsMenu(),
@@ -1098,7 +1119,7 @@ class _OcartoHomeState extends State<OcartoHome> {
               const SizedBox(height: 6),
               OutlinedButton.icon(
                 onPressed: _recording ? null : () {
-                  setState(() { elements.clear(); _selectedElement = null; _selectedVertex = null; });
+                  setState(() { elements.clear(); _draft = null; _selectedElement = null; _selectedVertex = null; });
                   _scheduleAutosave();
                 },
                 icon: const Icon(Icons.delete_outline),
@@ -1116,6 +1137,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapUp: (d) => _onMapTap(d.localPosition, size),
+          onDoubleTap: _finishDrawing,
           onPanStart: (d) => _onMapDragStart(d.localPosition, size),
           onPanUpdate: (d) => _onMapDrag(d.localPosition, size),
           onPanEnd: (_) {
@@ -1129,6 +1151,7 @@ class _OcartoHomeState extends State<OcartoHome> {
               layers: layers,
               opacity: opacity,
               elements: elements,
+              draft: _draft,
               tool: tool,
               gpsCenter: _gpsCenter,
               currentFix: _currentFix,
