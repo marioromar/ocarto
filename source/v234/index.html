@@ -606,7 +606,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
   $('tiledPointFile').onchange=event=>{
     const files=Array.from(event.target.files||[]);
     if(!files.length)return;
-    if(files.some(f=>!/\\.(las|laz)$/i.test(f.name))){
+    if(files.some(f=>!/\.(las|laz)$/i.test(f.name))){
       $('tiledAreaStatus').textContent='Selecciona exclusivamente LAS/LAZ';
       tiledSelectedFiles=null;return;
     }
