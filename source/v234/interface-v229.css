@@ -127,3 +127,7 @@ html,body,.app{background:#101923;color:#e7edf3}
 .toolbar{display:flex!important;visibility:visible!important;min-height:48px;align-items:center}
 .toolbar .core-tool-icon{flex:0 0 34px!important;width:34px!important;height:32px;padding:0!important;display:inline-grid!important;place-items:center;font-size:20px;line-height:1;border-radius:7px;font-weight:700}
 .toolbar .core-tool-icon:disabled{opacity:.38}
+
+/* Coordenadas siempre legibles en la barra inferior */
+.coords{min-height:40px!important;padding:0 16px!important;background:#fff!important;color:#263746!important;font-size:12px!important;opacity:1!important}
+.coords span{color:#263746!important}
