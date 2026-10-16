@@ -625,7 +625,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     const u32=p=>v.getUint32(p,true),i32=p=>v.getInt32(p,true);
     if(n<64||v.getUint16(0,true)!==0x0cad)throw Error('No es un archivo OCAD válido');
     const version=v.getUint16(4,true);
-    if(version!==2018)throw Error('Lector editable preparado para OCAD 2018; versión encontrada: '+version);
+    if(version<10||version>12)throw Error('Versión OCAD no compatible con este lector: '+version);
     const objects=[],seen=new Set();let block=u32(12),blocks=0,invalid=0;
     while(block&&block+4+256*40<=n&&blocks++<1000&&!seen.has(block)){
       seen.add(block);const next=u32(block);
@@ -642,12 +642,12 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
         }
         const symbolCode=(code/1000).toFixed(3);
         if(type===1)objects.push({symbolCode,sourceObjectIndex:pos,nodeFlags,geometry:{type:'Point',coordinates:points[0]}});
-        else if(type===2)objects.push({symbolCode,sourceObjectIndex:k,geometry:{type:'LineString',coordinates:points}});
-        else if(type===3)objects.push({symbolCode,sourceObjectIndex:k,geometry:{type:'Polygon',coordinates:[points]}});
+        else if(type===2)objects.push({symbolCode,sourceObjectIndex:pos,nodeFlags,geometry:{type:'LineString',coordinates:points}});
+        else if(type===3)objects.push({symbolCode,sourceObjectIndex:pos,nodeFlags,geometry:{type:'Polygon',coordinates:[points]}});
       }
       block=next;
     }
-    if(!objects.length)throw Error('No se pudieron leer objetos OCAD 2018');
+    if(!objects.length)throw Error('No se pudieron leer objetos OCAD de este archivo');
     return {objects,setup:{scale:100000,easting:0,northing:0},skipped:{invalid,curves:objects.filter(o=>o.nodeFlags?.some(flags=>flags[0]&3)).length}};
   }
   $('openEditableOcad').onclick=()=>$('editableOcadFile').click();
@@ -656,7 +656,8 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     try{
       if(file.size>250*1024*1024)throw Error('El archivo OCAD supera 250 MB');
       const buffer=await file.arrayBuffer();
-      const is2018=new DataView(buffer).getUint16(4,true)===2018;
+      const ocadVersion=new DataView(buffer).getUint16(4,true);
+      const is2018=ocadVersion>=10&&ocadVersion<=12;
       if(!is2018&&!window.OcartoOcadObjects?.parseOcadObjects)throw Error('No está disponible el lector OCAD para esta versión');
       const parsed=is2018?parseOcad2018Editable(buffer):OcartoOcadObjects.parseOcadObjects(buffer);
       const objects=parsed.objects||[];
