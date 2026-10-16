@@ -1,7 +1,7 @@
 /* Ocarto source registry · Spain. Metadata only; download adapters are added per provider. */
 window.OCARTO_SOURCE_REGISTRY = Object.freeze([
-  {id:'ign-cnig',scope:'state',provider:'IGN / CNIG',types:['orthophoto','lidar','dem','topography'],formats:['WMS','WMTS','LAZ','ASC','GeoTIFF'],regions:['ES']},
-  {id:'pnoa',scope:'state',provider:'PNOA',types:['orthophoto','lidar'],formats:['WMS','WMTS','LAZ'],regions:['ES']},
+  {id:'ign-cnig',scope:'state',provider:'IGN / CNIG',types:['orthophoto','lidar','dem','topography'],formats:['WMS','WMTS','LAZ','ASC','GeoTIFF'],regions:['ES'],downloadUrl:'https://www.cnig.es/catalogo-de-productos/geodesia-y-cartografia/lidar'},
+  {id:'pnoa',scope:'state',provider:'PNOA',types:['orthophoto','lidar'],formats:['WMS','WMTS','LAZ'],regions:['ES'],downloadUrl:'https://pnoa.ign.es/web/portal/pnoa-lidar/productos-a-descarga'},
   {id:'cartociudad',scope:'state',provider:'CartoCiudad',types:['topography','roads','addresses'],formats:['WMS','WFS'],regions:['ES']},
   {id:'osm',scope:'community',provider:'OpenStreetMap',types:['roads','buildings','landuse','water'],formats:['Overpass','GeoJSON'],regions:['ES']},
   {id:'mapant-es',scope:'community',provider:'mapant.es',types:['orienteering-map','topography','roads','landuse'],formats:['web-map','vector-data'],regions:['ES'],url:'https://mapant.es/'}
