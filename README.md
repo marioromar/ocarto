@@ -29,6 +29,12 @@ Se ha separado el módulo de escritura local de **CSV por bloques de 4096 filas*
 
 **Sigue pendiente:** comprobar en el PC el LAZ PNOA de millones de puntos, generar un MDT continuo interpolado con halos, unir curvas entre ventanas, validar la vegetación real, importar COPC por jerarquía y procesar LAS/LAZ en el ejecutable Flutter. La lectura de la fuente que intersecta múltiples ventanas **todavía se repite por ventana**.
 
+### Índice espacial de fuentes y precisión de ventanas
+
+Para áreas extensas, Ocarto ahora lee **una única vez los primeros 227 bytes** de cada LAS/LAZ para obtener sus límites y selecciona solo los archivos que intersectan cada bloque. Los archivos con cabecera ilegible no se omiten silenciosamente: pasan al procesador para devolver un error verificable. El `manifest.json` incluye el resumen de archivos indexados y la lista de fuentes utilizadas en cada ventana.
+
+Además, las fronteras de las ventanas se alinean simultáneamente con las dos resoluciones elegidas (por ejemplo, 0,5 m de terreno y 0,7 m de vegetación), para evitar celdas duplicadas en las uniones. **Esto no crea todavía halo ni garantiza continuidad de curvas.**
+
 ## LiDAR v262 · Procesamiento por ventanas con salida a disco
 
 Se añadió la herramienta **Área extensa · procesar por teselas**. Con un polígono georreferenciado seleccionado y varios archivos LAS/LAZ, Ocarto planifica bloques de tamaño controlado para superficies de hasta 4–9 km² a 0,5 m, procesa las celdas por ventana y escribe **CSV independientes de terreno y vegetación**, más un `manifest.json`, en la carpeta elegida en Chrome/Edge. Así se evita almacenar en memoria todas las celdas del área completa. Ahora también se corrigen errores previos de finalización de mosaico y del cálculo de extensión de un polígono.
