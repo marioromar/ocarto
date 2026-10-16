@@ -93,6 +93,7 @@
     const firstFileAction=document.getElementById('restoreLocalBackup');
     ['newProject','openProject','saveProject'].forEach(id=>{const action=document.getElementById(id);if(action&&firstFileAction)toolbar.insertBefore(action,firstFileAction)});
     decorateQuickFiles(toolbar);
+    decorateCoreActions(toolbar);
     arrange();
     new MutationObserver(arrange).observe(toolbar,{childList:true});
     const addAction=(menuName,id,label,parent=null)=>{const box=parent||menuBox(menuName);if(box.querySelector(`[data-menu-target="${id}"]`))return;const b=document.createElement('button');b.type='button';b.dataset.menuTarget=id;b.textContent=label;box.append(b);return b};
@@ -123,6 +124,13 @@
       svg.setAttribute('stroke-width','2.8');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');
       svg.innerHTML=art;mark.replaceChildren(svg);
       button.setAttribute('aria-label',button.querySelector('span')?.textContent.trim()||button.dataset.tool);
+    }
+  }
+  function decorateCoreActions(toolbar){
+    const actions={undo:['↶','Deshacer'],redo:['↷','Rehacer'],finishDraft:['✓','Terminar trazado'],deleteSelected:['⌫','Eliminar']};
+    for(const [id,[icon,label]] of Object.entries(actions)){
+      const button=toolbar.querySelector('#'+id); if(!button)continue;
+      button.classList.add('core-tool-icon'); button.title=label; button.setAttribute('aria-label',label); button.textContent=icon;
     }
   }
   function decorateQuickFiles(toolbar){
