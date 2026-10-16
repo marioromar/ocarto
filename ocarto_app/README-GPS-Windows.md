@@ -1,4 +1,4 @@
-# Ocarto Windows — GPS Bluetooth, georreferenciación y símbolos favoritos (v253)
+# Ocarto Windows — GPS Bluetooth y editor vectorial básico (v254)
 
 Se añade **GPS** como menú desplegable de la aplicación de escritorio Flutter `ocarto_app`, sin proyecto paralelo. Funciona con receptores GNSS Bluetooth **SPP/NMEA** que Windows presenta como un puerto COM, así como receptores USB con puerto serie. Los dispositivos solo **BLE/GATT** no son compatibles con este modo.
 
@@ -40,3 +40,13 @@ El prototipo Windows recupera una **columna derecha de símbolos**, con iconos g
 Al seleccionar uno de los símbolos lineales admitidos por el GPS (506, 504, 101, 304, 416 o GPS) también se actualiza la selección para una siguiente grabación GPS. Un track ya iniciado conserva su símbolo.
 
 **Compatibilidad:** los proyectos antiguos sin favoritos permanecen legibles; la v249 del editor web y la v252 de Windows siguen conservadas en sus respectivas ramas.
+
+## Geometrías vectoriales editables — v254
+
+En **Herramientas** o mediante un símbolo de la columna derecha, selecciona punto, línea o área. Al usar línea o área, **cada clic añade un vértice al mismo objeto**, no crea un objeto nuevo. Termina el trazado con **doble clic** o el botón **Terminar** del panel. Para cancelar un trazado sin guardar, utiliza la X del panel. Las líneas exigen al menos dos vértices distintos y las áreas al menos tres que no formen una superficie degenerada. Al terminar, el objeto se añade al proyecto y se autoguarda.
+
+Con la herramienta **Seleccionar**, pulsa o arrastra un vértice para modificarlo; se admite también la edición de vértices GPS después de detener su grabación. Los puntos, líneas y áreas se guardan como geometrías reales en el formato de proyecto `.ocarto` (esquema 5). La representación de contornos naturales usa cúbicas Bézier de suavizado automático; los elementos definidos como angulares conservan las esquinas (edificios y muros, entre otros). **Todavía no se pueden manipular tiradores Bézier manualmente**.
+
+Cuando existe origen cartográfico/GPS, los nuevos vértices se almacenan como longitud/latitud WGS84; si no lo hay, se almacenan como **coordenadas locales del lienzo**. Las últimas no deben confundirse con georreferenciación verdadera y pueden variar de posición aparente al cambiar el tamaño del área de dibujo. Los formatos heredados de v253 siguen leyéndose. Se conservan GPS, PNG+PGW, catálogo provisional y favoritos.
+
+**Pendiente:** herramientas profesionales de suavizado por vértice, esquinas individuales, importación y edición CART/OCAD/OMAP y comprobaciones de campo. Los iconos de esta versión aún no reproducen todos los estilos oficiales IOF.
