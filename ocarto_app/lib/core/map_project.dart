@@ -56,7 +56,7 @@ class ProjectElement {
         'y': y,
         'symbol': symbol,
         if (vertices.isNotEmpty) 'vertices': vertices.map((v) => v.toJson()).toList(),
-        if (vertices.isNotEmpty) 'geographic': geographic,
+        if (geographic) 'geographic': true,
         if (isGpsTrack) 'gpsTrack': true,
         if (isGpsTrack) 'gpsPoints': gpsPoints.map((p) => p.toJson()).toList(),
       };
