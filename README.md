@@ -1,6 +1,6 @@
 # Ocarto — editor cartográfico de orientación
 
-**Editor web: v249 · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
+**Editor web: v249 con reparación LiDAR v258 · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
 
 ## Descargar la aplicación
 
@@ -15,6 +15,19 @@ Para usar Ocarto desde un ordenador, descarga el ZIP, descomprímelo y abre el a
 En **Archivo → Revisar símbolos y tintas OCAD…** se puede abrir un archivo de Bobadilla y comprobar en modo **solo lectura** símbolos, colores CMYK y orden provisional de impresión. La auditoría permite descargar un informe JSON, y **no sustituye los símbolos, colores ni las prioridades actuales**. Falta verificar el resultado visualmente contra OCAD 2018 antes de aprobar nuevos predeterminados.
 
 El desarrollo sigue en la rama `ocarto-v249`, sincronizada con `main`. La versión del ZIP se construye a partir de los mismos archivos fuente del editor.
+
+## LiDAR v258 · Volver a poder importar LAS/LAZ
+
+Se ha restaurado el archivo **lidar-worker.js** ausente, el decodificador **laz-perf 3.4.0** y su WebAssembly local, y se ha conectado con la lectura por bloques del editor web. La validación incluye pruebas sobre archivos LAS y LAZ reales y modelos pequeños controlados; **no demuestra aún la fiabilidad con áreas de 4–9 km² ni con el LAZ PNOA de millones de puntos**.
+
+**Para abrir esta versión en Windows:** descomprime el ZIP de la rama v258 y ejecuta **ABRIR-OCARTO.bat**; el navegador se abrirá en un servidor local. Abrir index.html directamente puede bloquear los Workers.
+
+- [Instrucciones de prueba LiDAR v258](PRUEBA-LIDAR-v258.md)
+- [ZIP completo con LiDAR v258](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v258.zip)
+- [Código GitHub v258](https://github.com/marioromar/ocarto/tree/ocarto-v258)
+- [Pruebas LiDAR GitHub Actions](https://github.com/marioromar/ocarto/actions/workflows/lidar-worker.yml)
+
+**Límites explícitos:** COPC jerárquico no implementado; 1.000.000 de celdas por modelo como protección de memoria; la app Windows Flutter aún no procesa LAS/LAZ. El diseño de menús LiDAR aún necesita revisión presencial.
 
 ## Ocarto Windows — Bézier georreferenciado en metros UTM (v257)
 
