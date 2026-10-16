@@ -36,7 +36,7 @@ void main() {
     expect(e.geographic, isFalse);
     expect(e.vertices.map((v) => v.toJson()).toList(),
         source.elements.single.vertices.map((v) => v.toJson()).toList());
-    expect(restored.version, 6);
+    expect(restored.version, 7);
   });
 
   test('área con longitud y latitud WGS84 recupera geometría', () {
