@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'core/map_project.dart';
 import 'core/project_storage.dart';
 import 'core/symbol_catalog.dart';
+import 'core/vector_geometry.dart';
 import 'gps/gps_serial_service.dart';
 import 'gps/nmea_parser.dart';
 import 'geo/georeferenced_raster.dart';
@@ -25,13 +26,18 @@ class MapElement {
     this.symbol, {
     this.isGpsTrack = false,
     List<GpsFix>? gpsPoints,
-  }) : gpsPoints = gpsPoints ?? <GpsFix>[];
+    List<Offset>? vertices,
+    this.geographic = false,
+  }) : gpsPoints = gpsPoints ?? <GpsFix>[],
+       vertices = vertices ?? <Offset>[];
 
   final MapTool tool;
-  final Offset position;
+  Offset position;
   String symbol;
   final bool isGpsTrack;
+  final bool geographic;
   final List<GpsFix> gpsPoints;
+  final List<Offset> vertices;
 }
 
 class GpsLineSymbol {
@@ -196,6 +202,7 @@ class _OcartoHomeState extends State<OcartoHome> {
   int? _selectedVertex;
   bool _movingVertex = false;
   bool _recording = false;
+  MapElement? _draft;
 
   @override
   void initState() {
@@ -299,6 +306,8 @@ class _OcartoHomeState extends State<OcartoHome> {
           tool: e.tool.name,
           x: e.position.dx, y: e.position.dy, symbol: e.symbol,
           isGpsTrack: e.isGpsTrack, gpsPoints: List<GpsFix>.from(e.gpsPoints),
+          vertices: e.vertices.map((v) => VectorVertex(v.dx, v.dy)).toList(),
+          geographic: e.geographic,
         )).toList(),
         gpsCenterLatitude: _gpsCenter?.latitude,
         gpsCenterLongitude: _gpsCenter?.longitude,
@@ -418,6 +427,8 @@ class _OcartoHomeState extends State<OcartoHome> {
             Offset(element.x, element.y), element.symbol,
             isGpsTrack: element.isGpsTrack,
             gpsPoints: List<GpsFix>.from(element.gpsPoints),
+            vertices: element.vertices.map((v) => Offset(v.x, v.y)).toList(),
+            geographic: element.geographic,
           )));
         _gpsCenter = null;
         if (project.gpsCenterLatitude != null &&
@@ -436,6 +447,7 @@ class _OcartoHomeState extends State<OcartoHome> {
             ? project.gpsTrackSymbol : '506';
         _selectedElement = null;
         _selectedVertex = null;
+        _draft = null;
       });
       if (rasterToLoad != null) {
         try {
