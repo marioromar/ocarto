@@ -147,7 +147,26 @@ async function loadEnd(message) {
   }
   if(t.received!==t.size) throw Error('Archivo incompleto: '+t.received+'/'+t.size+' bytes');
   const buffer=t.bytes.buffer,meta=header(buffer);
-  const record={buffer,meta},out=previewFor(record),job={cancelled:false,id:t.id};
+  const record={buffer,meta};
+  // A tile in a mosaic does not require a preview. Its compressed source is
+  // decoded during area-add; decoding all points here as well meant doing
+  // every LAZ tile TWICE, a major cost for 7+ million point PNOA files.
+  if(area && area.id===t.sessionId) {
+    const view=new DataView(buffer);
+    const spatialBounds={maxX:view.getFloat64(179,true),minX:view.getFloat64(187,true),
+      maxY:view.getFloat64(195,true),minY:view.getFloat64(203,true)};
+    if(!Object.values(spatialBounds).every(Number.isFinite) ||
+        spatialBounds.minX>spatialBounds.maxX ||
+        spatialBounds.minY>spatialBounds.maxY)
+      throw Error('Límites espaciales LAS/LAZ inválidos en la cabecera');
+    cloud=record;
+    send({type:'loaded',jobId:t.id,sessionId:t.sessionId,count:meta.count,
+      version:meta.major+'.'+meta.minor+(meta.compressed?' LAZ':''),
+      headerOnly:true,preview:new Float32Array(0),
+      bounds:spatialBounds,format:meta.format});
+    return;
+  }
+  const out=previewFor(record),job={cancelled:false,id:t.id};
   busy=job;
   try {
     await forPoints(record,job,(x,y,z,cls,r,i)=>out.accept(x,y,z,i),meta.compressed?'decompress':'read');
