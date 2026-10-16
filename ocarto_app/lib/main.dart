@@ -1147,6 +1147,7 @@ class _OcartoHomeState extends State<OcartoHome> {
             }
           },
           child: CustomPaint(
+            key: ValueKey('drawing-${_draft?.vertices.length ?? 0}'),
             painter: MapPainter(
               layers: layers,
               opacity: opacity,
