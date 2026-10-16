@@ -1230,8 +1230,8 @@ class _OcartoHomeState extends State<OcartoHome> {
                         BezierHandleMode.aligned => 'Alineados',
                         BezierHandleMode.free => 'Libres',
                       }, style: const TextStyle(fontSize: 11)),
-                      selected: (_selectedEditable?.bezier[_selectedVertex!]?.
-                          mode ?? BezierHandleMode.mirrored) == mode,
+                      selected: (_selectedEditable!.bezier[_selectedVertex!]?.mode ??
+                          BezierHandleMode.mirrored) == mode,
                       onSelected: (_) => _setHandleMode(mode),
                     ),
                 ]),
