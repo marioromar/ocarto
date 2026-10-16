@@ -1,0 +1,17 @@
+name: Ocarto Windows · prueba del lanzador local
+on:
+  push:
+    paths:
+      - 'servidor-ocarto.ps1'
+      - 'ABRIR-OCARTO.bat'
+      - 'source/v234/tests/test-lidar-launcher.ps1'
+      - '.github/workflows/ocarto-launcher.yml'
+  workflow_dispatch:
+jobs:
+  windows-launcher:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probar servidor local y recursos LiDAR
+        shell: powershell
+        run: .\source\v234\tests\test-lidar-launcher.ps1
