@@ -1,13 +1,54 @@
 # Ocarto local static server; Windows PowerShell 5.1; loopback only.
+param(
+    [int]$RequestedPort = 8787
+)
 $ErrorActionPreference = 'Stop'
 $root = [System.IO.Path]::GetFullPath($PSScriptRoot)
 $rootPrefix = $root.TrimEnd('\') + '\'
-$port = 8787
-$server = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $port)
+
+function Test-OcartoEndpoint {
+    param([int]$CandidatePort)
+    try {
+        $response = Invoke-WebRequest -Uri ("http://127.0.0.1:{0}/" -f $CandidatePort) -UseBasicParsing -TimeoutSec 2
+        return ($response.StatusCode -eq 200 -and $response.Content -match '(?i)\bocarto\b')
+    } catch {
+        return $false
+    }
+}
+
+# If Ocarto is already running, reuse it instead of failing with a socket error.
+if (Test-OcartoEndpoint $RequestedPort) {
+    Write-Host "Ocarto ya esta abierto en http://127.0.0.1:$RequestedPort/" -ForegroundColor Green
+    if ($env:OCARTO_HEADLESS -ne "1") { Start-Process "http://127.0.0.1:$RequestedPort/" }
+    exit 0
+}
+
+$port = $RequestedPort
+$server = $null
+for ($candidatePort = $RequestedPort; $candidatePort -lt ($RequestedPort + 20); $candidatePort++) {
+    $candidateServer = $null
+    try {
+        $candidateServer = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $candidatePort)
+        $candidateServer.Start()
+        $server = $candidateServer
+        $port = $candidatePort
+        break
+    } catch {
+        if ($null -ne $candidateServer) {
+            try { $candidateServer.Stop() } catch {}
+        }
+    }
+}
+if ($null -eq $server) {
+    throw "No hay ningun puerto libre entre $RequestedPort y $($RequestedPort + 19)."
+}
+
 try {
-    $server.Start()
     Write-Host "OCARTO - servidor local (solo este ordenador)" -ForegroundColor Green
     Write-Host "Editor: http://127.0.0.1:$port/"
+    if ($port -ne $RequestedPort) {
+        Write-Host "El puerto $RequestedPort estaba ocupado; se ha usado automaticamente el $port." -ForegroundColor Yellow
+    }
     Write-Host "Deja esta ventana abierta para utilizar LiDAR. Ctrl+C para cerrar."
     if ($env:OCARTO_HEADLESS -ne "1") { Start-Process "http://127.0.0.1:$port/" }
     while ($true) {
