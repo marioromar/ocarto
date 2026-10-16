@@ -127,7 +127,7 @@
     }
   }
   function decorateCoreActions(toolbar){
-    const actions={undo:['↶','Deshacer'],redo:['↷','Rehacer'],finishDraft:['✓','Terminar trazado'],deleteSelected:['⌫','Eliminar']};
+    const actions={undo:['↶','Deshacer'],redo:['↷','Rehacer'],finishDraft:['✓','Terminar trazado'],deleteSelected:['⌫','Eliminar'],zoomIn:['＋','Acercar'],zoomOut:['−','Alejar']};
     for(const [id,[icon,label]] of Object.entries(actions)){
       const button=toolbar.querySelector('#'+id); if(!button)continue;
       button.classList.add('core-tool-icon'); button.title=label; button.setAttribute('aria-label',label); button.textContent=icon;
