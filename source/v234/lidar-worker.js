@@ -289,8 +289,18 @@ onmessage=async event=>{
       if(aoi && (!Array.isArray(aoi.rings)||!aoi.rings.length||
           aoi.rings.some(r=>!Array.isArray(r)||r.length<3||r.some(p=>!Array.isArray(p)||p.length!==2||!p.every(Number.isFinite)))))
         throw Error('El área seleccionada no forma un polígono válido');
-      area={id:m.sessionId,aoi,terrain:makeGrid(m.terrainCell),vegetation:makeGrid(m.vegetationCell),tiles:0,points:0};
-      send({type:'area-ready',sessionId:m.sessionId,capacity:{terrainCells:0,vegetationCells:0,maxCells:MAX_CELLS}});return;
+      const terrain=makeGrid(m.terrainCell),vegetation=makeGrid(m.vegetationCell);
+      let capacity;
+      if(aoi?.rings?.length){
+        const extent={minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};
+        for(const ring of aoi.rings)for(const p of ring)addBounds(extent,p[0],p[1]);
+        const estimate=cell=>Math.ceil((extent.maxX-extent.minX)/cell+1)*Math.ceil((extent.maxY-extent.minY)/cell+1);
+        capacity={terrainCells:estimate(terrain.cell),vegetationCells:estimate(vegetation.cell),maxCells:MAX_CELLS};
+        if(capacity.terrainCells>MAX_CELLS || capacity.vegetationCells>MAX_CELLS)
+          throw Error('El área seleccionada excede el máximo de un millón de celdas por modelo. Aumenta la celda o recorta el área.');
+      }
+      area={id:m.sessionId,aoi,terrain,vegetation,tiles:0,points:0};
+      send({type:'area-ready',sessionId:m.sessionId,...(capacity?{capacity}:{})});return;
     }
     if(type==='area-add') {await addAreaTile(m);return;}
     if(type==='area-finish'){finishArea(m);return;}
