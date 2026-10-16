@@ -13,7 +13,9 @@
         bounds.maxX<=bounds.minX || bounds.maxY<=bounds.minY) throw Error('Extensión UTM del polígono no válida');
     const cells=[Number(terrainCell),Number(vegetationCell)];
     if(cells.some(c=>!Number.isFinite(c)||c<.1||c>100))throw Error('Resolución LiDAR no válida');
-    const limit=opts.maxCellsPerTile??Math.floor(MAX_CELLS*.8);
+    // Keep headroom for two simultaneous grids, the compressed LAZ bytes,
+    // and the CSV arrays being streamed to disk.
+    const limit=opts.maxCellsPerTile??Math.floor(MAX_CELLS*.5);
     if(!Number.isInteger(limit)||limit<100||limit>MAX_CELLS)throw Error('Límite por tesela no válido');
     const base=Math.min(...cells);
     // Geometry aligns to integer multiples of the finest cell size, and the
