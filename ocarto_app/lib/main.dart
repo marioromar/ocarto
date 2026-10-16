@@ -1076,7 +1076,7 @@ class _OcartoHomeState extends State<OcartoHome> {
               _toolButton(MapTool.area, Icons.pentagon_outlined, 'Área'),
               const SizedBox(height: 5),
               if (_draft != null) ...[
-                Text('Trazado: ${_draft!.vertices.length} vértices',
+                Text('Trazado: ${_draft!.vertices.length} ${_draft!.vertices.length == 1 ? 'vértice' : 'vértices'}',
                   style: const TextStyle(color: Color(0xffe6c879))),
                 Row(children: [
                   Expanded(child: FilledButton.tonalIcon(
