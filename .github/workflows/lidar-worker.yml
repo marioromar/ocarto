@@ -1,0 +1,26 @@
+name: Ocarto LiDAR smoke tests
+
+on:
+  push:
+    branches:
+      - 'ocarto-v258'
+  workflow_dispatch:
+
+jobs:
+  lidar-worker-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Worker source syntax
+        run: node --check source/v234/lidar-worker.js
+      - name: Test real LAS / LAZ decoder
+        run: node --test source/v234/tests/lidar-worker.test.cjs
+      - name: Verify offline LAZ dependencies
+        run: |
+          test -s source/v234/vendor/laz-perf.js
+          test -s source/v234/vendor/laz-perf.wasm
+          test -s source/v234/vendor/LAZ-PERF-LICENSE.txt
