@@ -29,11 +29,22 @@ class VectorGeometry {
   static bool valid(String tool, List<VectorVertex> vertices) {
     if (vertices.length < minimumVertices(tool)) return false;
     if (vertices.any((p) => !p.x.isFinite || !p.y.isFinite)) return false;
-    if (tool == 'point') return true;
-    for (var i = 1; i < vertices.length; i++) {
-      if (vertices[i].x != vertices[i - 1].x ||
-          vertices[i].y != vertices[i - 1].y) return true;
+    final unique = <String>{};
+    for (final p in vertices) {
+      unique.add('${p.x}:${p.y}');
     }
-    return false;
+    if (unique.length < minimumVertices(tool)) return false;
+    if (tool != 'area') return true;
+    // Área de zapatero con origen local para reducir cancelación en
+    // coordenadas UTM o grados de longitud/latitud cercanos entre sí.
+    final origin = vertices.first;
+    var doubleArea = 0.0;
+    for (var i = 0; i < vertices.length; i++) {
+      final a = vertices[i];
+      final b = vertices[(i + 1) % vertices.length];
+      doubleArea += (a.x - origin.x) * (b.y - origin.y) -
+          (b.x - origin.x) * (a.y - origin.y);
+    }
+    return doubleArea != 0 && doubleArea.isFinite;
   }
 }
