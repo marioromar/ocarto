@@ -634,20 +634,21 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
         if(!pos||length<64||pos+length>n){if(pos)invalid++;continue}
         const code=i32(pos),type=v.getUint8(pos+4),count=u32(pos+44);
         if(![1,2,3].includes(type)||!count||count>100000||56+count*8>length){invalid++;continue}
-        const points=[];for(let j=0;j<count;j++){
+        const points=[],nodeFlags=[];for(let j=0;j<count;j++){
           const x=i32(pos+56+j*8),y=i32(pos+60+j*8);
           // Los 8 bits inferiores contienen indicadores de nodos y tangentes.
           points.push([Math.floor(x/256)/100,Math.floor(y/256)/100]);
+          nodeFlags.push([x&255,y&255]);
         }
         const symbolCode=(code/1000).toFixed(3);
-        if(type===1)objects.push({symbolCode,sourceObjectIndex:pos,geometry:{type:'Point',coordinates:points[0]}});
+        if(type===1)objects.push({symbolCode,sourceObjectIndex:pos,nodeFlags,geometry:{type:'Point',coordinates:points[0]}});
         else if(type===2)objects.push({symbolCode,sourceObjectIndex:k,geometry:{type:'LineString',coordinates:points}});
         else if(type===3)objects.push({symbolCode,sourceObjectIndex:k,geometry:{type:'Polygon',coordinates:[points]}});
       }
       block=next;
     }
     if(!objects.length)throw Error('No se pudieron leer objetos OCAD 2018');
-    return {objects,setup:{scale:100000,easting:0,northing:0},skipped:{invalid,curves:objects.filter(o=>o.geometry.type!=='Point').length}};
+    return {objects,setup:{scale:100000,easting:0,northing:0},skipped:{invalid,curves:objects.filter(o=>o.nodeFlags?.some(flags=>flags[0]&3)).length}};
   }
   $('openEditableOcad').onclick=()=>$('editableOcadFile').click();
   $('editableOcadFile').onchange=async event=>{
@@ -663,7 +664,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       const setup=parsed.setup||{},factor=(setup.scale||10000)/100000;
       const toLocal=([x,y])=>({x:(x-(setup.easting||0))*factor,y:-(y-(setup.northing||0))*factor});
       const added=[],counts={area:0,line:0,point:0},unsupported={};
-      const makeMeta=obj=>({ocadSymbolCode:obj.symbolCode,ocadSourceFile:file.name,ocadSourceObjectIndex:obj.sourceObjectIndex});
+      const makeMeta=obj=>({ocadSymbolCode:obj.symbolCode,ocadSourceFile:file.name,ocadSourceObjectIndex:obj.sourceObjectIndex,ocadNodeFlags:obj.nodeFlags});
       for(const obj of objects){
         const geometry=obj.geometry||{},kind=geometry.type,coords=geometry.coordinates;
         const common={x:0,y:0,symbolCode:obj.symbolCode,properties:makeMeta(obj),ocadImported:true};
