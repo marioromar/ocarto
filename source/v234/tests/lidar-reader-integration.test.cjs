@@ -99,3 +99,57 @@ test('lector web transmite LAS y LAZ con igual extensión espacial',async()=>{
    assert(Math.abs(las.result.bounds[key]-laz.result.bounds[key])<.001,key);
  }
 });
+
+test('mosaico ignora tesela LAS exterior leyendo solo la cabecera, sin reservar ni descomprimir toda la nube',async()=>{
+ const b=bridge();
+ b.worker.postMessage({type:'area-start',sessionId:90,
+   terrainCell:1,vegetationCell:1,
+   aoi:{rings:[[[1000000000,1000000000],[1000000010,1000000000],
+     [1000000010,1000000010],[1000000000,1000000010]]]}});
+ const file=fileFixture('1815.las'),size=file.size;
+ const result=await reader.streamFileToWorker(file,b.worker,{
+   jobId:91,sessionId:90,chunkSize:64
+ });
+ assert.equal(result.skipped,true);
+ assert.equal(result.count,0);
+ assert.equal(result.bounds,null);
+ const chunks=b.queued.filter(x=>x==='load-chunk').length;
+ assert(chunks>=4 && chunks<=5,'Se deben leer como máximo los primeros 320 bytes: '+chunks);
+ assert(chunks*64<size,'La tesela fuera de área no debe transferirse entera');
+ assert(b.events.some(m=>m.type==='load-skip'));
+ assert(b.events.some(m=>m.type==='load-skip-ack'));
+});
+test('mosaico ignora tesela LAZ exterior sin cargar WebAssembly',async()=>{
+ const b=bridge();
+ b.worker.postMessage({type:'area-start',sessionId:92,
+   terrainCell:1,vegetationCell:1,
+   aoi:{rings:[[[1000000000,1000000000],[1000000004,1000000000],
+     [1000000004,1000000004],[1000000000,1000000004]]]}});
+ const result=await reader.streamFileToWorker(fileFixture('1815.laz'),b.worker,{
+   jobId:93,sessionId:92,chunkSize:512
+ });
+ assert.equal(result.skipped,true);
+ assert.equal(result.count,0);
+ assert.equal(b.queued.filter(x=>x==='load-chunk').length,1);
+ assert(!b.events.some(m=>m.stage==='decompress'));
+});
+test('mosaico no descarta tesela LAS si su cabecera intersecta el área',async()=>{
+ const fixture=fileFixture('1815.las');
+ const file=Buffer.from(await fixture.arrayBuffer());
+ const d=new DataView(file.buffer,file.byteOffset,file.byteLength);
+ const xmin=d.getFloat64(187,true),xmax=d.getFloat64(179,true);
+ const ymin=d.getFloat64(203,true),ymax=d.getFloat64(195,true);
+ const areaX=(xmin+xmax)/2,areaY=(ymin+ymax)/2;
+ const b=bridge();
+ b.worker.postMessage({type:'area-start',sessionId:94,
+   terrainCell:4,vegetationCell:4,
+   aoi:{rings:[[[areaX-5,areaY-5],[areaX+5,areaY-5],
+     [areaX+5,areaY+5],[areaX-5,areaY+5]]]}});
+ const result=await reader.streamFileToWorker(fixture,b.worker,{
+   jobId:95,sessionId:94,chunkSize:128
+ });
+ assert(!result.skipped);
+ assert(result.count>0);
+ assert.equal(b.queued.filter(x=>x==='load-chunk').length,
+   Math.ceil(fixture.size/128));
+});
