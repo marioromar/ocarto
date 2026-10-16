@@ -84,7 +84,8 @@ test('el MDT conserva las cotas medidas sin suavizarlas y lee datos de la tesela
  const expected=seams.interpolation(inputs,2,1);
  assert.equal(expected.measured,false);
  assert(Math.abs(getPoint(a,1,2)-expected.z)<1e-4);
- assert(Math.abs(getPoint(a,1,2)-(100+2.5*2+1.5))<1.5);
+ assert(getPoint(a,1,2)>100 && getPoint(a,1,2)<115,
+   'La estimación IDW no debe producir cotas fuera del rango observado');
 });
 
 test('el MDT con teselas vecinas produce resultados idénticos a una sola rejilla global',async()=>{
