@@ -629,7 +629,7 @@ class _OcartoHomeState extends State<OcartoHome> {
     body: Row(children: [
       SizedBox(
         width: 315,
-        child: Container(
+        child: Material(
           color: const Color(0xff202b2f),
           child: ListView(children: [
             Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
