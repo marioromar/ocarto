@@ -8,7 +8,6 @@ on:
       - 'ocarto-v261'
       - 'ocarto-v262'
       - 'ocarto-v263'
-      - 'ocarto-v263'
   workflow_dispatch:
 
 jobs:
