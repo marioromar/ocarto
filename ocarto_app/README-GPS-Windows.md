@@ -1,4 +1,4 @@
-# Ocarto Windows — GPS Bluetooth y grabación de tracks (v250)
+# Ocarto Windows — GPS Bluetooth y grabación de tracks (v251)
 
 Se añade **GPS** como menú desplegable de la aplicación de escritorio Flutter `ocarto_app`, sin proyecto paralelo. Funciona con receptores GNSS Bluetooth **SPP/NMEA** que Windows presenta como un puerto COM, así como receptores USB con puerto serie. Los dispositivos solo **BLE/GATT** no son compatibles con este modo.
 
@@ -8,7 +8,7 @@ Se añade **GPS** como menú desplegable de la aplicación de escritorio Flutter
 4. Elige un **símbolo lineal** del desplegable (por defecto *506 — Sendero*); pulsa **Iniciar grabación**. Los puntos entran directamente en una línea del proyecto, conservando coordenadas **WGS84**, marcas de tiempo y altitud cuando está disponible.
 5. **Detener** finaliza la línea. Se puede seleccionar y mover sus vértices después de detenerla, o cambiar el símbolo. También se puede **Exportar GPX**.
 
-**Autoguardado:** se escribe una copia del proyecto en el directorio de documentos de la aplicación como `ocarto-project.json` al iniciar y terminar un track y periódicamente durante su grabación (aprox. cada tres segundos, si llegan posiciones nuevas). Se recomienda además usar **Guardar proyecto** para elegir una ruta externa. El autoguardado se puede recuperar mediante **Cargar proyecto** cuando no se selecciona un archivo.
+**Autoguardado v251:** el proyecto se escribe primero en `ocarto-project.json.tmp` y solo después se sustituye el archivo principal `ocarto-project.json`. Antes de sustituir un principal válido se conserva la versión anterior en `ocarto-project.json.bak` (mediante `ocarto-project.json.bak.tmp`). El proceso evita sobrescribir la última copia buena con un principal corrupto. Si el principal no se puede leer, **Recuperar autoguardado** intenta el temporal válido y después el respaldo. Se guarda al iniciar y terminar un track y periódicamente durante la grabación (aprox. cada tres segundos, si llegan posiciones nuevas). Se recomienda usar además **Guardar proyecto** para elegir una ruta externa. La recuperación se debe probar con un archivo real antes de depender de ella en campo.
 
 **Control de calidad:** solo posiciones GGA/RMC con checksum correcto, GGA con calidad positiva o RMC con estado A. Un filtro de 2 m, HDOP máximo 5 (si existe) y velocidad implícita máxima 30 m/s reduce el ruido y rechaza saltos. Estos valores son configurables en el código y no deben confundirse con precisión certificada.
 
@@ -16,4 +16,6 @@ Se añade **GPS** como menú desplegable de la aplicación de escritorio Flutter
 
 **Dependencia:** `flutter_libserialport ^0.6.0` (wrapper MIT que empaqueta `libserialport`, LGPL-3.0-or-later). Al distribuir binarios de Windows, hay que incluir los avisos de licencia y cumplir las condiciones de redistribución de la biblioteca nativa.
 
-**Compilar en Windows:** dentro de `ocarto_app` ejecutar `flutter pub get`, `flutter test`, `flutter build windows`. Necesita Flutter estable, Visual Studio con Desktop development with C++, SDK de Windows y receptor GPS para ensayos reales. No se adjunta EXE porque la compilación y la prueba con un equipo Bluetooth real no se han ejecutado en este entorno.
+**Compilar en Windows:** dentro de `ocarto_app` ejecutar `flutter pub get`, `flutter test`, `flutter build windows`. Necesita Flutter estable, Visual Studio con Desktop development with C++, SDK de Windows y receptor GPS para ensayos reales. La automatización de GitHub Actions incluye pruebas y compilación para Windows y publica el paquete `ocarto-windows-gps` cuando termina correctamente; no es un instalador. **La conexión con un GPS físico sigue sin validación en campo**.
+
+**Pruebas v251:** `test/project_storage_test.dart` verifica que las posiciones WGS84 sobreviven al guardado, que se conserva una copia previa y que la recuperación funciona con archivos truncados o temporales interrumpidos. Son pruebas de lógica de archivos; no sustituyen una prueba real del disco Windows ni de un receptor GNSS.
