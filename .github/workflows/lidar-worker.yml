@@ -8,6 +8,7 @@ on:
       - 'ocarto-v261'
       - 'ocarto-v262'
       - 'ocarto-v263'
+      - 'ocarto-v264'
   workflow_dispatch:
 
 jobs:
@@ -25,8 +26,9 @@ jobs:
           node --check source/v234/lidar-tile-plan.js
           node --check source/v234/lidar-tile-export.js
           node --check source/v234/lidar-source-index.js
+          node --check source/v234/lidar-tile-seams.js
       - name: Test real LAS / LAZ decoder
-        run: node --test source/v234/tests/lidar-worker.test.cjs source/v234/tests/lidar-reader-integration.test.cjs source/v234/tests/lidar-tiling.test.cjs source/v234/tests/lidar-export.test.cjs source/v234/tests/lidar-source-index.test.cjs
+        run: node --test source/v234/tests/lidar-worker.test.cjs source/v234/tests/lidar-reader-integration.test.cjs source/v234/tests/lidar-tiling.test.cjs source/v234/tests/lidar-export.test.cjs source/v234/tests/lidar-source-index.test.cjs source/v234/tests/lidar-seams.test.cjs
       - name: Verify offline LAZ dependencies
         run: |
           test -s source/v234/vendor/laz-perf.js
