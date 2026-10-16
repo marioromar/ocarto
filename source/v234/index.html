@@ -630,22 +630,32 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       if(!objects.length)throw Error('No se han encontrado áreas compatibles para editar');
       const setup=parsed.setup||{},factor=(setup.scale||10000)/100000;
       const toLocal=([x,y])=>({x:(x-(setup.easting||0))*factor,y:-(y-(setup.northing||0))*factor});
-      const added=[];
+      const added=[],counts={area:0,line:0,point:0},unsupported={};
+      const makeMeta=obj=>({ocadSymbolCode:obj.symbolCode,ocadSourceFile:file.name,ocadSourceObjectIndex:obj.sourceObjectIndex});
       for(const obj of objects){
-        if(obj.geometry?.type!=='Polygon'||!obj.geometry.coordinates?.[0])continue;
-        const rings=obj.geometry.coordinates;
-        const points=rings[0].slice(0,-1).map(toLocal);
-        if(points.length<3)continue;
-        const holes=rings.slice(1).map(r=>r.slice(0,-1).map(toLocal)).filter(r=>r.length>=3);
-        added.push({type:'area',x:0,y:0,points,holes,symbol:'vegetation',symbolCode:obj.symbolCode,properties:{ocadSymbolCode:obj.symbolCode,ocadSourceFile:file.name,ocadSourceObjectIndex:obj.sourceObjectIndex},ocadImported:true});
+        const geometry=obj.geometry||{},kind=geometry.type,coords=geometry.coordinates;
+        const common={x:0,y:0,symbolCode:obj.symbolCode,properties:makeMeta(obj),ocadImported:true};
+        if(kind==='Polygon'&&coords?.[0]){
+          const points=coords[0].slice(0,-1).map(toLocal);
+          if(points.length<3)continue;
+          const holes=coords.slice(1).map(r=>r.slice(0,-1).map(toLocal)).filter(r=>r.length>=3);
+          added.push({...common,type:'area',points,holes,symbol:'vegetation'});counts.area++;
+        }else if(kind==='LineString'&&Array.isArray(coords)){
+          const points=coords.map(toLocal);if(points.length<2)continue;
+          added.push({...common,type:'line',points,symbol:'path'});counts.line++;
+        }else if(kind==='MultiLineString'&&Array.isArray(coords)){
+          for(const line of coords){const points=line.map(toLocal);if(points.length<2)continue;added.push({...common,type:'line',points,symbol:'path'});counts.line++}
+        }else if(kind==='Point'&&Array.isArray(coords)){
+          const p=toLocal(coords);added.push({...common,type:'point',x:p.x,y:p.y,points:[p],symbol:'stone'});counts.point++;
+        }else{unsupported[kind||'sin geometría']=(unsupported[kind||'sin geometría']||0)+1}
       }
-      if(!added.length)throw Error('No hay áreas poligonales compatibles');
+      if(!added.length)throw Error('El lector no ha devuelto objetos geométricos compatibles');
       const before=snapshotMap();
       S.features.push(...added);
       recordMapEdit(before);S.selection=null;S.multiSelection=[];draw();
       const skipped=parsed.skipped||{},warnings=Object.entries(skipped).filter(([,v])=>Number(v)>0).map(([k,v])=>k+': '+v);
-      const status='OCAD '+file.name+': '+added.length+' áreas editables importadas. Los símbolos se conservan como códigos, pero su apariencia es provisional. No se importan aún líneas, puntos ni textos.'+(warnings.length?' Omisiones del lector: '+warnings.join(', '):'');
-      $('editableOcadStatus').textContent=status;toast(added.length+' áreas OCAD editables importadas; importación parcial');
+      const status='OCAD '+file.name+': '+counts.area+' áreas, '+counts.line+' líneas, '+counts.point+' puntos editables. Simbología provisional; textos y curvas originales aún no garantizados.'+(warnings.length?' Omisiones del lector: '+warnings.join(', '):'')+(Object.keys(unsupported).length?' Geometrías no admitidas: '+JSON.stringify(unsupported):'');
+      $('editableOcadStatus').textContent=status;toast(added.length+' objetos OCAD editables importados; importación parcial');
     }catch(err){$('editableOcadStatus').textContent='Error al abrir OCAD: '+err.message;toast('OCAD: '+err.message)}
     finally{event.target.value=''}
   };
