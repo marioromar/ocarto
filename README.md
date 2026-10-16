@@ -8,7 +8,7 @@
 - **[Código y versiones de Ocarto](source/v234/index.html)**
 - **[Cambios y comprobaciones OCAD v249](source/v234/OCAD-v249.md)**
 
-**Para probar LiDAR en Windows:** descarga el ZIP de la rama v261, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v258.md).
+**Para probar LiDAR en Windows:** descarga el ZIP de la rama v261, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v261.md).
 
 ## Revisión OCAD 2018
 
@@ -38,7 +38,7 @@ La versión **v260** incluye además una prueba de integración completa entre e
 
 Se ha restaurado el archivo **lidar-worker.js** ausente, el decodificador **laz-perf 3.4.0** y su WebAssembly local, y se ha conectado con la lectura por bloques del editor web. La validación incluye pruebas sobre archivos LAS y LAZ reales y modelos pequeños controlados; **no demuestra aún la fiabilidad con áreas de 4–9 km² ni con el LAZ PNOA de millones de puntos**.
 
-**Para abrir esta versión en Windows:** descomprime el ZIP de la rama v260 y ejecuta **ABRIR-OCARTO.bat**; el navegador se abrirá en un servidor local. Abrir index.html directamente puede bloquear los Workers.
+**Para abrir esta versión en Windows:** descomprime el ZIP de la rama v261 y ejecuta **ABRIR-OCARTO.bat**; el navegador se abrirá en un servidor local. Abrir index.html directamente puede bloquear los Workers.
 
 - [Instrucciones de prueba LiDAR v258](PRUEBA-LIDAR-v258.md)
 - [ZIP completo con LiDAR v258](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v258.zip)
