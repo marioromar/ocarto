@@ -1,4 +1,4 @@
-# Ocarto Windows — GPS Bluetooth y editor vectorial básico (v254)
+# Ocarto Windows — GPS, edición vectorial y tiradores Bézier (v255)
 
 Se añade **GPS** como menú desplegable de la aplicación de escritorio Flutter `ocarto_app`, sin proyecto paralelo. Funciona con receptores GNSS Bluetooth **SPP/NMEA** que Windows presenta como un puerto COM, así como receptores USB con puerto serie. Los dispositivos solo **BLE/GATT** no son compatibles con este modo.
 
@@ -50,3 +50,15 @@ Con la herramienta **Seleccionar**, pulsa o arrastra un vértice para modificarl
 Cuando existe origen cartográfico/GPS, los nuevos vértices se almacenan como longitud/latitud WGS84; si no lo hay, se almacenan como **coordenadas locales del lienzo**. Las últimas no deben confundirse con georreferenciación verdadera y pueden variar de posición aparente al cambiar el tamaño del área de dibujo. Los formatos heredados de v253 siguen leyéndose. Se conservan GPS, PNG+PGW, catálogo provisional y favoritos.
 
 **Pendiente:** herramientas profesionales de suavizado por vértice, esquinas individuales, importación y edición CART/OCAD/OMAP y comprobaciones de campo. Los iconos de esta versión aún no reproducen todos los estilos oficiales IOF.
+
+## Edición manual de Bézier — v255
+
+La edición de los trazados vectoriales incorpora **dos tiradores por vértice**, entrante y saliente, y tres modos:
+
+- **Editar tiradores Bézier:** seleccionar la herramienta **Seleccionar**, hacer clic sobre el vértice de una línea o área terminada y pulsar este botón en **Herramientas**. Aparecen dos controles amarillos unidos al vértice. Arrastrar uno para modificar la curvatura; el opuesto se refleja respecto al vértice, conservando una tangente continua.
+- **Vértice de esquina:** el vértice seleccionado pierde sus tiradores y vuelve a comportarse como esquina. Los edificios, muros y vallados mantienen sus lados rectos de manera predeterminada.
+- **Suavizado automático:** elimina los ajustes manuales del vértice y devuelve el cálculo automático de curvatura. La nueva interpolación limita la longitud y orientación de las tangentes en curvas cerradas, evitando los retrocesos que provocaban los cálculos Catmull-Rom sin restricción.
+
+Cuando un vértice se mueve, sus controles manuales se trasladan la misma distancia, para no deformar la curva accidentalmente. Los tiradores se guardan como coordenadas absolutas en el **mismo sistema que el vértice** (lienzo local o longitud/latitud WGS84) dentro del archivo `.ocarto`, cuyo esquema pasa a **versión 6**. Los archivos de versiones anteriores sin tiradores continúan siendo legibles.
+
+**Limitaciones:** los tiradores manuales mantienen una tangente simétrica de entrada/salida; todavía faltan los tiradores independientes de longitud, control de ángulos y otros tratamientos avanzados de curvas del editor cartográfico profesional. Los recorridos grabados con GPS siguen siendo polilíneas editables por vértices, pero **no** utilizan estos tiradores Bézier. Se requieren pruebas visuales sobre cartografía real antes de darlo por terminado para producción.
