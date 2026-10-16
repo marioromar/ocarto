@@ -14,7 +14,7 @@ void main() {
     // catálogo derecho 245, con lienzo en x=236..554.
     await tester.tapAt(const Offset(310, 320));
     await tester.pump();
-    expect(find.text('Trazado: 1 vértices'), findsOneWidget);
+    expect(find.text('Trazado: 1 vértice'), findsOneWidget);
     await tester.tapAt(const Offset(430, 380));
     await tester.pump();
     expect(find.text('Trazado: 2 vértices'), findsOneWidget);
