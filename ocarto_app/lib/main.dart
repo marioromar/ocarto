@@ -15,6 +15,7 @@ import 'core/bezier_controls.dart';
 import 'gps/gps_serial_service.dart';
 import 'gps/nmea_parser.dart';
 import 'geo/georeferenced_raster.dart';
+import 'geo/geographic_bezier_editor.dart';
 
 void main() => runApp(const OcartoApp());
 
@@ -617,15 +618,25 @@ class _OcartoHomeState extends State<OcartoHome> {
     return element;
   }
 
+  GeographicBezierEditor? _metricBezier(MapElement element) {
+    final epsg = _rasterImage != null && element.geographic
+        ? _geoRaster?.epsg : null;
+    return epsg == null ? null : GeographicBezierEditor(epsg);
+  }
+
   void _enableBezierHandles() {
     final element = _selectedEditable;
     final vertex = _selectedVertex;
     if (element == null || vertex == null) return;
     final points = element.vertices
         .map((v) => VectorVertex(v.dx, v.dy)).toList();
+    final metric = _metricBezier(element);
     setState(() {
-      element.bezier[vertex] = BezierControls.initialize(
-          points, vertex, closed: element.tool == MapTool.area);
+      element.bezier[vertex] = metric == null
+          ? BezierControls.initialize(
+              points, vertex, closed: element.tool == MapTool.area)
+          : metric.initialize(
+              points, vertex, closed: element.tool == MapTool.area);
       _dragHandleSide = 0;
     });
     unawaited(_autosave().catchError((Object error) {
@@ -639,14 +650,21 @@ class _OcartoHomeState extends State<OcartoHome> {
     if (element == null || vertex == null) return;
     final anchor = element.vertices[vertex];
     final control = element.bezier[vertex];
+    final metric = _metricBezier(element);
+    final point = VectorVertex(anchor.dx, anchor.dy);
+    final points = element.vertices
+        .map((p) => VectorVertex(p.dx, p.dy)).toList();
     final current = control == null || control.corner
-        ? BezierControls.initialize(
-            element.vertices.map((p) => VectorVertex(p.dx, p.dy)).toList(),
-            vertex, closed: element.tool == MapTool.area)
+        ? (metric == null
+            ? BezierControls.initialize(
+                points, vertex, closed: element.tool == MapTool.area)
+            : metric.initialize(
+                points, vertex, closed: element.tool == MapTool.area))
         : control;
     setState(() {
-      element.bezier[vertex] = current.withMode(
-        mode, VectorVertex(anchor.dx, anchor.dy));
+      element.bezier[vertex] = metric == null
+          ? current.withMode(mode, point)
+          : metric.withMode(current, mode, point);
       _dragHandleSide = 0;
     });
     unawaited(_autosave().catchError((Object error) {
@@ -718,18 +736,30 @@ class _OcartoHomeState extends State<OcartoHome> {
             final anchor = element.vertices[vertex];
             final old = element.bezier[vertex];
             final controls = old ?? const BezierControls();
-            element.bezier[vertex] = controls.moveHandle(
-              vertex: VectorVertex(anchor.dx, anchor.dy),
-              destination: VectorVertex(stored.dx, stored.dy),
-              outgoingSide: _dragHandleSide > 0,
-            );
+            final point = VectorVertex(anchor.dx, anchor.dy);
+            final destination = VectorVertex(stored.dx, stored.dy);
+            final metric = _metricBezier(element);
+            element.bezier[vertex] = metric == null
+                ? controls.moveHandle(
+                    vertex: point, destination: destination,
+                    outgoingSide: _dragHandleSide > 0)
+                : metric.moveHandle(
+                    existing: controls, anchor: point,
+                    destination: destination,
+                    outgoingSide: _dragHandleSide > 0);
           } else {
             final previous = element.vertices[vertex];
             element.vertices[vertex] = stored;
             final control = element.bezier[vertex];
             if (control != null) {
-              element.bezier[vertex] = control.translated(
-                  stored.dx - previous.dx, stored.dy - previous.dy);
+              final metric = _metricBezier(element);
+              element.bezier[vertex] = metric == null
+                  ? control.translated(
+                      stored.dx - previous.dx, stored.dy - previous.dy)
+                  : metric.moveAnchor(
+                      existing: control,
+                      previous: VectorVertex(previous.dx, previous.dy),
+                      destination: VectorVertex(stored.dx, stored.dy));
             }
           }
         } else if (element.tool == MapTool.point) {
@@ -1168,7 +1198,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         SizedBox(width: 10),
         Text('Ocarto'),
         SizedBox(width: 10),
-        Text('v256', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
+        Text('v257', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
       ]),
       actions: [
         if (_recording)
