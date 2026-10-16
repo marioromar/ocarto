@@ -16,8 +16,8 @@ En **Archivo → Revisar símbolos y tintas OCAD…** se puede abrir un archivo 
 
 El desarrollo sigue en la rama `ocarto-v249`, sincronizada con `main`. La versión del ZIP se construye a partir de los mismos archivos fuente del editor.
 
-## Ocarto Windows — GPS Bluetooth (v250)
+## Ocarto Windows — GPS Bluetooth (v251)
 
-La rama [ocarto-v250](https://github.com/marioromar/ocarto/tree/ocarto-v250) amplía la aplicación Flutter de Windows con un menú **GPS**: conexión a receptores Bluetooth SPP por COM, NMEA en tiempo real, seguimiento de posición, grabación automática de tracks como líneas con símbolo elegido y exportación GPX. [Código Windows](ocarto_app/) · [Instrucciones de GPS](ocarto_app/README-GPS-Windows.md).
+La rama [ocarto-v251](https://github.com/marioromar/ocarto/tree/ocarto-v251) mantiene el menú **GPS** de Ocarto Flutter para Windows (receptores Bluetooth SPP por COM y USB NMEA, posicionamiento, grabación editable de tracks y GPX) e incorpora **guardado temporal con respaldo y recuperación ante escrituras interrumpidas**. [Código Windows](ocarto_app/) · [Instrucciones y límites de GPS](ocarto_app/README-GPS-Windows.md) · [Compilaciones Windows](https://github.com/marioromar/ocarto/actions/workflows/flutter-windows-gps.yml).
 
-La versión web v249 y sus símbolos actuales siguen sin alterarse. Esta rama Windows v250 no incluye todavía un instalador listo para usar; el workflow intenta generar un paquete Windows verificable.
+La versión web v249 y sus símbolos actuales no se modifican en esta rama. Windows Flutter sigue siendo un prototipo separado dentro de **este mismo repositorio**, aún sin mapa georreferenciado completo ni integración de todo el editor web. La conexión GPS debe probarse con hardware físico. El paquete de Actions, cuando la ejecución finaliza correctamente, es una compilación portable, no un instalador.
