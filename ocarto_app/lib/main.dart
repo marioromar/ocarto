@@ -1372,31 +1372,61 @@ class MapPainter extends CustomPainter {
         epsg: _projection);
   }
 
-  /// Curvas Catmull-Rom convertidas a cúbicas Bézier: controles acotados
-  /// por los vecinos para evitar la inversión de la curva en extremos.
-  /// Edificios, vallados y muros respetan las esquinas explícitas.
-  Path _shapePath(List<Offset> points, {required bool closed,
-      required bool angular}) {
+  /// Keep automatic tangents inside the forward half of their segment.
+  /// Unlike an unchecked Catmull-Rom tangent, this cannot reverse at tight
+  /// bends: it falls back to a short segment-aligned tangent.
+  Offset _forwardTangent(Offset candidate, Offset segment) {
+    if (segment.distance < 1e-9) return Offset.zero;
+    if ((candidate.dx * segment.dx + candidate.dy * segment.dy) <= 0 ||
+        candidate.distance < 1e-8) return segment * .25;
+    final cap = segment.distance * .42;
+    return candidate.distance > cap
+        ? candidate * (cap / candidate.distance)
+        : candidate;
+  }
+
+  /// The geometric Bézier controls are independent for every vertex.
+  /// Legacy vectors keep auto smoothing; buildings default to straight
+  /// sides, unless the user explicitly creates a smooth anchor.
+  Path _shapePath(List<Offset> points, {
+    required bool closed,
+    required bool angular,
+    required List<BezierControls?> bezier,
+    required bool geographic,
+    required Size size,
+  }) {
     final path = Path();
     if (points.isEmpty) return path;
     path.moveTo(points.first.dx, points.first.dy);
     if (points.length == 1) return path;
     final n = points.length;
-    if (angular || n == 2) {
-      for (final p in points.skip(1)) { path.lineTo(p.dx, p.dy); }
-      if (closed) path.close();
-      return path;
-    }
     final segments = closed ? n : n - 1;
+    bool corner(int i) => i >= bezier.length
+        ? angular : (bezier[i]?.corner ?? angular);
+    Offset? handle(int i, {required bool outgoing}) {
+      if (i >= bezier.length || bezier[i] == null) return null;
+      final v = outgoing ? bezier[i]!.outgoing : bezier[i]!.incoming;
+      return v == null ? null :
+          _vectorToScreen(Offset(v.x, v.y), geographic, size);
+    }
     for (var i = 0; i < segments; i++) {
-      final p0 = points[closed ? (i - 1 + n) % n : math.max(0, i - 1)];
-      final p1 = points[i];
-      final p2 = points[(i + 1) % n];
-      final p3 = points[closed ? (i + 2) % n : math.min(n - 1, i + 2)];
-      // Para extremos abiertos, tangentes de un solo segmento.
-      final c1 = p1 + (p2 - p0) * (1 / 6);
-      final c2 = p2 - (p3 - p1) * (1 / 6);
-      path.cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, p2.dx, p2.dy);
+      final j = (i + 1) % n;
+      final first = points[i];
+      final last = points[j];
+      if (corner(i) && corner(j)) {
+        path.lineTo(last.dx, last.dy);
+        continue;
+      }
+      final before = points[closed ? (i + n - 1) % n : math.max(0, i - 1)];
+      final after = points[closed ? (j + 1) % n : math.min(n - 1, j + 1)];
+      final segment = last - first;
+      final autoOutgoing = _forwardTangent((last - before) * (1 / 6), segment);
+      final autoIncoming = _forwardTangent((after - first) * (1 / 6), segment);
+      final c1 = corner(i) ? first + segment * .25
+          : (handle(i, outgoing: true) ?? first + autoOutgoing);
+      final c2 = corner(j) ? last - segment * .25
+          : (handle(j, outgoing: false) ?? last - autoIncoming);
+      path.cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, last.dx, last.dy);
     }
     if (closed) path.close();
     return path;
@@ -1425,7 +1455,8 @@ class MapPainter extends CustomPainter {
       final angular = <String>{
         'Edificio area', 'Edificio', 'Muro', 'Valla', 'Privado',
       }.contains(element.symbol);
-      final path = _shapePath(points, closed: closed, angular: angular);
+      final path = _shapePath(points, closed: closed, angular: angular,
+          bezier: element.bezier, geographic: element.geographic, size: size);
       if (closed && points.length >= 3) {
         canvas.drawPath(path, Paint()
           ..color = baseColor.withValues(alpha: .60)
@@ -1452,6 +1483,30 @@ class MapPainter extends CustomPainter {
     } else if (element.tool == MapTool.area) {
       canvas.drawRect(Rect.fromCenter(center: element.position,
           width: 70, height: 45), Paint()..color = baseColor);
+    }
+    if (!inProgress && selectedElement == index &&
+        selectedVertex != null && selectedVertex! < points.length &&
+        selectedVertex! < element.bezier.length) {
+      final controls = element.bezier[selectedVertex!];
+      if (controls != null && !controls.corner) {
+        final anchor = points[selectedVertex!];
+        for (final side in [-1, 1]) {
+          final stored = side < 0 ? controls.incoming : controls.outgoing;
+          if (stored == null) continue;
+          final p = _vectorToScreen(Offset(stored.x, stored.y),
+              element.geographic, size);
+          if (p == null) continue;
+          canvas.drawLine(anchor, p, Paint()
+            ..color = const Color(0xffe5a33d)
+            ..strokeWidth = 1.6);
+          canvas.drawCircle(p, side == selectedHandleSide ? 6.5 : 5.4,
+            Paint()..color = side == selectedHandleSide
+                ? const Color(0xffffd978) : const Color(0xfff5bd56));
+          canvas.drawCircle(p, side == selectedHandleSide ? 6.5 : 5.4,
+            Paint()..color = const Color(0xff2b454b)
+              ..strokeWidth = 1.3..style = PaintingStyle.stroke);
+        }
+      }
     }
     if (inProgress || selectedElement == index) {
       for (var j = 0; j < points.length; j++) {
