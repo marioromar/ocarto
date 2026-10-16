@@ -90,6 +90,24 @@ async function forPoints(record, job, visitor, stage='read') {
 }
 function bounds() { return {minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity}; }
 function addBounds(b,x,y) {b.minX=Math.min(b.minX,x);b.maxX=Math.max(b.maxX,x);b.minY=Math.min(b.minY,y);b.maxY=Math.max(b.maxY,y);}
+/// Read just the LAS header bounds (not the point cloud). When a tile is
+/// wholly outside a requested polygon, do not allocate its full file buffer.
+/// A corrupt/unknown bounding box is never enough to discard a tile: the
+/// ordinary importer will validate/decode it and report any real file error.
+function fileOutsideAoi(probe, aoi) {
+  if (!aoi?.rings?.[0]?.length || probe.byteLength < 227) return false;
+  const d=new DataView(probe.buffer,probe.byteOffset,probe.byteLength);
+  if (d.getUint32(0,true)!==0x4653414c || d.getUint8(24)!==1 ||
+      d.getUint8(25)>4) return false;
+  const tile={maxX:d.getFloat64(179,true),minX:d.getFloat64(187,true),
+    maxY:d.getFloat64(195,true),minY:d.getFloat64(203,true)};
+  if (![tile.minX,tile.maxX,tile.minY,tile.maxY].every(Number.isFinite) ||
+      tile.minX>tile.maxX || tile.minY>tile.maxY) return false;
+  const selection=bounds();
+  for (const p of aoi.rings[0]) addBounds(selection,p[0],p[1]);
+  return tile.maxX<selection.minX || tile.minX>selection.maxX ||
+      tile.maxY<selection.minY || tile.minY>selection.maxY;
+}
 function makeGrid(cell,limit=MAX_CELLS) {
   cell=Number(cell);
   if(!Number.isFinite(cell)||cell<0.1) throw Error('Celda LiDAR mínima: 0,1 m');
@@ -115,6 +133,12 @@ const canceled=job=>job.cancelled;
 async function loadEnd(message) {
   if(!transfer || transfer.id!==message.jobId) throw Error('Carga LiDAR no iniciada');
   const t=transfer;transfer=null;
+  if (t.skipped) {
+    send({type:'loaded',jobId:t.id,sessionId:t.sessionId,
+      skipped:true,count:0,bounds:null,preview:new Float32Array(0),
+      reason:'Tesela fuera del polígono seleccionado: descartada antes de leer/descomprimir toda la nube'});
+    return;
+  }
   if(t.received!==t.size) throw Error('Archivo incompleto: '+t.received+'/'+t.size+' bytes');
   const buffer=t.bytes.buffer,meta=header(buffer);
   const record={buffer,meta},out=previewFor(record),job={cancelled:false,id:t.id};
@@ -269,7 +293,11 @@ onmessage=async event=>{
       const fileSize=Number(m.fileSize);
       if(!Number.isSafeInteger(fileSize)||fileSize<227||fileSize>1500000000)
         throw Error('Tamaño de archivo LAS/LAZ no admitido. Máximo 1,5 GB por tesela.');
-      transfer={id:m.jobId,sessionId:m.sessionId,size:fileSize,received:0,bytes:new Uint8Array(fileSize)};
+      const checkArea=area?.id===m.sessionId && !!area?.aoi;
+      transfer={id:m.jobId,sessionId:m.sessionId,size:fileSize,received:0,
+        bytes:checkArea?null:new Uint8Array(fileSize),checkArea,
+        headerProbe:checkArea?new Uint8Array(227):null,
+        heldChunks:checkArea?[]:null,skipped:false};
       send({type:'load-ready',jobId:m.jobId});return;
     }
     if(type==='load-chunk') {
@@ -277,8 +305,31 @@ onmessage=async event=>{
       if(m.offset!==transfer.received || !(m.chunk instanceof Uint8Array) ||
           m.chunk.byteLength===0 || m.chunk.byteLength+transfer.received>transfer.size)
         throw Error('Bloque LAS/LAZ fuera de secuencia o con longitud inválida');
-      transfer.bytes.set(m.chunk,transfer.received);
-      transfer.received+=m.chunk.byteLength;
+      const t=transfer;
+      // Keep only the initial chunks until the first 227 bytes are known.
+      // No large ArrayBuffer is reserved for a file that can be skipped.
+      if (t.checkArea && !t.bytes) {
+        t.heldChunks.push({offset:t.received,bytes:m.chunk});
+        const need=Math.max(0,227-t.received);
+        if (need>0) t.headerProbe.set(m.chunk.subarray(0,need),t.received);
+        t.received+=m.chunk.byteLength;
+        if (t.received>=227) {
+          if (fileOutsideAoi(t.headerProbe,area.aoi)) {
+            t.skipped=true;t.heldChunks=null;t.headerProbe=null;
+            send({type:'load-skip',jobId:m.jobId,
+              reason:'La extensión LAS/LAZ está fuera del polígono'});
+            send({type:'load-skip-ack',jobId:m.jobId,sequence:m.sequence});
+            return;
+          }
+          t.bytes=new Uint8Array(t.size);
+          for (const piece of t.heldChunks)
+            t.bytes.set(piece.bytes,piece.offset);
+          t.heldChunks=null;t.headerProbe=null;
+        }
+      } else {
+        t.bytes.set(m.chunk,t.received);
+        t.received+=m.chunk.byteLength;
+      }
       send({type:'load-chunk-ack',jobId:m.jobId,sequence:m.sequence});
       return;
     }
