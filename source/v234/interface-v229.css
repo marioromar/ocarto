@@ -77,3 +77,47 @@ html,body{background:#edf0f3;color:var(--ink)}
 @media(max-width:1100px){.layout{grid-template-columns:206px minmax(0,1fr) 280px}.left .tool{font-size:10px}}
 @media(max-width:960px){.layout{grid-template-columns:206px minmax(0,1fr)}}
 @media(max-width:700px){.layout{grid-template-columns:84px minmax(0,1fr)}.left{padding:5px 4px}.left::before{font-size:8px}.left .tool-grid{gap:4px}.left .tool{min-height:55px;padding:4px 2px;font-size:8px}.left .tool b{width:25px;height:25px;margin-bottom:2px}.left .tool b svg{width:24px;height:24px}}
+
+
+/* v235 — Ocarto B: oscuro, símbolos compactos y favoritos fijos arriba. */
+:root{--ink:#e7edf3;--muted:#a9bac9;--line:#344858;--paper:#111c27;--panel:#192633}
+html,body,.app{background:#101923;color:#e7edf3}
+.topbar{background:#182430;color:#edf3f8;border-color:#344554}
+.brand,.oc-menu summary{color:#edf3f8}.project-name,.top-status{color:#b0bfca}
+.oc-dropdown{background:#202f3d;color:#edf3f8;border-color:#3d5263}
+.oc-dropdown button{color:#e7edf3}.oc-dropdown button:hover{background:#314657;color:white}
+.layout{grid-template-columns:164px minmax(0,1fr) 320px;background:#111b25}
+.left{background:#192633;border-color:#354858}.left::before{color:#aebfcf}
+.left .tool{min-height:55px;background:#233342;color:#e8eff5;border:1px solid #344b5c;box-shadow:none;border-radius:6px}
+.left .tool b,.left .tool-icon{color:#45b9df}.left .tool b svg{stroke-width:3.2}
+.left .tool:hover{background:#30485a}.left .tool.selected{background:#164961;border-color:#49b9e4;color:white}
+.toolbar,.coords,.app>.coords{background:#192633;color:#bdcbd6;border-color:#344858}
+.toolbar>.action,.toolbar>.quick-file{background:#273948;color:#e8f0f6;border-color:#40596b}
+.right{background:#172431;border-color:#3a4c5b}
+.workspace-tabs{background:#172431;border-color:#344858}
+.workspace-tab{color:#b6c6d1}.workspace-tab.active{background:#254c63;color:#fff;border-color:#3a8fb6}
+.workspace-panel{background:#172431;color:#e7edf3}
+.workspace-heading{color:#f3f7fa;margin:0 0 6px;font-size:13px}
+#symbolsWorkspace{display:flex;flex-direction:column;overflow:hidden;padding:7px 5px 5px;gap:4px}
+#symbolsWorkspace[hidden]{display:none}
+#symbolsWorkspace .symbol-controls{flex:0 0 auto;margin:0;display:flex;gap:4px}
+#symbolsWorkspace .symbol-controls input{min-width:0;flex:1;padding:5px;background:#233443;color:#fff;border:1px solid #435b6d}
+#symbolsWorkspace .symbol-controls select{width:78px;padding:4px;background:#233443;color:#fff;border:1px solid #435b6d}
+#symbolsWorkspace .symbol-list{flex:1;min-height:0;max-height:none;overflow-y:auto;overflow-x:hidden;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(32px,1fr));align-content:start;gap:2px}
+#symbolsWorkspace .symbol-group{grid-column:1/-1;margin:4px 0 1px;padding:2px 3px;color:#a9bac9;font-size:9px;font-weight:750;line-height:1.1}
+#symbolsWorkspace .symbol-option,#symbolsWorkspace .oc-favorite-symbol{position:relative;display:grid;place-items:center;width:100%;height:32px;min-height:32px;min-width:0;padding:1px;margin:0;gap:0;border:1px solid #3c5060;border-radius:3px;background:#253543;color:#e8eef4;cursor:pointer;overflow:hidden}
+#symbolsWorkspace .symbol-option:hover{background:#36566a;border-color:#65b5d4}
+#symbolsWorkspace .symbol-option.active{background:#285a73;border:2px solid #55c6f1}
+#symbolsWorkspace .symbol-glyph{display:grid;place-items:center;width:27px;height:27px;min-width:0;margin:0;padding:0;border:0;border-radius:1px;background:transparent;font-size:23px;font-weight:900;line-height:1;color:inherit}
+#symbolsWorkspace .symbol-name,#symbolsWorkspace .symbol-code,#symbolsWorkspace .symbol-state{display:none}
+#symbolsWorkspace .oc-favorites{flex:0 0 auto;padding:2px 0 5px;border-bottom:1px solid #465969}
+#symbolsWorkspace .oc-favorites[hidden]{display:none}
+#symbolsWorkspace .oc-favorites-title{font-size:10px;font-weight:800;color:#f6c65b;margin:1px 2px 4px}
+#symbolsWorkspace .oc-favorites-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(32px,1fr));gap:2px;max-height:116px;overflow:auto}
+#symbolsWorkspace .symbol-option.is-favorite:after{content:'★';position:absolute;right:0;top:0;font-size:9px;color:#ffd264;text-shadow:0 1px 2px #000}
+#symbolsWorkspace #activeSymbolLabel{flex:0 0 auto;font-size:10px;color:#c7d5df;margin:1px 2px}
+#symbolsWorkspace .field,#symbolsWorkspace .card{display:none}
+#symbolsWorkspace .symbol-context-menu{z-index:100}
+@media(max-width:1100px){.layout{grid-template-columns:132px minmax(0,1fr) 286px}}
+@media(max-width:960px){.layout{grid-template-columns:110px minmax(0,1fr) 276px}.right{display:flex;position:static;width:auto;max-width:none}.left .tool-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.layout{grid-template-columns:65px minmax(0,1fr)}.right{display:none}.show-right .right{display:flex;position:fixed;inset:var(--app-topbar-height,82px) 0 30px auto;width:min(320px,90vw)}}
