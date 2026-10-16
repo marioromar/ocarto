@@ -398,7 +398,35 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
   }
   // Worker aislado para LAS y LAZ: los puntos completos no bloquean el hilo del editor.
   let lasWorker=null,lasBounds=null,lasTotal=0,lidarJobId=0,lidarOperation='idle',pendingCloudName=null,terrainGrid=[],terrainCellSize=0,vegetationRows=[],cloudReadController=null;let reusableVegetationModel=null,reusableVegetationImageModel=null,mapSymbolGuidePolygons=[],vegetationOrthoSampleCache=null;let areaTileQueueActive=false,areaReady=false,areaBoundsAcc=null,areaPointsAcc=0,areaTilesAcc=0,areaOverlaps=0,areaCancelRequested=false,areaSessionId=0,areaFilesCount=0;
-  function requestAreaWorker(message,expected){return new Promise((resolve,reject)=>{const listener=e=>{const m=e.data||{},matches=(message.sessionId!==undefined&&(m.sessionId===message.sessionId||m.jobId===message.sessionId))||(message.jobId!==undefined&&m.jobId===message.jobId);if(!matches)return;if(m.type===expected){lasWorker.removeEventListener('message',listener);resolve(m)}else if((m.type==='error'&&m.operation==='area')||m.type==='area-tile-cancelled'){lasWorker.removeEventListener('message',listener);const error=Error(m.message||'Procesamiento del área cancelado');error.name=m.type==='area-tile-cancelled'?'AbortError':'Error';reject(error)}};lasWorker.addEventListener('message',listener);lasWorker.postMessage(message)})}
+  function requestAreaWorker(message,expected){
+    const worker=lasWorker;
+    return new Promise((resolve,reject)=>{
+      const limit=expected==='area-tile-done'?900000:120000;
+      const timer=setTimeout(()=>finish(Error('El proceso LiDAR tardó demasiado en responder; comprueba la memoria o reduce el área.')),limit);
+      function finish(err,result){
+        clearTimeout(timer);
+        worker.removeEventListener('message',onMessage);
+        worker.removeEventListener('error',onError);
+        if(err)reject(err);else resolve(result);
+      }
+      function onError(event){finish(Error('El procesador LiDAR dejó de funcionar: '+(event.message||'error desconocido')))}
+      function onMessage(event){
+        const m=event.data||{};
+        const matches=(message.sessionId!==undefined&&(m.sessionId===message.sessionId||m.jobId===message.sessionId))||
+          (message.jobId!==undefined&&m.jobId===message.jobId);
+        if(!matches)return;
+        if(m.type===expected)finish(null,m);
+        else if((m.type==='error'&&m.operation==='area')||m.type==='area-tile-cancelled'){
+          const error=Error(m.message||'Procesamiento del área cancelado');
+          error.name=m.type==='area-tile-cancelled'?'AbortError':'Error';
+          finish(error);
+        }
+      }
+      worker.addEventListener('message',onMessage);
+      worker.addEventListener('error',onError);
+      worker.postMessage(message);
+    });
+  }
   async function processAreaFiles(files){
     if(files.some(f=>!(/\.(las|laz)$/i.test(f.name)))){toast('Para crear un modelo de área, selecciona solo archivos LAS/LAZ');$('pointFile').value='';return}
     if(lidarOperation!=='idle')return;installLASWorker();areaTileQueueActive=true;areaReady=false;areaCancelRequested=false;areaFilesCount=files.length;areaBoundsAcc=null;areaPointsAcc=0;areaTilesAcc=0;areaOverlaps=0;lasTotal=0;S.points=[];S.candidates=[];areaSessionId=++lidarJobId;lidarOperation='area';$('lidarProgress').style.display='block';$('lidarProgress').value=0;$('lidarStatus').textContent='Preparando mosaico de '+files.length+' teselas…';updateLidarButtons();
