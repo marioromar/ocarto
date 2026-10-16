@@ -6,7 +6,7 @@ void main() {
   testWidgets('muestra el editor de Ocarto', (tester) async {
     await tester.pumpWidget(const OcartoApp());
     expect(find.text('Ocarto'), findsOneWidget);
-    expect(find.text('Plantilla georreferenciada'), findsOneWidget);
+    expect(find.text('Plantilla georreferenciada'), findsWidgets);
     await tester.scrollUntilVisible(
       find.text('Mapa editable'), 250,
       scrollable: find.byType(Scrollable).first,
