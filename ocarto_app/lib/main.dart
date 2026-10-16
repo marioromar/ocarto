@@ -796,6 +796,8 @@ class _OcartoHomeState extends State<OcartoHome> {
         Icon(Icons.terrain, color: Color(0xff87d8b2)),
         SizedBox(width: 10),
         Text('Ocarto'),
+        SizedBox(width: 10),
+        Text('v252', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
       ]),
       actions: [
         if (_recording)
