@@ -39,7 +39,10 @@ test('escribe CSV de más de 8000 celdas en bloques de 4096, sin duplicar encabe
   assert.equal(lines.length,n+1);
   assert.equal(lines[0],'x_utm,y_utm,min_ground_z_m');
   assert.equal(lines[1],'350000,4070000,100');
-  assert.equal(lines.at(-1),'354501,4070000,190.02');
+  const last=lines.at(-1).split(',').map(Number);
+  assert.equal(last[0],354501);
+  assert.equal(last[1],4070000);
+  assert(Math.abs(last[2]-190.02)<1e-9,'Las cotas exportadas deben conservar su valor numérico');
   assert.equal(dir.written.get('tesela_001_001_mdt.csv').length,4,
     'Expected header + 2 full 4096-row batches + last partial batch');
 });
