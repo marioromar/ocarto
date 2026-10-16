@@ -159,24 +159,28 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       {id:'purple',name:'Púrpura',priority:60,colors:['#a020f0','#c000c0']}
     ];
     const ocartoPrintOrder=()=>{try{const stored=JSON.parse(localStorage.getItem('ocarto.printColorOrder.v1')||'null');return Array.isArray(stored)&&stored.length===OCARTO_PRINT_COLORS.length&&stored.every(v=>OCARTO_PRINT_COLORS.some(c=>c.id===v.id))?stored:OCARTO_PRINT_COLORS.map(({id,priority})=>({id,priority}))}catch{return OCARTO_PRINT_COLORS.map(({id,priority})=>({id,priority}))}};
+    const configuredPrintOrder=Object.fromEntries(ocartoPrintOrder().map(({id,priority})=>[id,Number(priority)||0]));
+    const colorGroup=(raw)=>{
+      const color=String(raw||'').toLowerCase().trim();
+      if(Object.hasOwn(configuredPrintOrder,color))return color;
+      const exact=OCARTO_PRINT_COLORS.find(c=>c.colors.includes(color));if(exact)return exact.id;
+      const hex=color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/);
+      if(!hex)return 'green';
+      const h=hex[1],v=h.length===3?h.split('').map(c=>parseInt(c+c,16)):Array.from({length:3},(_,i)=>parseInt(h.slice(i*2,i*2+2),16));
+      const [r,g,b]=v,maximum=Math.max(...v),minimum=Math.min(...v),delta=maximum-minimum;
+      if(maximum>220&&delta<22)return 'white';
+      if(maximum<95&&delta<35)return 'black';
+      if(r>115&&b>100&&r>g*1.22&&b>g*1.15)return 'purple';
+      if(r>g*1.15&&g>b*1.12&&r>115)return 'brown';
+      if(b>r*1.12&&b>g*.98)return 'blue';
+      if(g>r*1.08&&g>b*.95)return 'green';
+      if(r>140&&g>110&&b<g*.8)return 'yellow';
+      return 'green';
+    };
     const ocartoColorPriority=(f)=>{
       const style=OcartoSymbolSpecs.symbolStyle(f.symbol,S.mapType)||{};
       const raw=(f.heightBand?f.fillColor:null)||(f.layerId&&vectorLayerFor(f)?.id!=='cartography'?vectorLayerFor(f)?.color:null)||style.color||style.outline||style.fill||'';
-      const color=String(raw).toLowerCase().trim();
-      const named={white:0,yellow:10,green:20,blue:30,brown:40,black:50,purple:60,magenta:60};
-      if(named[color]!==undefined)return ocartoPrintOrder().find(v=>v.id===color)?.priority??named[color];
-      const hex=color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/);
-      if(!hex)return 25;
-      const h=hex[1],v=h.length===3?h.split('').map(c=>parseInt(c+c,16)):Array.from({length:3},(_,i)=>parseInt(h.slice(i*2,i*2+2),16));
-      const [r,g,b]=v,maximum=Math.max(...v),minimum=Math.min(...v),delta=maximum-minimum;
-      if(maximum>220&&delta<22)return 0;
-      if(maximum<95&&delta<35)return 50;
-      if(r>115&&b>100&&r>g*1.22&&b>g*1.15)return 60;
-      if(r>g*1.15&&g>b*1.12&&r>115)return 40;
-      if(b>r*1.12&&b>g*.98)return 30;
-      if(g>r*1.08&&g>b*.95)return 20;
-      if(r>140&&g>110&&b<g*.8)return 10;
-      return 25;
+      return configuredPrintOrder[colorGroup(raw)]??20;
     };
     for(const referenceOnly of [true,false]){
       const ordered=S.features.map((f,i)=>({f,i,layer:vectorLayerFor(f)}))
