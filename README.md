@@ -1,20 +1,34 @@
 # Ocarto — editor cartográfico de orientación
 
-**Editor profesional web: v263 (LiDAR optimizado y exportación verificada) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
+**Editor profesional web: v264 (MDT preliminar con halo entre teselas) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
 
 ## Descargar la aplicación
 
-- **[Ocarto v263 — ZIP de la rama con GPS y LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v263.zip)**
+- **[Ocarto v264 — ZIP de la rama con GPS y LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v264.zip)**
 - **[Código y versiones de Ocarto](source/v234/index.html)**
 - **[Cambios y comprobaciones OCAD v249](source/v234/OCAD-v249.md)**
 
-**Para probar LiDAR en Windows:** descarga el ZIP de la rama v263, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v263.md).
+**Para probar LiDAR en Windows:** descarga el ZIP de la rama v264, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v264.md).
 
 ## Revisión OCAD 2018
 
 En **Archivo → Revisar símbolos y tintas OCAD…** se puede abrir un archivo de Bobadilla y comprobar en modo **solo lectura** símbolos, colores CMYK y orden provisional de impresión. La auditoría permite descargar un informe JSON, y **no sustituye los símbolos, colores ni las prioridades actuales**. Falta verificar el resultado visualmente contra OCAD 2018 antes de aprobar nuevos predeterminados.
 
-La rama `ocarto-v263` incorpora GPS y el procesamiento LiDAR por ventanas en el mismo editor web profesional, sin sustituir sus herramientas. El ZIP enlazado es el archivo de esta misma rama GitHub.
+La rama `ocarto-v264` incorpora GPS y el procesamiento LiDAR por ventanas en el mismo editor web profesional, sin sustituir sus herramientas. El ZIP enlazado es el archivo de esta misma rama GitHub.
+
+## LiDAR v264 · MDT preliminar con halo y uniones entre teselas
+
+Esta versión añade una **segunda fase opcional** al procesamiento LiDAR de áreas grandes. Después de exportar todas las teselas a CSV, en el panel LiDAR pulsa **«MDT preliminar · unir bordes»** y selecciona la carpeta de resultados `ocarto_teselas_...` que contiene `manifest.json`.
+
+Ocarto lee por flujo las celdas de suelo de cada tesela y una franja de **2 celdas alrededor de sus vecinas (halo)**. Genera para cada bloque un archivo `tesela_NNN_NNN_mdt_preliminar.asc` compatible con **ESRI ASCII Grid**. Las cotas de suelo realmente observadas se conservan; solo se interpolan pequeños vacíos de hasta 2 celdas con al menos 3 muestras cercanas, mediante distancia inversa al cuadrado. Los huecos grandes y las zonas exteriores al polígono (incluidos sus huecos) permanecen como **NODATA**. El diseño conserva los límites de memoria por ventana y evita cargar la zona completa.
+
+Los archivos se exportan por orden, y `manifest.json` mantiene un apartado `dtmSeams` separado del estado original de la nube, de modo que una cancelación de esta segunda fase no marque como fallido el procesamiento LAS/LAZ que ya se completó. Se puede pulsar **«Detener MDT»**. Las rejillas completas previas permanecen en disco.
+
+**Muy importante:** es una **rejilla MDT preliminar**, no una interpolación geodésica/cartográfica profesional y **todavía no genera curvas continuas**. No se han implementado aún una exportación GeoTIFF/PNG georreferenciada de este nuevo MDT, los contornos suavizados ni el reconocimiento de formas de relieve. Se necesitan pruebas sobre el LAZ PNOA real y comparación visual con el terreno.
+
+- [Guía de prueba con los botones exactos](PRUEBA-LIDAR-v264.md)
+- [ZIP idéntico al repositorio v264](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v264.zip)
+- [Pruebas LAS/LAZ, halo y lanzador Windows](https://github.com/marioromar/ocarto/actions/workflows/lidar-worker.yml)
 
 ## LiDAR v263 · Evitar descomprimir LAZ dos veces y validar archivos exportados
 
