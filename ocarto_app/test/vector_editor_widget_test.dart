@@ -14,13 +14,13 @@ void main() {
     // catálogo derecho 245, con lienzo en x=236..554.
     await tester.tapAt(const Offset(310, 320));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Trazado: 1 vértice'), findsOneWidget);
+    expect(find.byKey(const ValueKey('drawing-1')), findsOneWidget);
     await tester.tapAt(const Offset(430, 380));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Trazado: 2 vértices'), findsOneWidget);
+    expect(find.byKey(const ValueKey('drawing-2')), findsOneWidget);
     await tester.tap(find.text('Terminar'));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Trazado: 2 vértices'), findsNothing);
+    expect(find.byKey(const ValueKey('drawing-0')), findsOneWidget);
     expect(find.text('Símbolos favoritos'), findsOneWidget);
   });
 
@@ -40,6 +40,6 @@ void main() {
     expect(find.text('Trazado: 2 vértices'), findsOneWidget);
     await tester.tap(find.byTooltip('Cancelar trazado en curso'));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Trazado: 2 vértices'), findsNothing);
+    expect(find.byKey(const ValueKey('drawing-0')), findsOneWidget);
   });
 }
