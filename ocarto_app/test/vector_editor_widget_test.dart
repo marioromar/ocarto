@@ -67,6 +67,16 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('enable-bezier-handles')));
     await tester.pump();
     expect(find.byKey(const ValueKey('bezier-corner')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('bezier-mode-free')));
+    await tester.tap(find.byKey(const ValueKey('bezier-mode-free')));
+    await tester.pump();
+    expect(tester.widget<ChoiceChip>(
+        find.byKey(const ValueKey('bezier-mode-free'))).selected, isTrue);
+    await tester.ensureVisible(find.byKey(const ValueKey('bezier-mode-aligned')));
+    await tester.tap(find.byKey(const ValueKey('bezier-mode-aligned')));
+    await tester.pump();
+    expect(tester.widget<ChoiceChip>(
+        find.byKey(const ValueKey('bezier-mode-aligned'))).selected, isTrue);
     await tester.ensureVisible(find.byKey(const ValueKey('bezier-corner')));
     await tester.tap(find.byKey(const ValueKey('bezier-corner')));
     await tester.pump();
