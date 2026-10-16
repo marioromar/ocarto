@@ -57,6 +57,18 @@ void main() {
     expect(VectorGeometry.valid('area', restored.vertices), isTrue);
   });
 
+  test('un punto geográfico sin lista de vértices conserva WGS84', () {
+    final project = MapProject(name: 'GPS', layers: [], elements: [
+      ProjectElement(tool: 'point', x: -4.422, y: 36.725,
+          symbol: 'Árbol', geographic: true),
+    ]);
+    final restored = MapProject.decode(project.encode()).elements.single;
+    expect(restored.geographic, isTrue);
+    expect(restored.x, -4.422);
+    expect(restored.y, 36.725);
+    expect(restored.vertices, isEmpty);
+  });
+
   test('el proyecto antiguo sin vertices sigue siendo válido', () {
     final old = MapProject(name: 'Antiguo', layers: [],
       elements: [ProjectElement(tool: 'point', x: 5, y: 10)]);
