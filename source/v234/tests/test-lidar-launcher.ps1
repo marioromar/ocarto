@@ -23,6 +23,15 @@ try {
       $message=if(Test-Path $err){Get-Content $err -Raw}else{"No stderr"}
       throw "Failed to start Ocarto PowerShell server: $message"
     }
+    $reuseOut = Join-Path $env:TEMP "ocarto-server-reuse-out.log"
+    $reuseErr = Join-Path $env:TEMP "ocarto-server-reuse-err.log"
+    $reuseProc = Start-Process -FilePath "powershell.exe" -ArgumentList @(
+      "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $script
+    ) -PassThru -Wait -WindowStyle Hidden -RedirectStandardOutput $reuseOut -RedirectStandardError $reuseErr
+    if($reuseProc.ExitCode -ne 0) {
+      $message=if(Test-Path $reuseErr){Get-Content $reuseErr -Raw}else{"No stderr"}
+      throw "The second launcher did not reuse the active Ocarto server: $message"
+    }
     foreach($file in @("source/v234/lidar-worker.js",
       "source/v234/vendor/laz-perf.js","source/v234/vendor/laz-perf.wasm")){
         $req=Invoke-WebRequest -Uri "http://127.0.0.1:8787/$file" -UseBasicParsing -TimeoutSec 10
