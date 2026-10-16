@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../gps/nmea_parser.dart';
 import '../geo/georeferenced_raster.dart';
+import 'vector_geometry.dart';
 
 class ProjectLayer {
   ProjectLayer({
@@ -35,8 +36,10 @@ class ProjectElement {
     required this.y,
     this.symbol = 'IOF-placeholder',
     List<GpsFix>? gpsPoints,
+    List<VectorVertex>? vertices,
+    this.geographic = false,
     this.isGpsTrack = false,
-  }) : gpsPoints = gpsPoints ?? [];
+  }) : gpsPoints = gpsPoints ?? [], vertices = vertices ?? [];
 
   final String tool;
   final double x;
@@ -44,12 +47,16 @@ class ProjectElement {
   final String symbol;
   final bool isGpsTrack;
   final List<GpsFix> gpsPoints;
+  final List<VectorVertex> vertices;
+  final bool geographic;
 
   Map<String, Object> toJson() => {
         'tool': tool,
         'x': x,
         'y': y,
         'symbol': symbol,
+        if (vertices.isNotEmpty) 'vertices': vertices.map((v) => v.toJson()).toList(),
+        if (vertices.isNotEmpty) 'geographic': geographic,
         if (isGpsTrack) 'gpsTrack': true,
         if (isGpsTrack) 'gpsPoints': gpsPoints.map((p) => p.toJson()).toList(),
       };
@@ -59,6 +66,9 @@ class ProjectElement {
         x: (json['x'] as num).toDouble(),
         y: (json['y'] as num).toDouble(),
         symbol: json['symbol'] as String? ?? 'IOF-placeholder',
+        vertices: (json['vertices'] as List<dynamic>? ?? const [])
+            .map((v) => VectorVertex.fromJson(v as Map<String, dynamic>)).toList(),
+        geographic: json['geographic'] == true,
         isGpsTrack: json['gpsTrack'] == true,
         gpsPoints: (json['gpsPoints'] as List<dynamic>? ?? const [])
             .map((v) => GpsFix.fromJson(v as Map<String, dynamic>))
@@ -71,7 +81,7 @@ class MapProject {
     required this.name,
     required this.layers,
     required this.elements,
-    this.version = 4,
+    this.version = 5,
     this.gpsCenterLatitude,
     this.gpsCenterLongitude,
     this.gpsMetersPerPixel = 2,
