@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"classification":2,"elevation":101.2},"geometry":{"type":"Point","coordinates":[0,0,101.2]}},{"type":"Feature","properties":{"classification":5,"elevation":103.7},"geometry":{"type":"Point","coordinates":[1,1,103.7]}}]}
