@@ -11,6 +11,7 @@ import 'core/map_project.dart';
 import 'core/project_storage.dart';
 import 'core/symbol_catalog.dart';
 import 'core/vector_geometry.dart';
+import 'core/bezier_controls.dart';
 import 'gps/gps_serial_service.dart';
 import 'gps/nmea_parser.dart';
 import 'geo/georeferenced_raster.dart';
@@ -27,9 +28,13 @@ class MapElement {
     this.isGpsTrack = false,
     List<GpsFix>? gpsPoints,
     List<Offset>? vertices,
+    List<BezierControls?>? bezier,
     this.geographic = false,
   }) : gpsPoints = gpsPoints ?? <GpsFix>[],
-       vertices = vertices ?? <Offset>[];
+       vertices = vertices ?? <Offset>[],
+       bezier = bezier == null || bezier.isEmpty
+           ? List<BezierControls?>.filled(vertices?.length ?? 0, null, growable: true)
+           : List<BezierControls?>.from(bezier);
 
   final MapTool tool;
   Offset position;
@@ -38,6 +43,7 @@ class MapElement {
   final bool geographic;
   final List<GpsFix> gpsPoints;
   final List<Offset> vertices;
+  final List<BezierControls?> bezier;
 }
 
 class GpsLineSymbol {
@@ -201,6 +207,7 @@ class _OcartoHomeState extends State<OcartoHome> {
   int? _selectedElement;
   int? _selectedVertex;
   bool _movingVertex = false;
+  int _dragHandleSide = 0; // -1 entrante, +1 saliente, 0 ancla.
   bool _recording = false;
   MapElement? _draft;
 
@@ -307,6 +314,7 @@ class _OcartoHomeState extends State<OcartoHome> {
           x: e.position.dx, y: e.position.dy, symbol: e.symbol,
           isGpsTrack: e.isGpsTrack, gpsPoints: List<GpsFix>.from(e.gpsPoints),
           vertices: e.vertices.map((v) => VectorVertex(v.dx, v.dy)).toList(),
+          bezier: List<BezierControls?>.from(e.bezier),
           geographic: e.geographic,
         )).toList(),
         gpsCenterLatitude: _gpsCenter?.latitude,
@@ -428,6 +436,7 @@ class _OcartoHomeState extends State<OcartoHome> {
             isGpsTrack: element.isGpsTrack,
             gpsPoints: List<GpsFix>.from(element.gpsPoints),
             vertices: element.vertices.map((v) => Offset(v.x, v.y)).toList(),
+            bezier: element.bezier,
             geographic: element.geographic,
           )));
         _gpsCenter = null;
@@ -447,6 +456,7 @@ class _OcartoHomeState extends State<OcartoHome> {
             ? project.gpsTrackSymbol : '506';
         _selectedElement = null;
         _selectedVertex = null;
+        _dragHandleSide = 0;
         _draft = null;
       });
       if (rasterToLoad != null) {
@@ -556,8 +566,10 @@ class _OcartoHomeState extends State<OcartoHome> {
     } else {
       final prev = _screenPosition(_draft!.vertices.last, size, _draft!.geographic);
       if (prev != null && (prev - position).distance < 3) return;
-      setState(() => _draft!.vertices.add(
-          _storePosition(position, size, _draft!.geographic)));
+      setState(() {
+        _draft!.vertices.add(_storePosition(position, size, _draft!.geographic));
+        _draft!.bezier.add(null);
+      });
     }
   }
 
@@ -590,7 +602,8 @@ class _OcartoHomeState extends State<OcartoHome> {
 
   void _changeTool(MapTool value) {
     if (!_finishDrawing()) return;
-    setState(() { tool = value; _selectedElement = null; _selectedVertex = null; });
+    setState(() { tool = value; _selectedElement = null; _selectedVertex = null;
+      _dragHandleSide = 0; });
   }
 
   void _onMapDragStart(Offset position, Size size) {
@@ -754,6 +767,9 @@ class _OcartoHomeState extends State<OcartoHome> {
   void _chooseCatalogSymbol(OcartoCatalogSymbol entry) {
     if (!_finishDrawing()) return;
     setState(() {
+      _dragHandleSide = 0;
+      _selectedElement = null;
+      _selectedVertex = null;
       symbol = entry.id;
       tool = switch (entry.tool) {
         CatalogTool.point => MapTool.point,
@@ -1049,7 +1065,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         SizedBox(width: 10),
         Text('Ocarto'),
         SizedBox(width: 10),
-        Text('v254', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
+        Text('v255', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
       ]),
       actions: [
         if (_recording)
