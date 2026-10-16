@@ -69,16 +69,16 @@ void main() {
     expect(find.byKey(const ValueKey('bezier-corner')), findsOneWidget);
     await Scrollable.ensureVisible(
       tester.element(find.byKey(const ValueKey('bezier-mode-free'))),
-      alignment: 0.5, duration: const Duration(milliseconds: 200));
-    await tester.pumpAndSettle();
+      alignment: 0.5, duration: Duration.zero);
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('bezier-mode-free')));
     await tester.pump();
     expect(tester.widget<ChoiceChip>(
         find.byKey(const ValueKey('bezier-mode-free'))).selected, isTrue);
     await Scrollable.ensureVisible(
       tester.element(find.byKey(const ValueKey('bezier-mode-aligned'))),
-      alignment: 0.5, duration: const Duration(milliseconds: 200));
-    await tester.pumpAndSettle();
+      alignment: 0.5, duration: Duration.zero);
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('bezier-mode-aligned')));
     await tester.pump();
     expect(tester.widget<ChoiceChip>(
