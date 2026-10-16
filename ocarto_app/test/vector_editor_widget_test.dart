@@ -35,6 +35,7 @@ void main() {
     await tester.pump();
     await tester.tapAt(const Offset(435, 410));
     await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const ValueKey('drawing-2')), findsOneWidget);
     await tester.tap(find.text('Terminar'));
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byKey(const ValueKey('drawing-2')), findsOneWidget);
