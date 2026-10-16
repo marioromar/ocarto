@@ -1,6 +1,6 @@
 # Ocarto — editor cartográfico de orientación
 
-**Versión actual: v249.** Este es el repositorio principal del mismo proyecto Ocarto; no existe un proyecto paralelo.
+**Editor web: v249 · Aplicación Windows Flutter: v254.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
 
 ## Descargar la aplicación
 
