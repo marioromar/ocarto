@@ -403,7 +403,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         symbol = findCatalogSymbol(project.selectedCatalogSymbol ?? '') != null
             ? project.selectedCatalogSymbol! : 'Árbol';
         tool = MapTool.values.firstWhere(
-          (value) => value.name == project.activeTool,
+          (value) => value.name == project!.activeTool,
           orElse: () => MapTool.select,
         );
         for (final layer in project.layers) {
