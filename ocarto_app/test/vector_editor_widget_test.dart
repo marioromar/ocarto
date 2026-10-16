@@ -13,13 +13,13 @@ void main() {
     // En el test de escritorio: panel izquierdo 235, mapa central y
     // catálogo derecho 245, con lienzo en x=236..554.
     await tester.tapAt(const Offset(310, 320));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Trazado: 1 vértice'), findsOneWidget);
     await tester.tapAt(const Offset(430, 380));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Trazado: 2 vértices'), findsOneWidget);
     await tester.tap(find.text('Terminar'));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Trazado: 2 vértices'), findsNothing);
     expect(find.text('Símbolos favoritos'), findsOneWidget);
   });
@@ -34,12 +34,12 @@ void main() {
     await tester.tapAt(const Offset(300, 310));
     await tester.pump();
     await tester.tapAt(const Offset(435, 410));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('Terminar'));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Trazado: 2 vértices'), findsOneWidget);
     await tester.tap(find.byTooltip('Cancelar trazado en curso'));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Trazado: 2 vértices'), findsNothing);
   });
 }
