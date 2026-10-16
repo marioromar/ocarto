@@ -76,7 +76,7 @@
     const menuActionIds=new Set(['newProject','openProject','restoreLocalBackup','saveProject','exportMap','undo','redo','selectAllObjects','duplicateSelected','copySelected','cutSelected','pasteSelected','deleteSelected','clearMap','zoomIn','zoomOut','layersNav','symbolsNav','selectMode','smoothConservative','smoothGeometric','validateGeometry','measureSelection','detectBtn','terrainBtn','exportContours','projectSettings','mapCrs']);
     menu.querySelectorAll('[data-menu-target]').forEach(button=>{if(menuActionIds.has(button.dataset.menuTarget))button.remove()});
     ['#extendDistance','#joinSelectedLines','#createParallel'].forEach(sel=>{const node=document.querySelector(sel);if(node)editBox.append(node.parentElement)});
-    ['ARCHIVO','EDICIÓN','VER','HERRAMIENTAS','LIDAR','CONFIGURACIÓN'].forEach(label=>{const item=findMenu(label);if(item)menu.append(item)});
+    ['ARCHIVO','EDICIÓN','VER','HERRAMIENTAS','LIDAR','PLANTILLAS','GPS','CONFIGURACIÓN'].forEach(label=>{const item=findMenu(label);if(item)menu.append(item)});
     const keep=new Set(['undo','redo','cutSelected','copySelected','pasteSelected','finishDraft','deleteSelected','zoomIn','zoomOut','restoreLocalBackup','openProject','saveProject']);
     const category=(el)=>{
       const id=el.id||'', text=(el.innerText||el.value||el.title||'').toLowerCase();
