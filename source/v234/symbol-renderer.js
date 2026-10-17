@@ -33,6 +33,11 @@ const meta={
   'manmade-x':{code:'531',color:COLORS.black,sizeMm:1,lineWidthMm:.22},
   'stairway':{code:'532',color:COLORS.black,lineWidthMm:.1,pattern:'ticked'},
   'obstacles-area':{code:'533',fill:COLORS.black,fillOpacity:.5,pattern:'dots',patternColor:COLORS.black},
+  'magnetic-north-line':{code:'601',color:COLORS.black,lineWidthMm:.14},
+  'course-start':{code:'701',color:COLORS.purple,sizeMm:1,lineWidthMm:.35},
+  'course-control':{code:'703',color:COLORS.purple,lineWidthMm:.35},
+  'course-line':{code:'705',color:COLORS.purple,lineWidthMm:.35},
+  'course-finish':{code:'706',color:COLORS.purple,lineWidthMm:.35},
   'bare-rock':{code:'214',fill:COLORS.black,fillOpacity:.35},
   'depression':{code:'111',color:COLORS.brown,sizeMm:.8},
   'pit':{code:'112',color:COLORS.brown,sizeMm:.7},
@@ -134,6 +139,11 @@ const extra=[
  {id:'manmade-x',geometry:'point',group:'Puntos · construcciones',name:'Elemento construido en X (531)',glyph:'×',sizeMm:1,lineMm:.22},
  {id:'stairway',geometry:'line',group:'Líneas · construcciones',name:'Escalera (532)',glyph:'≡',sizeMm:0,lineMm:.1},
  {id:'obstacles-area',geometry:'area',group:'Áreas · construcciones',name:'Área con obstáculos (533)',glyph:'···',sizeMm:0,lineMm:.1},
+ {id:'magnetic-north-line',geometry:'line',group:'Líneas · técnicos',name:'Línea de norte magnético (601)',glyph:'│',sizeMm:0,lineMm:.14},
+ {id:'course-start',geometry:'point',group:'Símbolos de recorrido',name:'Salida (701)',glyph:'△',sizeMm:1,lineMm:.35},
+ {id:'course-control',geometry:'point',group:'Símbolos de recorrido',name:'Control (703)',glyph:'○',sizeMm:1,lineMm:.35},
+ {id:'course-line',geometry:'line',group:'Símbolos de recorrido',name:'Línea de recorrido (705)',glyph:'━',sizeMm:0,lineMm:.35},
+ {id:'course-finish',geometry:'point',group:'Símbolos de recorrido',name:'Meta (706)',glyph:'◎',sizeMm:1,lineMm:.35},
  {id:'passable-cliff',geometry:'line',group:'Líneas · relieve y rocas',name:'Cortado franqueable (202)',glyph:'╱',sizeMm:0,lineMm:.25},
  {id:'boulder-field-open',geometry:'area',group:'Áreas · rocas',name:'Campo de bloques (208)',glyph:'▲',sizeMm:0,lineMm:.1}
 ];
