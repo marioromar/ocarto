@@ -16,6 +16,11 @@ const meta={
   'contour-supplementary':{code:'103',color:COLORS.brown,lineWidthMm:.10,pattern:'dashed'},
   'knoll':{code:'109',color:COLORS.brown,sizeMm:.6},
   'elongated-knoll':{code:'110',color:COLORS.brown,sizeMm:.8},
+  'rocky-pit':{code:'203.1',color:COLORS.black,sizeMm:.8},
+  'dangerous-pit':{code:'203.2',color:COLORS.black,sizeMm:.8},
+  'boulder-cluster':{code:'207',color:COLORS.black,sizeMm:.8},
+  'stony-ground':{code:'210',fill:COLORS.white,pattern:'dots',patternColor:COLORS.black},
+  'bare-rock':{code:'214',fill:COLORS.black,fillOpacity:.35},
   'depression':{code:'111',color:COLORS.brown,sizeMm:.8},
   'pit':{code:'112',color:COLORS.brown,sizeMm:.7},
   'cairn':{code:'526',color:COLORS.black,sizeMm:.8},
@@ -100,6 +105,10 @@ const extra=[
  {id:'broken-ground',geometry:'area',group:'Áreas · relieve',name:'Terreno accidentado (113)',glyph:'···',sizeMm:0,lineMm:.1},
  {id:'very-broken-ground',geometry:'area',group:'Áreas · relieve',name:'Terreno muy accidentado (114)',glyph:'⁙',sizeMm:0,lineMm:.1},
  {id:'elongated-knoll',geometry:'point',group:'Puntos · relieve',name:'Montículo alargado (110)',code:'110',glyph:'•••',sizeMm:.8,lineMm:.15},
+ {id:'rocky-pit',geometry:'point',group:'Puntos · rocas',name:'Hoyo rocoso o cueva (203.1)',glyph:'⌒',sizeMm:.8,lineMm:.18},
+ {id:'dangerous-pit',geometry:'point',group:'Puntos · rocas',name:'Hoyo peligroso (203.2)',glyph:'●',sizeMm:.8,lineMm:.18},
+ {id:'boulder-cluster',geometry:'point',group:'Puntos · rocas',name:'Grupo de piedras (207)',glyph:'▲',sizeMm:.8,lineMm:.18},
+ {id:'stony-ground',geometry:'area',group:'Áreas · rocas',name:'Terreno pedregoso (210)',glyph:'···',sizeMm:0,lineMm:.1},
  {id:'passable-cliff',geometry:'line',group:'Líneas · relieve y rocas',name:'Cortado franqueable (202)',glyph:'╱',sizeMm:0,lineMm:.25},
  {id:'boulder-field-open',geometry:'area',group:'Áreas · rocas',name:'Campo de bloques (208)',glyph:'▲',sizeMm:0,lineMm:.1}
 ];
