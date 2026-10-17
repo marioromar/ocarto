@@ -438,11 +438,11 @@ if(typeof window!=='undefined')window.OcartoUrbanWidthTools={offsetRing};
     const ensureMenu=(label)=>{let d=findMenu(label);if(d)return d;d=document.createElement('details');const s=document.createElement('summary');s.textContent=label;const box=document.createElement('div');box.className='oc-dropdown';d.append(s,box);menu.append(d);return d};
     const menuBox=(label)=>ensureMenu(label).querySelector('.oc-dropdown');
     const editBox=menuBox('EDICIÓN'), viewBox=menuBox('VER'), toolsBox=menuBox('HERRAMIENTAS'), fileBox=menuBox('MAPA');
-    const menuActionIds=new Set(['newProject','openProject','restoreLocalBackup','saveProject','exportMap','undo','redo','selectAllObjects','duplicateSelected','copySelected','cutSelected','pasteSelected','deleteSelected','clearMap','zoomIn','zoomOut','layersNav','symbolsNav' ,'selectMode','smoothConservative','smoothGeometric','validateGeometry','measureSelection']);
+    const menuActionIds=new Set(['undo','redo','selectAllObjects','duplicateSelected','copySelected','cutSelected','pasteSelected','deleteSelected','clearMap','zoomIn','zoomOut','layersNav','symbolsNav','selectMode','smoothConservative','smoothGeometric','validateGeometry','measureSelection']);
     menu.querySelectorAll('[data-menu-target]').forEach(button=>{if(menuActionIds.has(button.dataset.menuTarget))button.remove()});
     ['#extendDistance','#joinSelectedLines','#createParallel'].forEach(sel=>{const node=document.querySelector(sel);if(node)editBox.append(node.parentElement)});
     ['MAPA','EDICIÓN','VER','HERRAMIENTAS','LIDAR','PLANTILLAS','GPS','CONFIGURACIÓN'].forEach(label=>{const item=findMenu(label);if(item)menu.append(item)});
-    const keep=new Set(['undo','redo','finishDraft','deleteSelected']);
+    const keep=new Set(['undo','redo','finishDraft','deleteSelected','zoomIn','zoomOut','newProject','openProject','restoreLocalBackup','downloadLocalBackup','saveProject','saveOmap','saveOcad','exportMap','clearMap']);
     const category=(el)=>{
       const id=el.id||'', text=(el.innerText||el.value||el.title||'').toLowerCase();
       if(/save|open|backup|export|import|project|ocad|geojson|kmz|clearMap/i.test(id+' '+text))return fileBox;
@@ -452,7 +452,7 @@ if(typeof window!=='undefined')window.OcartoUrbanWidthTools={offsetRing};
     };
     const arrange=()=>Array.from(toolbar.children).forEach(el=>{
       if(el.id==='showMobilePanels'||el.classList.contains('zoom-label')||el.tagName==='SELECT'&&el.hidden)return;
-      if(keep.has(el.id)||el.classList.contains('hidden-input'))return;
+      if(keep.has(el.id)){if(!['undo','redo','finishDraft','deleteSelected','zoomIn','zoomOut'].includes(el.id))el.hidden=true;return;}if(el.classList.contains('hidden-input'))return;
       category(el).append(el);
     });
     arrange();
