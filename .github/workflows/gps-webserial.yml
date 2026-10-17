@@ -3,11 +3,7 @@ on:
   push:
     paths:
       - 'source/v234/gps-webserial.js'
-      - 'source/v234/index.html'
-      - 'source/v234/ocarto-runtime-v248-6.js'
       - 'source/v234/tests/gps-webserial.test.cjs'
-      - 'source/v234/symbol-renderer.js'
-      - 'source/v234/tests/symbol-renderer.test.cjs'
       - '.github/workflows/gps-webserial.yml'
   workflow_dispatch:
 jobs:
