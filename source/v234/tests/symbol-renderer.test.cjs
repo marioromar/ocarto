@@ -13,6 +13,10 @@ const drawingLog=[];
 const ctx={save(){},restore(){},translate(){},clearRect(){},beginPath(){},arc(){drawingLog.push('arc')},lineTo(){drawingLog.push('line')},moveTo(){},fill(){drawingLog.push('fill')},stroke(){drawingLog.push('stroke')},closePath(){},rect(){},bezierCurveTo(){},setLineDash(){},quadraticCurveTo(){}};
 const canvas={width:48,height:36,getContext:()=>ctx};
 
+test('los nombres visibles no se repiten',()=>{
+ const names=catalog.map(item=>item.name).filter(Boolean);
+ assert.equal(new Set(names).size,names.length);
+});
 test('cada ID de símbolo es único y la ampliación no duplica registros',()=>{
  assert.ok(catalog.length>=90);
  assert.equal(new Set(catalog.map(x=>x.id)).size,catalog.length);
