@@ -545,7 +545,6 @@ if(typeof window!=='undefined')window.OcartoUrbanWidthTools={offsetRing};
 (()=>{
   const providers=[
     ['IGN/CNIG','state','orthophoto, lidar, dem, topography','WMS, WMTS, LAZ, ASC, GeoTIFF'],
-    ['LiDAR nacional','state','nubes de puntos y modelos de elevación','LAZ, LAS, COPC, COG, WMS, WMTS'],
     ['PNOA','state','orthophoto, lidar','WMS, WMTS, LAZ, COG'],
     ['CartoCiudad','state','topography, roads, addresses','WMS, WFS'],
     ['OpenStreetMap','community','roads, buildings, landuse, water','Overpass, GeoJSON'],
