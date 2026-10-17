@@ -255,7 +255,7 @@ function decorateLine(ctx,id,pts,unitScale,zoom,style){
      ctx.moveTo(x-nx*height,y-ny*height);ctx.lineTo(x+nx*height,y+ny*height);
      if(id==='impassable-fence'){ctx.moveTo(x-ux*height*.55,y-uy*height*.55);ctx.lineTo(x+ux*height*.55,y+uy*height*.55)}
     }else if(mark==='cliff'||mark==='bank'){
-     ctx.moveTo(x,y);ctx.lineTo(x+nx*height*(mark==='cliff'?1.5:1),y+ny*height*(mark==='cliff'?1.5:1));
+     const cliffScale=id==='cliff'?1.75:id==='passable-cliff'?0.95:id==='quarry-edge'?1.25:1;ctx.moveTo(x,y);ctx.lineTo(x+nx*height*cliffScale,y+ny*height*cliffScale);
     }else if(mark==='railway'){
      ctx.moveTo(x-nx*height,y-ny*height);ctx.lineTo(x+nx*height,y+ny*height)
     }
