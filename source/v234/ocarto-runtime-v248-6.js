@@ -530,3 +530,12 @@ if(typeof window!=='undefined')window.OcartoUrbanWidthTools={offsetRing};
 })();
 
 ;
+
+/* v277: polygon zone selection */
+(()=>{
+  const bar=document.querySelector('.toolbar');
+  if(!bar||document.getElementById('markZone'))return;
+  const button=document.createElement('button');button.id='markZone';button.type='button';button.className='action';button.textContent='Marcar zona';button.title='Dibuja un polígono para delimitar la zona de consulta';
+  button.onclick=()=>{try{if(typeof setTool!=='function')throw Error('Herramienta de área no disponible');setTool('area');button.classList.add('primary');button.setAttribute('aria-pressed','true');toast('Haz clic en los vértices y doble clic para cerrar el polígono');}catch(err){toast('No se pudo activar Marcar zona: '+err.message)}};
+  bar.appendChild(button);
+})();
