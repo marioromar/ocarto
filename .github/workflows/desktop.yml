@@ -1,0 +1,27 @@
+name: Ocarto Desktop
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/symbols-v275]
+    paths:
+      - 'desktop/**'
+      - 'package.json'
+      - 'source/v234/**'
+      - 'servidor-ocarto.ps1'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm install
+      - run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ocarto-Desktop-Windows
+          path: |
+            dist/*.exe
+          retention-days: 30
