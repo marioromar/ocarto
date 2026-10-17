@@ -45,6 +45,9 @@ test('ISOM 101/102 y puntos erróneos están corregidos',()=>{
  assert.equal(SymbolRenderer.specFor('passable-wall').code,'513.1');
  assert.equal(SymbolRenderer.specFor('uncrossable-wall').code,'513.3');
 });
+test('cada símbolo del catálogo tiene especificación visual',()=>{
+ for(const item of catalog)assert.ok(SymbolRenderer.specFor(item.id),item.id);
+});
 test('no hay códigos pendientes ni códigos ficticios para elementos propios',()=>{
  for(const s of catalog){
   assert.notEqual(s.code,'Pendiente',s.id);
