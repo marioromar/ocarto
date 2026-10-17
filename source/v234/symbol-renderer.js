@@ -24,6 +24,9 @@ const meta={
   'uncrossable-marsh':{code:'307',fill:COLORS.blue,pattern:'rows',patternColor:COLORS.black},
   'marsh':{code:'308',fill:COLORS.white,pattern:'rows',patternColor:COLORS.blue},
   'indistinct-marsh':{code:'310',fill:COLORS.white,pattern:'rows',patternColor:COLORS.blue},
+  'bridge-entrance':{code:'512.1',color:COLORS.black,lineWidthMm:.2,decoration:'cliff'},
+  'underpass':{code:'512.2',color:COLORS.black,lineWidthMm:.2,pattern:'dashed'},
+  'passable-retaining-wall':{code:'513.2',color:COLORS.black,lineWidthMm:.2,pattern:'dashed'},
   'bare-rock':{code:'214',fill:COLORS.black,fillOpacity:.35},
   'depression':{code:'111',color:COLORS.brown,sizeMm:.8},
   'pit':{code:'112',color:COLORS.brown,sizeMm:.7},
@@ -116,6 +119,9 @@ const extra=[
  {id:'trench',geometry:'line',group:'Líneas · rocas',name:'Trinchera (215)',glyph:'╱',sizeMm:0,lineMm:.25},
  {id:'uncrossable-marsh',geometry:'area',group:'Áreas · agua',name:'Pantano infranqueable (307)',glyph:'≋',sizeMm:0,lineMm:.12},
  {id:'indistinct-marsh',geometry:'area',group:'Áreas · agua',name:'Pantano indistinto (310)',glyph:'≋',sizeMm:0,lineMm:.12},
+ {id:'bridge-entrance',geometry:'line',group:'Líneas · construcciones',name:'Entrada de puente o túnel (512.1)',glyph:'┬',sizeMm:0,lineMm:.2},
+ {id:'underpass',geometry:'line',group:'Líneas · construcciones',name:'Paso inferior o túnel (512.2)',glyph:'┄',sizeMm:0,lineMm:.2},
+ {id:'passable-retaining-wall',geometry:'line',group:'Líneas · construcciones',name:'Muro de contención franqueable (513.2)',glyph:'┄',sizeMm:0,lineMm:.2},
  {id:'passable-cliff',geometry:'line',group:'Líneas · relieve y rocas',name:'Cortado franqueable (202)',glyph:'╱',sizeMm:0,lineMm:.25},
  {id:'boulder-field-open',geometry:'area',group:'Áreas · rocas',name:'Campo de bloques (208)',glyph:'▲',sizeMm:0,lineMm:.1}
 ];
