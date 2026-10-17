@@ -73,10 +73,10 @@
     const ensureMenu=(label)=>{let d=findMenu(label);if(d)return d;d=document.createElement('details');const s=document.createElement('summary');s.textContent=label;const box=document.createElement('div');box.className='oc-dropdown';d.append(s,box);menu.append(d);return d};
     const menuBox=(label)=>ensureMenu(label).querySelector('.oc-dropdown');
     const editBox=menuBox('EDICIÓN'), viewBox=menuBox('VER'), toolsBox=menuBox('HERRAMIENTAS'), fileBox=menuBox('ARCHIVO');
-    const menuActionIds=new Set(['newProject','openProject','restoreLocalBackup','saveProject','exportMap','undo','redo','selectAllObjects','duplicateSelected','copySelected','cutSelected','pasteSelected','deleteSelected','clearMap','zoomIn','zoomOut','layersNav','symbolsNav','lidarNav','selectMode','smoothConservative','smoothGeometric','validateGeometry','measureSelection','detectBtn','terrainBtn','exportContours','projectSettings','mapCrs']);
+    const menuActionIds=new Set(['newProject','openProject','restoreLocalBackup','saveProject','exportMap','undo','redo','selectAllObjects','duplicateSelected','copySelected','cutSelected','pasteSelected','deleteSelected','clearMap','zoomIn','zoomOut','layersNav','symbolsNav','selectMode','smoothConservative','smoothGeometric','validateGeometry','measureSelection','detectBtn','terrainBtn','exportContours','projectSettings','mapCrs']);
     menu.querySelectorAll('[data-menu-target]').forEach(button=>{if(menuActionIds.has(button.dataset.menuTarget))button.remove()});
     ['#extendDistance','#joinSelectedLines','#createParallel'].forEach(sel=>{const node=document.querySelector(sel);if(node)editBox.append(node.parentElement)});
-    ['ARCHIVO','EDICIÓN','VER','HERRAMIENTAS','LIDAR','CONFIGURACIÓN'].forEach(label=>{const item=findMenu(label);if(item)menu.append(item)});
+    ['ARCHIVO','EDICIÓN','VER','HERRAMIENTAS','LIDAR','PLANTILLAS','GPS','CONFIGURACIÓN'].forEach(label=>{const item=findMenu(label);if(item)menu.append(item)});
     const keep=new Set(['undo','redo','cutSelected','copySelected','pasteSelected','finishDraft','deleteSelected','zoomIn','zoomOut','restoreLocalBackup','openProject','saveProject']);
     const category=(el)=>{
       const id=el.id||'', text=(el.innerText||el.value||el.title||'').toLowerCase();
@@ -93,11 +93,12 @@
     const firstFileAction=document.getElementById('restoreLocalBackup');
     ['newProject','openProject','saveProject'].forEach(id=>{const action=document.getElementById(id);if(action&&firstFileAction)toolbar.insertBefore(action,firstFileAction)});
     decorateQuickFiles(toolbar);
+    decorateCoreActions(toolbar);
     arrange();
     new MutationObserver(arrange).observe(toolbar,{childList:true});
     const addAction=(menuName,id,label,parent=null)=>{const box=parent||menuBox(menuName);if(box.querySelector(`[data-menu-target="${id}"]`))return;const b=document.createElement('button');b.type='button';b.dataset.menuTarget=id;b.textContent=label;box.append(b);return b};
     const addGroup=(menuName,label)=>{const d=document.createElement('details');d.className='oc-submenu';const summary=document.createElement('summary');summary.textContent=label;const box=document.createElement('div');box.className='oc-dropdown';d.append(summary,box);menuBox(menuName).append(d);return box};
-    [['ARCHIVO','newProject','Nuevo proyecto'],['ARCHIVO','openProject','Abrir proyecto'],['ARCHIVO','saveProject','Guardar proyecto'],['ARCHIVO','exportMap','Exportar GeoJSON'],['EDICIÓN','undo','Deshacer'],['EDICIÓN','redo','Rehacer'],['EDICIÓN','selectAllObjects','Seleccionar todo'],['EDICIÓN','duplicateSelected','Duplicar'],['EDICIÓN','copySelected','Copiar'],['EDICIÓN','cutSelected','Cortar'],['EDICIÓN','pasteSelected','Pegar'],['EDICIÓN','deleteSelected','Eliminar selección'],['EDICIÓN','clearMap','Limpiar elementos del mapa'],['VER','zoomIn','Acercar'],['VER','zoomOut','Alejar'],['VER','layersNav','Capas'],['VER','symbolsNav','Símbolos'],['VER','lidarNav','LiDAR e IA'],['HERRAMIENTAS','selectMode','Herramienta seleccionar'],['HERRAMIENTAS','validateGeometry','Validar geometría'],['HERRAMIENTAS','measureSelection','Medir longitudes y áreas'],['HERRAMIENTAS','detectBtn','Detectar elementos'],['HERRAMIENTAS','terrainBtn','Preparar MDT'],['HERRAMIENTAS','exportContours','Exportar curvas'],['HERRAMIENTAS','projectSettings','Ajustes del proyecto'],['HERRAMIENTAS','mapCrs','Sistema de coordenadas']].forEach(x=>addAction(...x));
+    [['ARCHIVO','newProject','Nuevo proyecto'],['ARCHIVO','openProject','Abrir proyecto'],['ARCHIVO','saveProject','Guardar proyecto'],['ARCHIVO','exportMap','Exportar GeoJSON'],['EDICIÓN','undo','Deshacer'],['EDICIÓN','redo','Rehacer'],['EDICIÓN','selectAllObjects','Seleccionar todo'],['EDICIÓN','duplicateSelected','Duplicar'],['EDICIÓN','copySelected','Copiar'],['EDICIÓN','cutSelected','Cortar'],['EDICIÓN','pasteSelected','Pegar'],['EDICIÓN','deleteSelected','Eliminar selección'],['EDICIÓN','clearMap','Limpiar elementos del mapa'],['VER','zoomIn','Acercar'],['VER','zoomOut','Alejar'],['VER','layersNav','Capas'],['VER','symbolsNav','Símbolos'],['LIDAR','lidarNav','Abrir panel LiDAR'],['HERRAMIENTAS','selectMode','Herramienta seleccionar'],['HERRAMIENTAS','validateGeometry','Validar geometría'],['HERRAMIENTAS','measureSelection','Medir longitudes y áreas'],['HERRAMIENTAS','detectBtn','Detectar elementos'],['HERRAMIENTAS','terrainBtn','Preparar MDT'],['HERRAMIENTAS','exportContours','Exportar curvas'],['HERRAMIENTAS','projectSettings','Ajustes del proyecto'],['HERRAMIENTAS','mapCrs','Sistema de coordenadas']].forEach(x=>addAction(...x));
     const smoothBox=addGroup('EDICIÓN','Suavizar');addAction('EDICIÓN','smoothConservative','Suavizar conservador',smoothBox);addAction('EDICIÓN','smoothGeometric','Suavizar geométrico',smoothBox);
     toolbar.querySelectorAll('.mobile-panel-button').forEach(b=>b.textContent='☰ Paneles');
   };
@@ -123,6 +124,13 @@
       svg.setAttribute('stroke-width','2.8');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');
       svg.innerHTML=art;mark.replaceChildren(svg);
       button.setAttribute('aria-label',button.querySelector('span')?.textContent.trim()||button.dataset.tool);
+    }
+  }
+  function decorateCoreActions(toolbar){
+    const actions={undo:['↶','Deshacer'],redo:['↷','Rehacer'],finishDraft:['✓','Terminar trazado'],deleteSelected:['⌫','Eliminar'],zoomIn:['＋','Acercar'],zoomOut:['−','Alejar']};
+    for(const [id,[icon,label]] of Object.entries(actions)){
+      const button=toolbar.querySelector('#'+id); if(!button)continue;
+      button.classList.add('core-tool-icon'); button.title=label; button.setAttribute('aria-label',label); button.textContent=icon;
     }
   }
   function decorateQuickFiles(toolbar){

@@ -1,5 +1,10 @@
 import 'dart:convert';
 
+import '../gps/nmea_parser.dart';
+import '../geo/georeferenced_raster.dart';
+import 'vector_geometry.dart';
+import 'bezier_controls.dart';
+
 class ProjectLayer {
   ProjectLayer({
     required this.id,
@@ -12,17 +17,17 @@ class ProjectLayer {
   bool visible;
   double opacity;
   Map<String, Object> toJson() => {
-    'id': id,
-    'name': name,
-    'visible': visible,
-    'opacity': opacity,
-  };
+        'id': id,
+        'name': name,
+        'visible': visible,
+        'opacity': opacity,
+      };
   factory ProjectLayer.fromJson(Map<String, dynamic> json) => ProjectLayer(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    visible: json['visible'] as bool? ?? true,
-    opacity: (json['opacity'] as num?)?.toDouble() ?? 1,
-  );
+        id: json['id'] as String,
+        name: json['name'] as String,
+        visible: json['visible'] as bool? ?? true,
+        opacity: (json['opacity'] as num?)?.toDouble() ?? 1,
+      );
 }
 
 class ProjectElement {
@@ -31,23 +36,58 @@ class ProjectElement {
     required this.x,
     required this.y,
     this.symbol = 'IOF-placeholder',
-  });
+    List<GpsFix>? gpsPoints,
+    List<VectorVertex>? vertices,
+    List<BezierControls?>? bezier,
+    this.geographic = false,
+    this.isGpsTrack = false,
+  }) : gpsPoints = gpsPoints ?? [],
+       vertices = vertices ?? [],
+       bezier = bezier ?? const <BezierControls?>[] {
+    if (this.bezier.isNotEmpty && this.bezier.length != this.vertices.length) {
+      throw const FormatException('Los tiradores Bézier no coinciden con los vértices.');
+    }
+  }
+
   final String tool;
   final double x;
   final double y;
   final String symbol;
+  final bool isGpsTrack;
+  final List<GpsFix> gpsPoints;
+  final List<VectorVertex> vertices;
+  final List<BezierControls?> bezier;
+  final bool geographic;
+
   Map<String, Object> toJson() => {
-    'tool': tool,
-    'x': x,
-    'y': y,
-    'symbol': symbol,
-  };
+        'tool': tool,
+        'x': x,
+        'y': y,
+        'symbol': symbol,
+        if (vertices.isNotEmpty) 'vertices': vertices.map((v) => v.toJson()).toList(),
+        if (bezier.any((v) => v != null))
+          'bezier': bezier.map((v) => v?.toJson()).toList(),
+        if (geographic) 'geographic': true,
+        if (isGpsTrack) 'gpsTrack': true,
+        if (isGpsTrack) 'gpsPoints': gpsPoints.map((p) => p.toJson()).toList(),
+      };
+
   factory ProjectElement.fromJson(Map<String, dynamic> json) => ProjectElement(
-    tool: json['tool'] as String,
-    x: (json['x'] as num).toDouble(),
-    y: (json['y'] as num).toDouble(),
-    symbol: json['symbol'] as String? ?? 'IOF-placeholder',
-  );
+        tool: json['tool'] as String,
+        x: (json['x'] as num).toDouble(),
+        y: (json['y'] as num).toDouble(),
+        symbol: json['symbol'] as String? ?? 'IOF-placeholder',
+        vertices: (json['vertices'] as List<dynamic>? ?? const [])
+            .map((v) => VectorVertex.fromJson(v as Map<String, dynamic>)).toList(),
+        geographic: json['geographic'] == true,
+        bezier: (json['bezier'] as List<dynamic>? ?? const [])
+            .map((v) => v == null ? null : BezierControls.fromJson(v as Map<String, dynamic>))
+            .toList(),
+        isGpsTrack: json['gpsTrack'] == true,
+        gpsPoints: (json['gpsPoints'] as List<dynamic>? ?? const [])
+            .map((v) => GpsFix.fromJson(v as Map<String, dynamic>))
+            .toList(),
+      );
 }
 
 class MapProject {
@@ -55,33 +95,77 @@ class MapProject {
     required this.name,
     required this.layers,
     required this.elements,
-    this.version = 1,
-  });
+    this.version = 7,
+    this.gpsCenterLatitude,
+    this.gpsCenterLongitude,
+    this.gpsMetersPerPixel = 2,
+    this.gpsTrackSymbol = '506',
+    this.geoRaster,
+    List<String>? favoriteSymbols,
+    this.selectedCatalogSymbol,
+    this.activeTool,
+  }) : favoriteSymbols = List.unmodifiable(favoriteSymbols ?? const <String>[]);
+
   final String name;
   final int version;
   final List<ProjectLayer> layers;
   final List<ProjectElement> elements;
+  final double? gpsCenterLatitude;
+  final double? gpsCenterLongitude;
+  final double gpsMetersPerPixel;
+  final String gpsTrackSymbol;
+  final GeoRasterReference? geoRaster;
+  final List<String> favoriteSymbols;
+  final String? selectedCatalogSymbol;
+  final String? activeTool;
+
   String encode() => jsonEncode({
-    'format': 'ocarto-project',
-    'version': version,
-    'name': name,
-    'layers': layers.map((e) => e.toJson()).toList(),
-    'elements': elements.map((e) => e.toJson()).toList(),
-  });
+        'format': 'ocarto-project',
+        'version': version,
+        'name': name,
+        'layers': layers.map((e) => e.toJson()).toList(),
+        'elements': elements.map((e) => e.toJson()).toList(),
+        if (geoRaster != null) 'geoRaster': geoRaster!.toJson(),
+        'favoriteSymbols': favoriteSymbols,
+        if (selectedCatalogSymbol != null) 'selectedCatalogSymbol': selectedCatalogSymbol,
+        if (activeTool != null) 'activeTool': activeTool,
+        'gps': {
+          'centerLatitude': gpsCenterLatitude,
+          'centerLongitude': gpsCenterLongitude,
+          'metersPerPixel': gpsMetersPerPixel,
+          'defaultLineSymbol': gpsTrackSymbol,
+        },
+      });
+
   factory MapProject.decode(String source) {
     final json = jsonDecode(source) as Map<String, dynamic>;
     if (json['format'] != 'ocarto-project') {
       throw const FormatException('Formato de proyecto no reconocido');
     }
+    final gps = json['gps'] is Map<String, dynamic>
+        ? json['gps'] as Map<String, dynamic>
+        : <String, dynamic>{};
     return MapProject(
       name: json['name'] as String? ?? 'Sin nombre',
       version: json['version'] as int? ?? 1,
-      layers: (json['layers'] as List<dynamic>? ?? [])
+      layers: (json['layers'] as List<dynamic>? ?? const [])
           .map((e) => ProjectLayer.fromJson(e as Map<String, dynamic>))
           .toList(),
-      elements: (json['elements'] as List<dynamic>? ?? [])
+      elements: (json['elements'] as List<dynamic>? ?? const [])
           .map((e) => ProjectElement.fromJson(e as Map<String, dynamic>))
           .toList(),
+      gpsCenterLatitude: (gps['centerLatitude'] as num?)?.toDouble(),
+      gpsCenterLongitude: (gps['centerLongitude'] as num?)?.toDouble(),
+      gpsMetersPerPixel:
+          (gps['metersPerPixel'] as num?)?.toDouble() ?? 2,
+      gpsTrackSymbol: gps['defaultLineSymbol'] as String? ?? '506',
+      geoRaster: json['geoRaster'] is Map<String, dynamic>
+          ? GeoRasterReference.fromJson(json['geoRaster'] as Map<String, dynamic>)
+          : null,
+      favoriteSymbols: (json['favoriteSymbols'] as List<dynamic>? ?? const [])
+          .whereType<String>().toList(),
+      selectedCatalogSymbol: json['selectedCatalogSymbol'] as String?,
+      activeTool: json['activeTool'] as String?,
     );
   }
 }

@@ -1,0 +1,8 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const G=require('../gps-webserial.js');
+const nmea=data=>{let xor=0;for(const c of data)xor ^= c.charCodeAt(0);return `$${data}*${xor.toString(16).padStart(2,'0').toUpperCase()}\r\n`};
+test('RMC correct, GPS coordinates and valid date',()=>{const f=G.parseNmea(nmea('GPRMC,120000.00,A,3703.5000,N,00431.0000,W,0.0,0.0,161026,,,A'));assert.equal(f.lat,37.05833333333333);assert.ok(Math.abs(f.lon+4.516666666666667)<1e-10);assert.equal(f.time,'2026-10-16T12:00:00.000Z')});
+test('reject bad CRC and no-fix RMC',()=>{assert.equal(G.parseNmea('$GPRMC,120000,A,3700.00,N,00400.00,W,0,0,161026*00'),null);assert.equal(G.parseNmea(nmea('GPRMC,120000,V,3700.00,N,00400.00,W,0,0,161026')),null)});
+test('GGA valid fix altitude satellite count',()=>{const f=G.parseNmea(nmea('GPGGA,120000.00,3703.5000,N,00431.0000,W,4,09,0.8,732.1,M,0,M,,,'),new Date('2026-10-16T12:00:01Z'));assert.equal(f.satellites,9);assert.equal(f.altitude,732.1);assert.equal(f.quality,4)});
+test('NMEA chunks fragmented and excessive noise',()=>{const msg=nmea('GPRMC,120000,A,3700.00,N,00400.00,W,0,0,161026');const c=new G.NmeaStream();assert.equal(c.push(msg.slice(0,15)).length,0);assert.equal(c.push(msg.slice(15)).length,1);c.push('!'.repeat(50000));assert.ok(c.pending.length<9000)});
+test('track distance minimum and implausible jump',()=>{const a={lat:37,lon:-4,time:'2026-10-16T12:00:00Z'};const b={lat:37.00005,lon:-4,time:'2026-10-16T12:00:01Z'};assert.ok(G.acceptTrackFix(b,a));assert.ok(!G.acceptTrackFix({...b,lat:37.0000001},a));assert.ok(!G.acceptTrackFix({...b,lat:38},a));assert.ok(!G.acceptTrackFix({...b,hdop:10},a))});

@@ -1,0 +1,42 @@
+name: Ocarto Windows GPS
+on:
+  push:
+    paths:
+      - 'ocarto_app/**'
+      - '.github/workflows/flutter-windows-gps.yml'
+  workflow_dispatch:
+jobs:
+  flutter-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Resolve dependencies
+        working-directory: ocarto_app
+        run: flutter pub get
+      - name: Run tests
+        working-directory: ocarto_app
+        run: flutter test
+  build-windows:
+    needs: flutter-tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+      - name: Resolve dependencies
+        working-directory: ocarto_app
+        run: flutter pub get
+      - name: Build Windows executable
+        working-directory: ocarto_app
+        run: flutter build windows --release
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocarto-windows-gps
+          path: ocarto_app/build/windows/x64/runner/Release/
