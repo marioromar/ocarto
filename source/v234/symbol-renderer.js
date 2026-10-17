@@ -7,7 +7,7 @@
 const COLORS={
   // Approximate on-screen RGB equivalents of the IOF CMYK definitions;
   // final printed colours still require printer/profile calibration.
-  black:'#000000',brown:'#d15c00',blue:'#00a8e8',green:'#3dff17',darkGreen:'#006633',yellow:'#ffba36',white:'#ffffff',grey:'#999999',purple:'#a626ff'
+  black:'#000000',brown:'#d15c00',blue:'#00a8e8',green:'#3dff17',darkGreen:'#00b324',yellow:'#ffba36',white:'#ffffff',grey:'#999999',purple:'#a626ff'
 };
 const meta={
   'contour-normal':{code:'101',color:COLORS.brown,lineWidthMm:.14},
