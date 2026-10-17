@@ -539,3 +539,28 @@ if(typeof window!=='undefined')window.OcartoUrbanWidthTools={offsetRing};
   button.onclick=()=>{try{if(typeof setTool!=='function')throw Error('Herramienta de área no disponible');setTool('area');button.classList.add('primary');button.setAttribute('aria-pressed','true');toast('Haz clic en los vértices y doble clic para cerrar el polígono');}catch(err){toast('No se pudo activar Marcar zona: '+err.message)}};
   bar.appendChild(button);
 })();
+
+
+/* v277: zone source catalogue */
+(()=>{
+  const providers=[
+    ['IGN/CNIG','state','orthophoto, lidar, dem, topography','WMS, WMTS, LAZ, ASC, GeoTIFF'],
+    ['PNOA','state','orthophoto, lidar','WMS, WMTS, LAZ, COG'],
+    ['CartoCiudad','state','topography, roads, addresses','WMS, WFS'],
+    ['OpenStreetMap','community','roads, buildings, landuse, water','Overpass, GeoJSON'],
+    ['mapant.es','community','orienteering-map, topography, roads, landuse','web-map, vector-data'],
+    ['IDE Andalucía','autonomous','orthophoto, lidar, dem, topography','WMS, WMTS, WFS']
+  ];
+  const key=f=>JSON.stringify((f.points||[]).map(p=>[Math.round((p.x||0)*1000),Math.round((p.y||0)*1000)]));
+  let last='';
+  function show(f){
+    const box=document.getElementById('mapPreparationSources');if(!box||!f||f.type!=='area'||!Array.isArray(f.points)||f.points.length<3)return;
+    const id=key(f);if(id===last)return;last=id;
+    box.className='source-zone-results';box.replaceChildren();
+    const title=document.createElement('strong');title.textContent=`Fuentes disponibles en la zona (${f.points.length} vértices)`;box.append(title);
+    const list=document.createElement('div');list.className='zone-source-list';
+    for(const [name,owner,data,formats] of providers){const card=document.createElement('div');card.className='zone-source-card';card.innerHTML=`<strong>${name}</strong><span>${owner} · ${data}</span><small>${formats}</small>`;list.append(card)}
+    box.append(list);const status=document.getElementById('mapPreparationStatus');if(status)status.textContent='Zona marcada. Se muestran las fuentes cartográficas que pueden consultarse para esta extensión.';
+  }
+  setInterval(()=>{const f=window.S?.selection?.collection==='feature'?window.S.features?.[window.S.selection.index]:window.S?.features?.at(-1);show(f)},500);
+})();
