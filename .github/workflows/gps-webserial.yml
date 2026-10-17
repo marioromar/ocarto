@@ -3,8 +3,6 @@ on:
   push:
     paths:
       - 'source/v234/gps-webserial.js'
-      - 'source/v234/index.html'
-      - 'source/v234/ocarto-runtime-v248-6.js'
       - 'source/v234/tests/gps-webserial.test.cjs'
       - '.github/workflows/gps-webserial.yml'
   workflow_dispatch:
@@ -20,6 +18,21 @@ jobs:
         run: node --check source/v234/gps-webserial.js
       - name: Tests NMEA y filtros de track
         run: node --test source/v234/tests/gps-webserial.test.cjs
+      - name: Verificar dibujo y edición Bézier
+        run: node --test source/v234/tests/bezier-drawing.test.cjs
+      - name: Validar sintaxis y símbolos del catálogo
+        run: |
+          node --check source/v234/symbol-renderer.js
+          node --test source/v234/tests/symbol-renderer.test.cjs
+      - name: Empaquetar editor Ocarto · vista preliminar
+        run: |
+          mkdir -p dist/ocarto
+          cp -a source/v234/. dist/ocarto/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ocarto-v276-preview-Simbolos-y-Bezier
+          path: dist/ocarto/
+          retention-days: 30
       - name: Verificar sintaxis del runtime Ocarto
         run: node --check source/v234/ocarto-runtime-v248-6.js
       - name: Verificar sintaxis de editor Ocarto

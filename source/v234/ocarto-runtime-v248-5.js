@@ -91,9 +91,10 @@
     return scale < info.baseScale ? info.baseScale / scale : 1;
   }
   function officialPointSize(symbol, mapType) {
-    const values = DEFAULT_SYMBOL_MM[symbol];
+    // En el catálogo la roca grande se llama large-rock; el perfil oficial usa rockLarge.
+    const values = DEFAULT_SYMBOL_MM[symbol==='large-rock'?'rockLarge':symbol];
     if (!values) return null;
-    const type = normalizeMapType(mapType);if(symbol==='large-rock')symbol='rockLarge';
+    const type = normalizeMapType(mapType);
     return type.startsWith('mtbo') ? values.mtbo : type === 'sprint' ? values.sprint : values.forest;
   }
   function minimumAreaGround(symbol,mapType,scaleValue) {
