@@ -40,6 +40,10 @@ test('ISOM 101/102 y puntos erróneos están corregidos',()=>{
  assert.equal(byId('cairn').code,'526');
  assert.equal(byId('building-point').code,'530');
  assert.equal(byId('vegetation-boundary').code,'416');
+ assert.equal(SymbolRenderer.specFor('watercourse').code,'305');
+ assert.equal(SymbolRenderer.specFor('small-watercourse').code,'306');
+ assert.equal(SymbolRenderer.specFor('passable-wall').code,'513.1');
+ assert.equal(SymbolRenderer.specFor('uncrossable-wall').code,'513.3');
 });
 test('no hay códigos pendientes ni códigos ficticios para elementos propios',()=>{
  for(const s of catalog){
