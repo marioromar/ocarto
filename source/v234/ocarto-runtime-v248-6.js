@@ -564,3 +564,5 @@ if(typeof window!=='undefined')window.OcartoUrbanWidthTools={offsetRing};
   }
   setInterval(()=>{const f=window.S?.selection?.collection==='feature'?window.S.features?.[window.S.selection.index]:window.S?.features?.at(-1);show(f)},500);
 })();
+
+(()=>{setInterval(()=>{try{const state=typeof S!=='undefined'?S:null;if(!state)return;const f=state.selection?.collection==='feature'?state.features?.[state.selection.index]:state.features?.at(-1);if(f&&typeof show==='function')show(f)}catch{ }},500)})();
