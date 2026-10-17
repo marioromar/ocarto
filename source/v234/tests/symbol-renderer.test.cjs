@@ -18,6 +18,19 @@ test('cada ID de símbolo es único y la ampliación no duplica registros',()=>{
  assert.equal(new Set(catalog.map(x=>x.id)).size,catalog.length);
  const len=catalog.length;SymbolRenderer.enrichCatalog(catalog);assert.equal(catalog.length,len);
 });
+test('relieve oficial 104/201/202 usa código, color y marcas propios',()=>{
+ assert.equal(byId('earth-bank').code,'104');
+ assert.equal(byId('cliff').code,'201');
+ assert.equal(byId('passable-cliff').code,'202');
+ assert.equal(SymbolRenderer.specFor('earth-bank').color,SymbolRenderer.COLORS.brown);
+ assert.equal(SymbolRenderer.specFor('cliff').color,SymbolRenderer.COLORS.black);
+ assert.equal(SymbolRenderer.specFor('passable-cliff').color,SymbolRenderer.COLORS.black);
+ for(const id of ['earth-bank','cliff','passable-cliff']){
+  drawingLog.length=0;
+  assert.equal(SymbolRenderer.decorateLine(ctx,id,[{x:0,y:0},{x:90,y:0}],null,1,SymbolRenderer.specFor(id)),true,id);
+  assert.ok(drawingLog.includes('stroke'),id);
+ }
+});
 test('ISOM 101/102 y puntos erróneos están corregidos',()=>{
  assert.equal(byId('contour-normal').code,'101');
  assert.equal(byId('contour-index').code,'102');
