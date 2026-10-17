@@ -48,6 +48,9 @@ const meta={
   'open-scattered':{code:'402',fill:COLORS.yellow,fillOpacity:.75,pattern:'dots',patternColor:COLORS.green},
   'rough-scattered':{code:'404',fill:COLORS.yellow,fillOpacity:.5,pattern:'dots',patternColor:COLORS.green},
   'boulder-field':{code:'209',fill:COLORS.white,pattern:'dots',patternColor:COLORS.black},
+  'boulder-field-open':{code:'208',fill:COLORS.white,pattern:'dots',patternColor:COLORS.black},
+  'passable-cliff':{code:'202',color:COLORS.black,lineWidthMm:.25,decoration:'cliff'},
+  'ruin-outline':{code:'523',color:COLORS.black,lineWidthMm:.17,pattern:'dashed'},
   'cliff':{code:'201',color:COLORS.black,lineWidthMm:.35,decoration:'cliff'},
   'earth-bank':{code:'104',color:COLORS.brown,lineWidthMm:.25,decoration:'bank'},
   'marsh-line':{code:'309',color:COLORS.blue,lineWidthMm:.18,pattern:'dashed'},
@@ -62,7 +65,7 @@ const meta={
   'quarry-area':{code:'Personalizado',fill:COLORS.grey,fillOpacity:.5,outline:COLORS.black},
   'construction-area':{code:'Personalizado',fill:COLORS.grey,fillOpacity:.45,pattern:'rows',patternColor:COLORS.black},
   'vegetation':{code:'Personalizado',fill:COLORS.green,fillOpacity:.45},
-  'ruin-area':{code:'523',fill:COLORS.white,outline:COLORS.black},
+  'ruin-area':{code:'Personalizado',fill:COLORS.white,outline:COLORS.black},
   'stream':{code:'304',color:COLORS.blue,lineWidthMm:.30},
   'marsh':{code:'308',fill:COLORS.white,pattern:'rows',patternColor:COLORS.blue},
   'special-vegetation':{code:'419',color:COLORS.green}
@@ -73,7 +76,10 @@ const extra=[
  {id:'narrow-ride',geometry:'line',group:'Líneas · caminos',name:'Cortafuegos o franja estrecha',glyph:'┄',sizeMm:0,lineMm:.2},
  {id:'cultivation-boundary',geometry:'line',group:'Líneas · vegetación',name:'Límite de cultivo',glyph:'┄',sizeMm:0,lineMm:.12},
  {id:'impassable-fence',geometry:'line',group:'Líneas · construcciones',name:'Valla infranqueable',glyph:'╫',sizeMm:0,lineMm:.25},
- {id:'ruined-wall',geometry:'line',group:'Líneas · construcciones',name:'Muro en ruinas',glyph:'┄',sizeMm:0,lineMm:.18}
+ {id:'ruined-wall',geometry:'line',group:'Líneas · construcciones',name:'Muro en ruinas',glyph:'┄',sizeMm:0,lineMm:.18},
+ {id:'ruin-outline',geometry:'line',group:'Líneas · construcciones',name:'Contorno de ruina (523)',glyph:'▤',sizeMm:0,lineMm:.17},
+ {id:'passable-cliff',geometry:'line',group:'Líneas · relieve y rocas',name:'Cortado franqueable (202)',glyph:'╱',sizeMm:0,lineMm:.25},
+ {id:'boulder-field-open',geometry:'area',group:'Áreas · rocas',name:'Campo de bloques (208)',glyph:'▲',sizeMm:0,lineMm:.1}
 ];
 function enrichCatalog(catalog){
  const ids=new Set(catalog.map(s=>s.id));
@@ -82,6 +88,7 @@ function enrichCatalog(catalog){
    const fix=meta[item.id];
    if(fix&&fix.code){item.code=fix.code}
    if(item.id==='boulder-field')item.name='Campo de bloques denso';
+   if(item.id==='ruin-area')item.name='Ruina como polígono (personalizado)';
    if(item.id==='contour-index')item.name='Curva de nivel maestra (índice)';
    if(item.id==='contour-normal')item.name='Curva de nivel normal';
    if((!fix || !fix.code)&&!/^\d+(?:\.\d+)?$/.test(String(item.code)))item.code='Personalizado';
