@@ -1,20 +1,30 @@
 # Ocarto — editor cartográfico de orientación
 
-**Editor profesional web: v264 (MDT preliminar con halo entre teselas) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
+**Editor profesional web: v275 (interfaz cartográfica y auditoría de bordes LiDAR) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
 
 ## Descargar la aplicación
 
-- **[Ocarto v264 — ZIP de la rama con GPS y LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v264.zip)**
+- **[Ocarto v275 — ZIP de la rama con GPS y LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v275.zip)**
 - **[Código y versiones de Ocarto](source/v234/index.html)**
 - **[Cambios y comprobaciones OCAD v249](source/v234/OCAD-v249.md)**
 
-**Para probar LiDAR en Windows:** descarga el ZIP de la rama v264, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v264.md).
+**Para probar LiDAR en Windows:** descarga el ZIP de la rama v275, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v275.md).
 
 ## Revisión OCAD 2018
 
 En **Archivo → Revisar símbolos y tintas OCAD…** se puede abrir un archivo de Bobadilla y comprobar en modo **solo lectura** símbolos, colores CMYK y orden provisional de impresión. La auditoría permite descargar un informe JSON, y **no sustituye los símbolos, colores ni las prioridades actuales**. Falta verificar el resultado visualmente contra OCAD 2018 antes de aprobar nuevos predeterminados.
 
-La rama `ocarto-v264` incorpora GPS y el procesamiento LiDAR por ventanas en el mismo editor web profesional, sin sustituir sus herramientas. El ZIP enlazado es el archivo de esta misma rama GitHub.
+La rama `ocarto-v275` incorpora GPS, mejoras de menús y símbolos, y el procesamiento LiDAR por ventanas en el mismo editor web profesional, sin sustituir sus herramientas. El ZIP enlazado es el archivo de esta misma rama GitHub.
+
+## LiDAR v275 · Auditoría de uniones y revisión de la interfaz
+
+La versión **v275** añade el botón **«Auditar uniones del MDT»** al menú LiDAR. Una vez completado el procesamiento por ventanas y el MDT preliminar con halo, abre la misma carpeta de resultados y compara las filas/columnas de borde de cada archivo ASCII Grid sin cargar el raster entero. Exporta `mdt_auditoria_bordes.json` y el apartado `dtmAudit` del manifiesto con conteos de celdas ausentes y cambios de gradiente que **deben revisarse**, sin modificarlos ni considerarlos automáticamente errores. El umbral de referencia es 1,5 m por celda; una vaguada o cortado verdadero también puede señalarse.
+
+Se mantienen los avances de interfaz de las ramas **v265–v274**, incluida la reorganización de menús y la paleta OCAD continua de símbolos. **No se ha terminado el rediseño profesional de la interfaz ni validado el LiDAR PNOA grande en campo**.
+
+- [Guía v275 para revisar el MDT](PRUEBA-LIDAR-v275.md)
+- [ZIP idéntico a la rama v275](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v275.zip)
+- [Pruebas LiDAR, informe y lanzador Windows](https://github.com/marioromar/ocarto/actions/workflows/lidar-worker.yml)
 
 ## LiDAR v264 · MDT preliminar con halo y uniones entre teselas
 
