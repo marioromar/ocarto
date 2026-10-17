@@ -42,6 +42,8 @@ const meta={
   'out-of-bounds-area':{code:'709',fill:COLORS.purple,fillOpacity:.5,pattern:'rows',patternColor:COLORS.white},
   'crossing-point':{code:'710.1',color:COLORS.purple,lineWidthMm:.5},
   'temporary-closed-area':{code:'714',fill:COLORS.purple,fillOpacity:.5,pattern:'rows',patternColor:COLORS.white},
+  'continuing-point':{code:'715',color:COLORS.purple,sizeMm:1,lineWidthMm:.35},
+  'forbidden-route-course':{code:'716',color:COLORS.purple,lineWidthMm:.4,pattern:'dashed'},
   'bare-rock':{code:'214',fill:COLORS.black,fillOpacity:.35},
   'depression':{code:'111',color:COLORS.brown,sizeMm:.8},
   'pit':{code:'112',color:COLORS.brown,sizeMm:.7},
@@ -152,6 +154,8 @@ const extra=[
  {id:'out-of-bounds-area',geometry:'area',group:'Símbolos de recorrido',name:'Área fuera de límites (709)',glyph:'▧',sizeMm:0,lineMm:.2},
  {id:'crossing-point',geometry:'point',group:'Símbolos de recorrido',name:'Punto de cruce (710.1)',glyph:'⌒',sizeMm:1,lineMm:.5},
  {id:'temporary-closed-area',geometry:'area',group:'Símbolos de recorrido',name:'Área temporal cerrada (714)',glyph:'▧',sizeMm:0,lineMm:.1},
+ {id:'continuing-point',geometry:'point',group:'Símbolos de recorrido',name:'Punto de continuación (715)',glyph:'●',sizeMm:1,lineMm:.35},
+ {id:'forbidden-route-course',geometry:'line',group:'Símbolos de recorrido',name:'Ruta prohibida (716)',glyph:'╳',sizeMm:0,lineMm:.4},
  {id:'passable-cliff',geometry:'line',group:'Líneas · relieve y rocas',name:'Cortado franqueable (202)',glyph:'╱',sizeMm:0,lineMm:.25},
  {id:'boulder-field-open',geometry:'area',group:'Áreas · rocas',name:'Campo de bloques (208)',glyph:'▲',sizeMm:0,lineMm:.1}
 ];
