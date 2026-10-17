@@ -5,6 +5,7 @@
 ## Probar la vista preliminar v276 (símbolos y Bézier)
 
 - **[Descargar Ocarto v276 preliminar · Símbolos y Bézier (ZIP directo)](https://api.github.com/repos/marioromar/ocarto/actions/artifacts/12085060295/zip)**
+- **[Descargar el código completo de la rama preliminar (ZIP de GitHub)](https://github.com/marioromar/ocarto/archive/refs/heads/fix/symbols-v275.zip)**
 - [Ver la ejecución de pruebas en GitHub Actions](https://github.com/marioromar/ocarto/actions/runs/38990037944)
 
 El ZIP es un artefacto de prueba de la rama `fix/symbols-v275`, no una versión estable ni un instalador. Al abrirlo, extrae todo el contenido y ejecuta `ABRIR-OCARTO.bat` si está incluido. El artefacto está disponible hasta el **16 de noviembre de 2026**. La ejecución terminó correctamente las comprobaciones de sintaxis, símbolos y Bézier; aún falta la comparación visual con OCAD real.
