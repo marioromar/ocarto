@@ -212,6 +212,29 @@ function drawPoint(ctx,id,r,style,candidate){
   ctx.strokeStyle=c;ctx.lineWidth=Math.max(1,r*.2);ctx.beginPath();ctx.moveTo(-r*.82,0);ctx.lineTo(r*.82,0);ctx.moveTo(0,-r*.82);ctx.lineTo(0,r*.82);ctx.stroke();break;
  case 'ruin-point':case 'bench':
   polygon([[-.8,-.6],[.8,-.6],[.8,.6],[-.8,.6]],false);break;
+ case 'rocky-pit':
+  ctx.beginPath();ctx.ellipse(0,0,r*.72,r*.46,0,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-r*.45,r*.18);ctx.quadraticCurveTo(0,r*.58,r*.45,r*.18);ctx.stroke();break;
+ case 'dangerous-pit':
+  ctx.beginPath();ctx.arc(0,0,r*.62,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-r*.48,-r*.48);ctx.lineTo(r*.48,r*.48);ctx.moveTo(r*.48,-r*.48);ctx.lineTo(-r*.48,r*.48);ctx.stroke();break;
+ case 'boulder-cluster':
+  for(const [x,y,rr] of [[-.45,.25,.32],[.08,.1,.42],[.48,.3,.26],[0,-.42,.24]]){ctx.beginPath();ctx.arc(x*r,y*r,rr*r,0,Math.PI*2);fill()}break;
+ case 'small-tower':
+  polygon([[-.62,-.6],[.62,-.6],[.62,.58],[-.62,.58]],false);ctx.beginPath();ctx.moveTo(-r*.8,0);ctx.lineTo(r*.8,0);ctx.stroke();break;
+ case 'fodder-rack':
+  ctx.beginPath();ctx.moveTo(-r*.7,-r*.55);ctx.lineTo(r*.7,-r*.55);ctx.moveTo(-r*.7,r*.55);ctx.lineTo(r*.7,r*.55);ctx.stroke();
+  for(const x of [-.5,-.17,.17,.5]){ctx.beginPath();ctx.moveTo(x*r,-r*.55);ctx.lineTo(x*r,r*.55);ctx.stroke()}break;
+ case 'manmade-x':
+  ctx.beginPath();ctx.moveTo(-r*.7,-r*.7);ctx.lineTo(r*.7,r*.7);ctx.moveTo(r*.7,-r*.7);ctx.lineTo(-r*.7,r*.7);ctx.stroke();break;
+ case 'course-start':
+  polygon([[0,-.85],[.78,.65],[-.78,.65]],false);break;
+ case 'course-control':ring(r*.72);break;
+ case 'course-finish':ring(r*.72);ring(r*.42);break;
+ case 'continuing-point':
+  ctx.beginPath();ctx.arc(0,0,r*.28,0,Math.PI*2);fill();ring(r*.72);break;
+ case 'crossing-point':
+  ctx.beginPath();ctx.moveTo(-r*.75,0);ctx.lineTo(r*.75,0);ctx.stroke();ctx.beginPath();ctx.arc(0,0,r*.45,Math.PI,Math.PI*2);ctx.stroke();break;
  default:ctx.restore();return false;
  }
  ctx.restore();return true;
