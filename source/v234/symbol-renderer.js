@@ -131,8 +131,8 @@ function drawPoint(ctx,id,r,style,candidate){
 function decorateLine(ctx,id,pts,unitScale,zoom,style){
  if(!Array.isArray(pts)||pts.length<2)return false;
  const mark=meta[id]?.decoration;if(!mark)return false;
- const gap=unitScale?Math.max(2,1.2*unitScale):Math.max(4,12/zoom),height=unitScale?Math.max(.7,.36*unitScale):Math.max(2,4/zoom);
- ctx.save();ctx.strokeStyle=colorFor(id,style);ctx.lineWidth=unitScale?Math.max(.2,(style?.lineWidthMm||.15)*unitScale):Math.max(1,1.5/zoom);
+ const gap=unitScale?Math.max(3.2,2.1*unitScale):Math.max(9,18/zoom),height=unitScale?Math.max(.55,.24*unitScale):Math.max(1.25,2.4/zoom);
+ ctx.save();ctx.strokeStyle=colorFor(id,style);ctx.lineWidth=unitScale?Math.max(.2,(style?.lineWidthMm||.15)*unitScale):Math.max(.8,1.15/zoom);
  for(let i=1;i<pts.length;i++){
   const a=pts[i-1],b=pts[i],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);if(len<.01)continue;
   const nx=-dy/len,ny=dx/len,ux=dx/len,uy=dy/len;
