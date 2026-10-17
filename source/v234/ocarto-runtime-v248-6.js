@@ -442,7 +442,7 @@ if(typeof window!=='undefined')window.OcartoUrbanWidthTools={offsetRing};
     menu.querySelectorAll('[data-menu-target]').forEach(button=>{if(menuActionIds.has(button.dataset.menuTarget))button.remove()});
     ['#extendDistance','#joinSelectedLines','#createParallel'].forEach(sel=>{const node=document.querySelector(sel);if(node)editBox.append(node.parentElement)});
     ['MAPA','EDICIÓN','VER','HERRAMIENTAS','LIDAR','PLANTILLAS','GPS','CONFIGURACIÓN'].forEach(label=>{const item=findMenu(label);if(item)menu.append(item)});
-    const keep=new Set(['undo','redo','finishDraft','deleteSelected','zoomIn','zoomOut','newProject','openProject','restoreLocalBackup','downloadLocalBackup','saveProject','saveOmap','saveOcad','exportMap','clearMap']);
+    const keep=new Set(['undo','redo','finishDraft','deleteSelected','zoomIn','zoomOut','newProject','openProject','restoreLocalBackup','downloadLocalBackup','saveProject','closeProject','saveOmap','saveOcad','exportMap','clearMap']);
     const category=(el)=>{
       const id=el.id||'', text=(el.innerText||el.value||el.title||'').toLowerCase();
       if(/save|open|backup|export|import|project|ocad|geojson|kmz|clearMap/i.test(id+' '+text))return fileBox;
