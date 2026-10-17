@@ -15,6 +15,7 @@ const meta={
   'contour-form':{code:'103',color:COLORS.brown,lineWidthMm:.10,pattern:'dashed'},
   'contour-supplementary':{code:'103',color:COLORS.brown,lineWidthMm:.10,pattern:'dashed'},
   'knoll':{code:'109',color:COLORS.brown,sizeMm:.6},
+  'elongated-knoll':{code:'110',color:COLORS.brown,sizeMm:.8},
   'depression':{code:'111',color:COLORS.brown,sizeMm:.8},
   'pit':{code:'112',color:COLORS.brown,sizeMm:.7},
   'cairn':{code:'526',color:COLORS.black,sizeMm:.8},
@@ -84,6 +85,7 @@ const extra=[
  {id:'ruined-wall',geometry:'line',group:'Líneas · construcciones',name:'Muro en ruinas',glyph:'┄',sizeMm:0,lineMm:.18},
  {id:'ruin-outline',geometry:'line',group:'Líneas · construcciones',name:'Contorno de ruina (523)',glyph:'▤',sizeMm:0,lineMm:.17},
  {id:'earth-bank',geometry:'line',group:'Líneas · relieve',name:'Talud de tierra (104)',glyph:'╱',sizeMm:0,lineMm:.25},
+ {id:'elongated-knoll',geometry:'point',group:'Puntos · relieve',name:'Montículo alargado (110)',code:'110',glyph:'•••',sizeMm:.8,lineMm:.15},
  {id:'passable-cliff',geometry:'line',group:'Líneas · relieve y rocas',name:'Cortado franqueable (202)',glyph:'╱',sizeMm:0,lineMm:.25},
  {id:'boulder-field-open',geometry:'area',group:'Áreas · rocas',name:'Campo de bloques (208)',glyph:'▲',sizeMm:0,lineMm:.1}
 ];
@@ -115,7 +117,11 @@ function drawPoint(ctx,id,r,style,candidate){
   ctx.beginPath();ctx.arc(0,0,r*(id==='tree'?.81:.7),0,Math.PI*2);fill();
   if(id==='bush'){ctx.beginPath();ctx.arc(0,0,r*.19,0,Math.PI*2);ctx.fillStyle=COLORS.white;ctx.fill()}break;
  }
- case 'knoll':case 'rock':case 'large-rock':case 'boulder-small':case 'anthill':
+ case 'knoll':
+  for(const [x,y] of [[-.42,.2],[.42,.2],[0,-.42]]){ctx.beginPath();ctx.arc(x*r,y*r,Math.max(1,r*.12),0,Math.PI*2);fill()}break;
+ case 'elongated-knoll':
+  for(const [x,y] of [[-.62,.12],[0,-.18],[.62,.12]]){ctx.beginPath();ctx.ellipse(x*r,y*r,Math.max(1,r*.18),Math.max(.7,r*.1),0,0,Math.PI*2);fill()}break;
+ case 'rock':case 'large-rock':case 'boulder-small':case 'anthill':
   if(id==='rock'||id==='large-rock'||id==='boulder-small')polygon([[0,-1],[.87,.58],[-.87,.58]],true);
   else{ctx.beginPath();ctx.arc(0,0,r*.63,0,Math.PI*2);fill()}break;
  case 'pit':case 'depression':
