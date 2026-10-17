@@ -221,6 +221,7 @@ function enrichCatalog(catalog){
    if(item.id==='contour-normal')item.name='Curva de nivel normal';
    if((!fix || !fix.code)&&!/^\d+(?:\.\d+)?$/.test(String(item.code)))item.code='Personalizado';
  }
+ { const oc=(typeof globalThis!=='undefined'&&globalThis.OcartoOcadSet)||root.OcartoOcadSet;if(oc&&oc.registerAlias)for(const item of catalog)if(!item.ocad&&/^\d+(\.\d+)?$/.test(String(item.code)))oc.registerAlias(item.id,String(item.code),item.geometry); }
  return catalog;
 }
 const OCAD=()=>root.OcartoOcadSet||(typeof globalThis!=='undefined'&&globalThis.OcartoOcadSet)||null;

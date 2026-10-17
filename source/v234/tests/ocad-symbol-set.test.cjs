@@ -50,9 +50,40 @@ test('la valla 516 coloca marcas a 60° y la 511 dibuja doble línea sin relleno
 test('la paleta y el mapa usan el conjunto: scripts y enganches presentes en index.html',()=>{
   for(const f of ['ocad-symbols-data.js','ocad-symbol-draw.js','ocad-symbol-set.js'])assert.ok(html.includes(`<script src="${f}"></script>`),f);
   assert.ok(html.indexOf('ocad-symbol-set.js')<html.indexOf('symbol-renderer.js'));
-  assert.ok(html.includes('OcartoOcadSet.owns(f.symbol)'));assert.ok(html.includes('OcartoOcadSet.drawFeature(ctx,f,'));
+  assert.ok(html.includes('OcartoOcadSet.resolve(f.symbol)'));assert.ok(html.includes('OcartoOcadSet.drawFeature(ctx,f,'));
 });
 test('renderPreview dibuja los símbolos OCAD en el lienzo de la paleta',()=>{
   const {ctx}=rec();const canvas={width:48,height:36,getContext:()=>ctx};
   for(const c of Set_.catalog())assert.equal(Renderer.renderPreview(canvas,c.id,c.geometry,Renderer.specFor(c.id)),true,c.id);
+});
+
+test('modo por defecto OCAD: los símbolos antiguos con el mismo código se resuelven al OCAD y sin duplicados en la paleta',()=>{
+  assert.equal(Set_.getMode(),'ocad');
+  const k='const SYMBOL_CATALOG=',a=html.indexOf(k),b=html.indexOf('];',a);
+  const cat=Renderer.enrichCatalog(vm.runInNewContext(html.slice(a+k.length,b+1)));
+  assert.equal(Set_.resolve('tree'),'ocad-417000');assert.equal(Set_.resolve('contour-normal'),'ocad-101000');
+  assert.equal(Set_.resolve('ocad-204000'),'ocad-204000');assert.equal(Set_.resolve('no-existe'),null);
+  const visibles=cat.filter(x=>x.ocad);assert.equal(visibles.length,212);
+  assert.equal(new Set(visibles.map(x=>x.code+'|'+x.geometry)).size,visibles.length,'códigos repetidos en el conjunto OCAD');
+});
+test('el modo legacy desactiva los alias y se puede volver a OCAD',()=>{
+  assert.equal(Set_.setMode('legacy'),'legacy');assert.equal(Set_.resolve('tree'),null);assert.equal(Set_.resolve('ocad-417000'),'ocad-417000');
+  assert.equal(Set_.setMode('basura'),'legacy');assert.equal(Set_.setMode('all'),'all');assert.equal(Set_.setMode('ocad'),'ocad');
+});
+test('index.html tiene el selector de conjunto, el filtro de la paleta y el refresco al cambiar de herramienta',()=>{
+  assert.ok(html.includes('id="symbolSetFilter"'));assert.ok(html.includes("setOk(x)&&(type==='all'"));
+  assert.ok(html.includes("queueMicrotask(renderSymbols)"));assert.ok(html.includes('14/S.zoom'));
+});
+
+test('grosor mínimo: las líneas finas se refuerzan y el modo real las deja a su medida',()=>{
+  const lw=(min)=>{const {ctx,log}=rec();Draw.drawLine(ctx,data,by(101000),[[0,0],[8,0]],10,min);return log.filter(([k,a])=>k==='='&&a[0]==='lineWidth').map(([k,a])=>a[1])[0]};
+  assert.ok(Math.abs(lw(0)-1.4)<1e-9,'real: 0,14 mm x 10 px/mm = 1,4');assert.equal(lw(3),3);
+  assert.equal(Set_.getWeight(),'reforzado');assert.equal(Set_.minScreen(),2);
+  assert.equal(Set_.setWeight('grueso'),'grueso');assert.equal(Set_.minScreen(),3.2);assert.equal(Set_.setWeight('x'),'grueso');Set_.setWeight('reforzado');
+});
+test('la paleta usa iconos grandes con código visible y el selector de grosor',()=>{
+  assert.ok(html.includes('<link rel="stylesheet" href="symbols-panel.css">'));assert.ok(html.includes('id="symbolWeightFilter"'));
+  const css=fs.readFileSync(path.join(__dirname,'..','symbols-panel.css'),'utf8');
+  assert.match(css,/minmax\(76px/);assert.match(css,/\.symbol-code\{display:block/);
+  const {ctx}=rec();const big={width:112,height:84,getContext:()=>ctx};assert.equal(Renderer.renderPreview(big,'ocad-417000','point',{}),true);
 });

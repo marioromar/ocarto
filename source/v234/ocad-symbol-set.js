@@ -20,34 +20,52 @@ if (lib) for (const s of lib.simbolos) {
   byId.set(id, { sym: s, entry, spec: { code: entry.code, color: firstColor(s), lineWidthMm: s.ancho || undefined, ocad: true } });
   list.push(entry);
 }
+const KEY = 'ocarto.symbolSet.v1', MODES = ['ocad', 'legacy', 'all'];
+let mode = 'ocad';
+try { const v = root.localStorage && root.localStorage.getItem(KEY); if (MODES.includes(v)) mode = v; } catch (e) { /* sin almacenamiento: se usa el valor por defecto */ }
+const getMode = () => mode;
+function setMode(m) { if (!MODES.includes(m)) return mode; mode = m; try { root.localStorage && root.localStorage.setItem(KEY, m); } catch (e) { /* ignorar */ } return mode; }
+// Alias: un símbolo antiguo de Ocarto (mismo código y geometría) se dibuja con el aspecto OCAD cuando el modo es 'ocad'.
+const byKey = new Map(list.map(e => [e.code + '|' + e.geometry, e.id])), aliases = new Map();
+function registerAlias(oldId, code, geometry) { const target = byKey.get(String(code) + '|' + geometry); if (target && !byId.has(oldId)) aliases.set(oldId, target); return !!target; }
+const resolve = id => byId.has(id) ? id : (mode === 'ocad' && aliases.get(id)) || null;
+const WKEY = 'ocarto.symbolWeight.v1', WEIGHTS = { real: 0, reforzado: 2, grueso: 3.2 };
+let weight = 'reforzado';
+try { const v = root.localStorage && root.localStorage.getItem(WKEY); if (v in WEIGHTS) weight = v; } catch (e) { /* ignorar */ }
+const getWeight = () => weight;
+function setWeight(w) { if (!(w in WEIGHTS)) return weight; weight = w; try { root.localStorage && root.localStorage.setItem(WKEY, w); } catch (e) { /* ignorar */ } return weight; }
+const minScreen = () => WEIGHTS[weight]; // grosor mínimo de línea en píxeles de pantalla
 const owns = id => byId.has(id);
 const spec = id => (byId.get(id) || {}).spec || null;
 const catalog = () => list.slice();
 
 // px = píxeles por mm de papel a la escala mostrada (ya con ampliación). f.points en unidades de mundo.
 function drawFeature(ctx, f, o) {
-  const r = byId.get(f.symbol); if (!r) return false;
+  const r = byId.get(o.symbol || f.symbol); if (!r) return false;
   const px = o.px, s = r.sym;
   ctx.save(); if (o.candidate) ctx.globalAlpha = .55;
-  if (s.tipo === 'punto') Draw.drawPoint(ctx, lib, s, px);
+  const min = o.min || 0;
+  if (s.tipo === 'punto') Draw.drawPoint(ctx, lib, s, px, min);
   else {
     const mm = p => [p.x / px, p.y / px], pts = (f.points || []).map(mm);
-    if (s.tipo === 'linea') Draw.drawLine(ctx, lib, s, pts, px);
-    else Draw.drawArea(ctx, lib, s, pts, px, (f.holes || []).map(h => h.map(mm)));
+    if (s.tipo === 'linea') Draw.drawLine(ctx, lib, s, pts, px, min);
+    else Draw.drawArea(ctx, lib, s, pts, px, (f.holes || []).map(h => h.map(mm)), min);
   }
   ctx.restore(); return true;
 }
 
 function drawPreview(canvas, id, geometry) {
   const r = byId.get(id), c = canvas && canvas.getContext && canvas.getContext('2d'); if (!r || !c) return false;
-  const w = canvas.width, h = canvas.height, PX = geometry === 'point' ? 14 : 11, s = r.sym;
+  const w = canvas.width, h = canvas.height, k = w / 48, s = r.sym, m = 3 * k, min = 2.2 * k;
+  // Iconos grandes y de trazo grueso; los símbolos puntuales mayores se ajustan a la casilla.
+  const PX = geometry === 'point' ? Math.min(26 * k, (w * .6) / Math.max(r.entry.sizeMm || .5, .3)) : 15 * k;
   c.clearRect(0, 0, w, h); c.save();
-  if (s.tipo === 'punto') { c.translate(w / 2, h / 2); Draw.drawPoint(c, lib, s, PX); }
-  else if (s.tipo === 'linea') Draw.drawLine(c, lib, s, [[3 / PX, h * .66 / PX], [(w - 3) / PX, h * .35 / PX]], PX);
-  else Draw.drawArea(c, lib, s, [[3 / PX, 3 / PX], [(w - 3) / PX, 3 / PX], [(w - 3) / PX, (h - 3) / PX], [3 / PX, (h - 3) / PX]], PX);
+  if (s.tipo === 'punto') { c.translate(w / 2, h / 2); Draw.drawPoint(c, lib, s, PX, min); }
+  else if (s.tipo === 'linea') Draw.drawLine(c, lib, s, [[m / PX, h * .66 / PX], [(w - m) / PX, h * .35 / PX]], PX, min);
+  else Draw.drawArea(c, lib, s, [[m / PX, m / PX], [(w - m) / PX, m / PX], [(w - m) / PX, (h - m) / PX], [m / PX, (h - m) / PX]], PX, null, min);
   c.restore(); return true;
 }
 
-const api = { owns, spec, catalog, drawFeature, drawPreview, count: () => list.length, source: lib && lib.fuente };
+const api = { owns, resolve, getWeight, setWeight, minScreen, registerAlias, getMode, setMode, spec, catalog, drawFeature, drawPreview, count: () => list.length, source: lib && lib.fuente };
 if (typeof module === 'object' && module.exports) module.exports = api; else root.OcartoOcadSet = api;
 })(typeof self !== 'undefined' ? self : this);

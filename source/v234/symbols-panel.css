@@ -1,0 +1,9 @@
+/* Paleta de símbolos: iconos grandes con código visible y controles en dos filas. */
+#symbolsWorkspace .symbol-controls{display:flex;flex-wrap:wrap;gap:4px}
+#symbolsWorkspace .symbol-controls input{flex:1 1 100%}
+#symbolsWorkspace .symbol-controls select{flex:1 1 30%;width:auto;min-width:0;font-size:11px}
+#symbolsWorkspace .symbol-list{grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:5px}
+#symbolsWorkspace .symbol-option{height:auto;min-height:84px;padding:4px 2px 3px;gap:2px;grid-template-rows:auto auto;align-content:start}
+#symbolsWorkspace .symbol-glyph{width:100%;height:auto;font-size:30px}
+#symbolsWorkspace .oc-symbol-preview{width:100%;max-width:74px;height:auto;aspect-ratio:4/3}
+#symbolsWorkspace .symbol-code{display:block;font-size:10px;font-weight:700;color:#cfe0ec;line-height:1.1}
