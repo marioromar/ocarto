@@ -39,6 +39,8 @@ const meta={
   'cultivation-boundary':{code:'415',color:COLORS.black,lineWidthMm:.10,pattern:'dotted'},
   'ruined-wall':{code:'514',color:COLORS.black,lineWidthMm:.18,pattern:'dashed'},
   'forbidden-route':{code:'711',color:COLORS.purple,lineWidthMm:.5,pattern:'solid'},
+  'broken-ground':{code:'113',fill:COLORS.brown,pattern:'dots',patternColor:COLORS.brown},
+  'very-broken-ground':{code:'114',fill:COLORS.brown,pattern:'dots',patternColor:COLORS.brown},
   'sand':{code:'213',fill:COLORS.white,pattern:'dots',patternColor:COLORS.black},
   'rocky-ground':{code:'210',fill:COLORS.white,pattern:'dots',patternColor:COLORS.black},
   'forest-runnable':{code:'405',fill:COLORS.white,fillOpacity:1},
@@ -85,6 +87,8 @@ const extra=[
  {id:'ruined-wall',geometry:'line',group:'Líneas · construcciones',name:'Muro en ruinas',glyph:'┄',sizeMm:0,lineMm:.18},
  {id:'ruin-outline',geometry:'line',group:'Líneas · construcciones',name:'Contorno de ruina (523)',glyph:'▤',sizeMm:0,lineMm:.17},
  {id:'earth-bank',geometry:'line',group:'Líneas · relieve',name:'Talud de tierra (104)',glyph:'╱',sizeMm:0,lineMm:.25},
+ {id:'broken-ground',geometry:'area',group:'Áreas · relieve',name:'Terreno accidentado (113)',glyph:'···',sizeMm:0,lineMm:.1},
+ {id:'very-broken-ground',geometry:'area',group:'Áreas · relieve',name:'Terreno muy accidentado (114)',glyph:'⁙',sizeMm:0,lineMm:.1},
  {id:'elongated-knoll',geometry:'point',group:'Puntos · relieve',name:'Montículo alargado (110)',code:'110',glyph:'•••',sizeMm:.8,lineMm:.15},
  {id:'passable-cliff',geometry:'line',group:'Líneas · relieve y rocas',name:'Cortado franqueable (202)',glyph:'╱',sizeMm:0,lineMm:.25},
  {id:'boulder-field-open',geometry:'area',group:'Áreas · rocas',name:'Campo de bloques (208)',glyph:'▲',sizeMm:0,lineMm:.1}
