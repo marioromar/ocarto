@@ -553,7 +553,7 @@ if(typeof window!=='undefined')window.OcartoUrbanWidthTools={offsetRing};
   ];
   const key=f=>JSON.stringify((f.points||[]).map(p=>[Math.round((p.x||0)*1000),Math.round((p.y||0)*1000)]));
   let last='';
-  function show(f){
+  function show(f){window.ocartoShowZoneSources=show;
     const box=document.getElementById('mapPreparationSources');if(!box||!f||f.type!=='area'||!Array.isArray(f.points)||f.points.length<3)return;
     const id=key(f);if(id===last)return;last=id;
     box.className='source-zone-results';box.replaceChildren();
@@ -565,4 +565,4 @@ if(typeof window!=='undefined')window.OcartoUrbanWidthTools={offsetRing};
   setInterval(()=>{const f=window.S?.selection?.collection==='feature'?window.S.features?.[window.S.selection.index]:window.S?.features?.at(-1);show(f)},500);
 })();
 
-(()=>{setInterval(()=>{try{const state=typeof S!=='undefined'?S:null;if(!state)return;const f=state.selection?.collection==='feature'?state.features?.[state.selection.index]:state.features?.at(-1);if(f&&typeof show==='function')show(f)}catch{ }},500)})();
+(()=>{setInterval(()=>{try{const state=typeof S!=='undefined'?S:null;if(!state)return;const f=state.selection?.collection==='feature'?state.features?.[state.selection.index]:state.features?.at(-1);if(f&&typeof window.ocartoShowZoneSources==='function')window.ocartoShowZoneSources(f)}catch{ }},500)})();
