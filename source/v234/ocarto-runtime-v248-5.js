@@ -91,9 +91,10 @@
     return scale < info.baseScale ? info.baseScale / scale : 1;
   }
   function officialPointSize(symbol, mapType) {
-    const values = DEFAULT_SYMBOL_MM[symbol];
+    // En el catálogo la roca grande se llama large-rock; el perfil oficial usa rockLarge.
+    const values = DEFAULT_SYMBOL_MM[symbol==='large-rock'?'rockLarge':symbol];
     if (!values) return null;
-    const type = normalizeMapType(mapType);if(symbol==='large-rock')symbol='rockLarge';
+    const type = normalizeMapType(mapType);
     return type.startsWith('mtbo') ? values.mtbo : type === 'sprint' ? values.sprint : values.forest;
   }
   function minimumAreaGround(symbol,mapType,scaleValue) {
@@ -503,10 +504,24 @@ async function streamFileToWorker(file,worker,{jobId,sessionId,signal,onProgress
   else if(m.type==='loaded'&&waiter?.kind==='finish'){const w=waiter;waiter=null;w.resolve(m)}
   else if((m.type==='error'&&m.operation==='load')||m.type==='cancelled'){failed=Object.assign(Error(m.message||'Carga cancelada'),{name:m.type==='cancelled'?'AbortError':'Error'});if(waiter){const w=waiter;waiter=null;w.reject(failed)}}
  };
- const waitFor=kind=>new Promise((resolve,reject)=>{waiter={kind,resolve,reject};if(failed){waiter=null;reject(failed)}});
+ const waitFor=kind=>new Promise((resolve,reject)=>{
+  const seconds=kind==='finish'?600:35;
+  const timer=setTimeout(()=>{
+   const error=Error('El procesador LiDAR no responde ('+kind+'). Comprueba que el servidor local y lidar-worker.js están disponibles.');
+   failed=error;if(waiter?.kind===kind){waiter=null;reject(error)}
+  },seconds*1000);
+  waiter={kind,resolve:value=>{clearTimeout(timer);resolve(value)},reject:error=>{clearTimeout(timer);reject(error)}};
+  if(failed){const w=waiter;waiter=null;w.reject(failed)}
+ });
+ const onWorkerError=event=>{
+  failed=Error('El procesador LiDAR no pudo iniciar: '+(event.message||'error de carga del Worker'));
+  if(waiter){const w=waiter;waiter=null;w.reject(failed)}
+ };
  const abort=()=>{try{worker.postMessage({type:'cancel',jobId})}catch(_){};try{void reader?.cancel()}catch(_){}};
  let reader=null;
- worker.addEventListener('message',onMessage);if(signal)signal.addEventListener('abort',abort,{once:true});
+ worker.addEventListener('message',onMessage);
+ worker.addEventListener('error',onWorkerError);
+ if(signal)signal.addEventListener('abort',abort,{once:true});
  try{
   worker.postMessage({type:'load-start',jobId,fileSize:file.size,sessionId});await waitFor('ready');
   reader=file.stream().getReader();
@@ -518,7 +533,7 @@ async function streamFileToWorker(file,worker,{jobId,sessionId,signal,onProgress
   if(done!==file.size&&!skipped)throw Error(`Lectura incompleta: ${done} de ${file.size} bytes`);
   worker.postMessage({type:'load-end',jobId});const loaded=await waitFor('finish');return loaded;
  }catch(e){if(e.name==='AbortError'||signal?.aborted)abort();else try{worker.postMessage({type:'cancel',jobId})}catch(_){}throw e}
- finally{if(signal)signal.removeEventListener('abort',abort);worker.removeEventListener('message',onMessage);if(reader)try{reader.releaseLock()}catch(_){}}
+ finally{if(signal)signal.removeEventListener('abort',abort);worker.removeEventListener('message',onMessage);worker.removeEventListener('error',onWorkerError);if(reader)try{reader.releaseLock()}catch(_){}}
 }
 function abortError(){const e=Error('Carga cancelada');e.name='AbortError';return e}
 return{readFileBuffer,streamFileToWorker,hasCopcInfo};

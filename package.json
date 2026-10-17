@@ -1,0 +1,22 @@
+{
+  "name": "ocarto-desktop",
+  "version": "0.276.0",
+  "description": "Editor cartográfico Ocarto para Windows",
+  "private": true,
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable nsis"
+  },
+  "devDependencies": {
+    "electron": "^32.2.7",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.ocarto.editor",
+    "productName": "Ocarto",
+    "files": ["desktop/**/*", "source/**/*", "servidor-ocarto.ps1", "ABRIR-OCARTO.bat"],
+    "win": {"target": ["portable", "nsis"]},
+    "nsis": {"oneClick": false, "allowToChangeInstallationDirectory": true}
+  }
+}
