@@ -56,14 +56,14 @@ test('previsualización disponible para cada símbolo y geometría',()=>{
  }
 });
 test('los puntos destacados tienen geometrías diferenciadas, no un punto genérico',()=>{
- for(const id of ['tree','bush','rock','large-rock','spring','waterhole','pit','depression','knoll','tower','cairn','crossing','special-vegetation']){
+ for(const id of ['tree','bush','rock','large-rock','spring','waterhole','pit','depression','knoll','elongated-knoll','rocky-pit','dangerous-pit','boulder-cluster','tower','cairn','crossing','special-vegetation']){
   drawingLog.length=0;
   assert.equal(SymbolRenderer.drawPoint(ctx,id,8,SymbolRenderer.specFor(id)||{},false),true,id);
   assert.ok(drawingLog.length>0,id);
  }
 });
 test('los símbolos lineales especiales incluyen marcas',()=>{
- for(const id of ['fence','impassable-fence','cliff','earth-bank','railway']){
+ for(const id of ['fence','impassable-fence','cliff','earth-bank','earth-wall','retaining-earth-wall','ruined-earth-wall','erosion-gully','trench','railway']){
   drawingLog.length=0;
   assert.equal(SymbolRenderer.decorateLine(ctx,id,[{x:0,y:0},{x:90,y:0}],null,1,SymbolRenderer.specFor(id)),true,id);
   assert.ok(drawingLog.includes('stroke'),id);
