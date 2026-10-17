@@ -118,7 +118,18 @@
     const exportButton=document.createElement('button');exportButton.type='button';exportButton.textContent='Exportar tracks GPX';
     const error=text('p',serialSupported?'':'Web Serial requiere Chromium/Edge en contexto seguro (HTTPS o localhost).');error.style.cssText='font-size:11px;white-space:normal;color:#f3bd8f';
     for(const el of [info,speed,connect,status,coord,text('p','Símbolo lineal predeterminado'),symbol,follow,start,stop,exportButton,error])drop.append(el);
-    details.append(drop);menu.append(details);
+    details.append(drop);
+    const existingGps=Array.from(menu.querySelectorAll(':scope>details')).find(item=>{
+      const label=item.querySelector(':scope>summary')?.textContent.trim();
+      return item!==details && label==='GPS';
+    });
+    if(existingGps)existingGps.remove();
+    const configurationMenu=Array.from(menu.querySelectorAll(':scope>details')).find(item=>item.querySelector(':scope>summary')?.textContent.trim()==='CONFIGURACIÓN');
+    if(configurationMenu)menu.insertBefore(details,configurationMenu);else menu.append(details);
+    details.addEventListener('toggle',()=>{
+      if(!details.open)return;
+      menu.querySelectorAll(':scope>details').forEach(item=>{if(item!==details)item.open=false});
+    });
     const decoder=new TextDecoder();
     let port=null,reader=null,closing=false,readingPromise=null,recording=false,lastFix=null,lastFixAt=0;
     let nmea=new NmeaStream();
