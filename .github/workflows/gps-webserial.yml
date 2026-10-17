@@ -6,6 +6,8 @@ on:
       - 'source/v234/index.html'
       - 'source/v234/ocarto-runtime-v248-6.js'
       - 'source/v234/tests/gps-webserial.test.cjs'
+      - 'source/v234/symbol-renderer.js'
+      - 'source/v234/tests/symbol-renderer.test.cjs'
       - '.github/workflows/gps-webserial.yml'
   workflow_dispatch:
 jobs:
@@ -22,6 +24,10 @@ jobs:
         run: node --test source/v234/tests/gps-webserial.test.cjs
       - name: Verificar dibujo y edición Bézier
         run: node --test source/v234/tests/bezier-drawing.test.cjs
+      - name: Validar sintaxis y símbolos del catálogo
+        run: |
+          node --check source/v234/symbol-renderer.js
+          node --test source/v234/tests/symbol-renderer.test.cjs
       - name: Verificar sintaxis del runtime Ocarto
         run: node --check source/v234/ocarto-runtime-v248-6.js
       - name: Verificar sintaxis de editor Ocarto
