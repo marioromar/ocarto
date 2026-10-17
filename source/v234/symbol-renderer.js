@@ -21,6 +21,9 @@ const meta={
   'boulder-cluster':{code:'207',color:COLORS.black,sizeMm:.8},
   'stony-ground':{code:'210',fill:COLORS.white,pattern:'dots',patternColor:COLORS.black},
   'trench':{code:'215',color:COLORS.black,lineWidthMm:.25,decoration:'cliff'},
+  'uncrossable-marsh':{code:'307',fill:COLORS.blue,pattern:'rows',patternColor:COLORS.black},
+  'marsh':{code:'308',fill:COLORS.white,pattern:'rows',patternColor:COLORS.blue},
+  'indistinct-marsh':{code:'310',fill:COLORS.white,pattern:'rows',patternColor:COLORS.blue},
   'bare-rock':{code:'214',fill:COLORS.black,fillOpacity:.35},
   'depression':{code:'111',color:COLORS.brown,sizeMm:.8},
   'pit':{code:'112',color:COLORS.brown,sizeMm:.7},
@@ -111,6 +114,8 @@ const extra=[
  {id:'boulder-cluster',geometry:'point',group:'Puntos · rocas',name:'Grupo de piedras (207)',glyph:'▲',sizeMm:.8,lineMm:.18},
  {id:'stony-ground',geometry:'area',group:'Áreas · rocas',name:'Terreno pedregoso (210)',glyph:'···',sizeMm:0,lineMm:.1},
  {id:'trench',geometry:'line',group:'Líneas · rocas',name:'Trinchera (215)',glyph:'╱',sizeMm:0,lineMm:.25},
+ {id:'uncrossable-marsh',geometry:'area',group:'Áreas · agua',name:'Pantano infranqueable (307)',glyph:'≋',sizeMm:0,lineMm:.12},
+ {id:'indistinct-marsh',geometry:'area',group:'Áreas · agua',name:'Pantano indistinto (310)',glyph:'≋',sizeMm:0,lineMm:.12},
  {id:'passable-cliff',geometry:'line',group:'Líneas · relieve y rocas',name:'Cortado franqueable (202)',glyph:'╱',sizeMm:0,lineMm:.25},
  {id:'boulder-field-open',geometry:'area',group:'Áreas · rocas',name:'Campo de bloques (208)',glyph:'▲',sizeMm:0,lineMm:.1}
 ];
