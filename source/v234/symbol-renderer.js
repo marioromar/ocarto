@@ -27,7 +27,8 @@ const meta={
   'fence':{code:'516',color:COLORS.black,lineWidthMm:.17,decoration:'fence'},
   'impassable-fence':{code:'518',color:COLORS.black,lineWidthMm:.25,decoration:'fence'},
   'pipeline':{code:'528',color:COLORS.black,lineWidthMm:.18},
-  'quarry-edge':{code:'202',color:COLORS.black,lineWidthMm:.18,decoration:'cliff'},
+  'earth-bank':{code:'104',color:COLORS.brown,lineWidthMm:.25,decoration:'bank'},
+  'quarry-edge':{code:'202',color:COLORS.black,lineWidthMm:.25,decoration:'cliff'},
   'footpath':{code:'505',color:COLORS.black,lineWidthMm:.25,pattern:'dashed'},
   'narrow-ride':{code:'508',color:COLORS.yellow,lineWidthMm:.2,pattern:'solid'},
   'cultivation-boundary':{code:'415',color:COLORS.black,lineWidthMm:.10,pattern:'dotted'},
@@ -78,6 +79,7 @@ const extra=[
  {id:'impassable-fence',geometry:'line',group:'Líneas · construcciones',name:'Valla infranqueable',glyph:'╫',sizeMm:0,lineMm:.25},
  {id:'ruined-wall',geometry:'line',group:'Líneas · construcciones',name:'Muro en ruinas',glyph:'┄',sizeMm:0,lineMm:.18},
  {id:'ruin-outline',geometry:'line',group:'Líneas · construcciones',name:'Contorno de ruina (523)',glyph:'▤',sizeMm:0,lineMm:.17},
+ {id:'earth-bank',geometry:'line',group:'Líneas · relieve',name:'Talud de tierra (104)',glyph:'╱',sizeMm:0,lineMm:.25},
  {id:'passable-cliff',geometry:'line',group:'Líneas · relieve y rocas',name:'Cortado franqueable (202)',glyph:'╱',sizeMm:0,lineMm:.25},
  {id:'boulder-field-open',geometry:'area',group:'Áreas · rocas',name:'Campo de bloques (208)',glyph:'▲',sizeMm:0,lineMm:.1}
 ];
