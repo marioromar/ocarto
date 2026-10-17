@@ -69,6 +69,13 @@ test('los símbolos lineales especiales incluyen marcas',()=>{
   assert.ok(drawingLog.includes('stroke'),id);
  }
 });
+test('la paleta de pantalla sigue los colores IOF del apéndice',()=>{
+ assert.equal(SymbolRenderer.COLORS.brown,'#d15c00');
+ assert.equal(SymbolRenderer.COLORS.blue,'#00a8e8');
+ assert.equal(SymbolRenderer.COLORS.green,'#3dff17');
+ assert.equal(SymbolRenderer.COLORS.darkGreen,'#00b324');
+ assert.equal(SymbolRenderer.COLORS.purple,'#a626ff');
+});
 test('paleta y mapa usan el mismo motor de símbolos',()=>{
  assert.ok(html.includes('<script src="symbol-renderer.js"></script>'));
  assert.ok(html.includes('OcartoSymbolRenderer.renderPreview(preview,x.id,x.geometry,style)'));
