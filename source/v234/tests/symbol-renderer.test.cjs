@@ -10,7 +10,7 @@ const parsed=vm.runInNewContext(html.slice(start+'const SYMBOL_CATALOG='.length,
 const catalog=SymbolRenderer.enrichCatalog(parsed);
 const byId=id=>catalog.find(x=>x.id===id);
 const drawingLog=[];
-const ctx={save(){},restore(){},translate(){},clearRect(){},beginPath(){},arc(){drawingLog.push('arc')},lineTo(){drawingLog.push('line')},moveTo(){},fill(){drawingLog.push('fill')},stroke(){drawingLog.push('stroke')},closePath(){},rect(){},bezierCurveTo(){},setLineDash(){},quadraticCurveTo(){}};
+const ctx={save(){},restore(){},translate(){},clearRect(){},beginPath(){},arc(){drawingLog.push('arc')},lineTo(){drawingLog.push('line')},moveTo(){},fill(){drawingLog.push('fill')},stroke(){drawingLog.push('stroke')},closePath(){},rect(){},bezierCurveTo(){},setLineDash(){},quadraticCurveTo(){},ellipse(){}};
 const canvas={width:48,height:36,getContext:()=>ctx};
 
 test('cada ID de símbolo es único y la ampliación no duplica registros',()=>{
@@ -87,5 +87,5 @@ test('paleta y mapa usan el mismo motor de símbolos',()=>{
  assert.ok(html.includes('<script src="symbol-renderer.js"></script>'));
  assert.ok(html.includes('OcartoSymbolRenderer.renderPreview(preview,x.id,x.geometry,style)'));
  assert.ok(html.includes('OcartoSymbolRenderer.drawPoint(ctx,f.symbol,r,symbolStyle,candidate)'));
- assert.ok(html.includes('OcartoSymbolRenderer.decorateLine(ctx,f.symbol,pts,unitScale,S.zoom,iof)'));
+ assert.ok(html.includes('OcartoSymbolRenderer.decorateLine(ctx,f.symbol,pts,unitScale,S.zoom,iof||OcartoSymbolRenderer.specFor(f.symbol)'));
 });

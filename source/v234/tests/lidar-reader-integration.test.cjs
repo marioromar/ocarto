@@ -25,6 +25,7 @@ assert.equal(typeof reader.streamFileToWorker,'function');
 function bridge() {
  const listeners=new Set(),events=[],queued=[];
  const context=vm.createContext({
+   onmessage:null, // como en un Worker real: el worker ('use strict') asigna onmessage
    self:null,ArrayBuffer,Uint8Array,Float32Array,DataView,
    setTimeout,clearTimeout,TextEncoder,TextDecoder,Blob,Response,WebAssembly,console,
    location:{href:'http://127.0.0.1:8787/source/v234/lidar-worker.js'},

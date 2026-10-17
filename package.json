@@ -6,6 +6,7 @@
   "main": "desktop/main.cjs",
   "scripts": {
     "start": "electron .",
+    "test": "node scripts/run-tests.cjs",
     "dist": "electron-builder --win portable nsis"
   },
   "devDependencies": {
@@ -15,8 +16,21 @@
   "build": {
     "appId": "com.ocarto.editor",
     "productName": "Ocarto",
-    "files": ["desktop/**/*", "source/**/*", "servidor-ocarto.ps1", "ABRIR-OCARTO.bat"],
-    "win": {"target": ["portable", "nsis"]},
-    "nsis": {"oneClick": false, "allowToChangeInstallationDirectory": true}
+    "files": [
+      "desktop/**/*",
+      "source/**/*",
+      "!source/**/tests/**",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

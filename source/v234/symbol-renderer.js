@@ -14,6 +14,12 @@ const meta={
   'contour-index':{code:'102',color:COLORS.brown,lineWidthMm:.25},
   'contour-form':{code:'103',color:COLORS.brown,lineWidthMm:.10,pattern:'dashed'},
   'contour-supplementary':{code:'103',color:COLORS.brown,lineWidthMm:.10,pattern:'dashed'},
+  'tree':{code:'417',color:COLORS.green,sizeMm:1.1,lineWidthMm:.18},
+  'bush':{code:'418',color:COLORS.green,sizeMm:.6,lineWidthMm:.18},
+  'rock':{code:'204',color:COLORS.black,sizeMm:.4,lineWidthMm:.15},
+  'large-rock':{code:'205',color:COLORS.black,sizeMm:.6,lineWidthMm:.15},
+  'waterhole':{code:'303',color:COLORS.blue,sizeMm:.8,lineWidthMm:.18},
+  'spring':{code:'312',color:COLORS.blue,sizeMm:2.5,lineWidthMm:.25},
   'knoll':{code:'109',color:COLORS.brown,sizeMm:.6},
   'elongated-knoll':{code:'110',color:COLORS.brown,sizeMm:.8},
   'rocky-pit':{code:'203.1',color:COLORS.black,sizeMm:.8},
@@ -67,7 +73,7 @@ const meta={
   'earth-bank':{code:'104',color:COLORS.brown,lineWidthMm:.25,decoration:'bank'},
   'earth-wall':{code:'105.1',color:COLORS.brown,lineWidthMm:.27,decoration:'bank'},
   'retaining-earth-wall':{code:'105.2',color:COLORS.brown,lineWidthMm:.18,decoration:'bank'},
-  'ruined-earth-wall':{code:'106',color:COLORS.brown,lineWidthMm:.18,pattern:'dashed'},
+  'ruined-earth-wall':{code:'106',color:COLORS.brown,lineWidthMm:.18,pattern:'dashed',decoration:'bank'},
   'erosion-gully':{code:'107',color:COLORS.brown,lineWidthMm:.25,decoration:'bank'},
   'small-erosion-gully':{code:'108',color:COLORS.brown,lineWidthMm:.25,pattern:'dotted'},
   'quarry-edge':{code:'202',color:COLORS.black,lineWidthMm:.25,decoration:'cliff'},
@@ -205,6 +211,7 @@ const extra=[
 function enrichCatalog(catalog){
  const ids=new Set(catalog.map(s=>s.id));
  for(const item of extra)if(!ids.has(item.id)){catalog.push({...item});ids.add(item.id)}
+ const ocad=OCAD();if(ocad)for(const item of ocad.catalog())if(!ids.has(item.id)){catalog.push({...item});ids.add(item.id)}
  for(const item of catalog){
    const fix=meta[item.id];
    if(fix&&fix.code){item.code=fix.code}
@@ -216,7 +223,8 @@ function enrichCatalog(catalog){
  }
  return catalog;
 }
-function specFor(id){return meta[id]||null}
+const OCAD=()=>root.OcartoOcadSet||(typeof globalThis!=='undefined'&&globalThis.OcartoOcadSet)||null;
+function specFor(id){const o=OCAD();return meta[id]||(o&&o.spec(id))||null}
 function colorFor(id,style){return style?.color||style?.fill||meta[id]?.color||meta[id]?.fill||COLORS.black}
 function symbolCode(item,style){return style?.code===null?null:(style?.code||meta[item.id]?.code||item.code)}
 function drawPoint(ctx,id,r,style,candidate){
@@ -301,7 +309,7 @@ function decorateLine(ctx,id,pts,unitScale,zoom,style){
  }
  ctx.restore();return true;
 }
-function renderPreview(canvas,id,geometry,style){
+function renderPreview(canvas,id,geometry,style){const oc=OCAD();if(oc&&oc.owns(id))return oc.drawPreview(canvas,id,geometry);
  if(!canvas?.getContext)return false;const ctx=canvas.getContext('2d');if(!ctx)return false;
  const w=canvas.width||40,h=canvas.height||32,c=colorFor(id,style),metaStyle=meta[id]||{};
  ctx.clearRect(0,0,w,h);ctx.save();

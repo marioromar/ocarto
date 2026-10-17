@@ -13,7 +13,8 @@ function makeWorker() {
  const messages=[];
  let context;
  const globals={
-   self:null,postMessage:m=>messages.push(m),setTimeout,clearTimeout,
+   // En un Worker real `onmessage` ya existe en el ámbito global; el worker usa 'use strict' y lo asigna.
+   onmessage:null,self:null,postMessage:m=>messages.push(m),setTimeout,clearTimeout,
    ArrayBuffer,Uint8Array,Float32Array,DataView,WebAssembly,console,
    fetch:async url=>{
      const name=String(url).replace(/^\.\//,'');

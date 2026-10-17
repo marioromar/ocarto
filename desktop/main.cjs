@@ -1,22 +1,20 @@
 const { app, BrowserWindow, dialog } = require('electron');
-const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { listen } = require('./server.cjs');
 
 let server;
-function startLocalServer() {
-  const script = path.join(process.resourcesPath, 'servidor-ocarto.ps1');
-  server = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script], { windowsHide: true });
-}
-function createWindow() {
+async function createWindow() {
+  // app.getAppPath() es la raíz del proyecto (o app.asar al empaquetar).
+  const started = await listen(app.getAppPath(), 8787);
+  server = started.server;
+  const url = `http://127.0.0.1:${started.port}/`;
   const win = new BrowserWindow({
     width: 1440, height: 900, minWidth: 960, minHeight: 640,
     title: 'Ocarto', autoHideMenuBar: true,
     webPreferences: { contextIsolation: true, sandbox: true }
   });
-  win.loadURL('http://127.0.0.1:8787/');
-  win.webContents.on('did-fail-load', () => setTimeout(() => win.loadURL('http://127.0.0.1:8787/'), 700));
+  win.loadURL(url);
 }
-app.whenReady().then(() => { startLocalServer(); setTimeout(createWindow, 900); });
-app.on('window-all-closed', () => { if (server) server.kill(); if (process.platform !== 'darwin') app.quit(); });
-app.on('before-quit', () => { if (server) server.kill(); });
+app.whenReady().then(() => createWindow().catch(e => { dialog.showErrorBox('Ocarto', e.message); app.quit(); }));
+app.on('window-all-closed', () => { if (server) server.close(); app.quit(); });
+app.on('before-quit', () => { if (server) server.close(); });
 process.on('uncaughtException', error => dialog.showErrorBox('Ocarto', error.message));
