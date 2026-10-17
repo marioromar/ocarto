@@ -4,7 +4,11 @@
  */
 (function(root){
 'use strict';
-const COLORS={black:'#161616',brown:'#ad5b00',blue:'#008dcd',green:'#159447',darkGreen:'#006633',yellow:'#ffbf35',white:'#ffffff',grey:'#a2a6a7',purple:'#ae259b'};
+const COLORS={
+  // Approximate on-screen RGB equivalents of the IOF CMYK definitions;
+  // final printed colours still require printer/profile calibration.
+  black:'#000000',brown:'#d15c00',blue:'#00a8e8',green:'#3dff17',darkGreen:'#006633',yellow:'#ffba36',white:'#ffffff',grey:'#999999',purple:'#ae259b'
+};
 const meta={
   'contour-normal':{code:'101',color:COLORS.brown,lineWidthMm:.14},
   'contour-index':{code:'102',color:COLORS.brown,lineWidthMm:.25},
