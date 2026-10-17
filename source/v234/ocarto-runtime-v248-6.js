@@ -380,7 +380,7 @@ if(typeof window!=='undefined')window.OcartoUrbanWidthTools={offsetRing};
     const oldRightChildren=Array.from(right.children);
     const oldLeftChildren=Array.from(left.children);
     const toolGrid=left.querySelector('.tool-grid');
-    const symbolPanel = makePanel('symbolsWorkspace', 'Símbolos');
+    const symbolPanel = makePanel('symbolsWorkspace', 'Símbolos · paleta OCAD');
     const layersPanel = makePanel('layersWorkspace', 'Capas');
     const propsPanel = makePanel('propertiesWorkspace', 'Propiedades');
     const lidarPanel = makePanel('lidarWorkspace', 'LiDAR');
