@@ -112,6 +112,11 @@ const meta={
   'vegetation':{code:'Personalizado',fill:COLORS.green,fillOpacity:.45},
   'ruin-area':{code:'Personalizado',fill:COLORS.white,outline:COLORS.black},
   'stream':{code:'304',color:COLORS.blue,lineWidthMm:.30},
+  'watercourse':{code:'305',color:COLORS.blue,lineWidthMm:.25},
+  'small-watercourse':{code:'306',color:COLORS.blue,lineWidthMm:.18},
+  'minor-watercourse':{code:'307',color:COLORS.blue,lineWidthMm:.12},
+  'passable-wall':{code:'513.1',color:COLORS.black,lineWidthMm:.18},
+  'uncrossable-wall':{code:'513.3',color:COLORS.black,lineWidthMm:.25},
   'marsh':{code:'308',fill:COLORS.white,pattern:'rows',patternColor:COLORS.blue},
   'special-vegetation':{code:'419',color:COLORS.green}
 };
