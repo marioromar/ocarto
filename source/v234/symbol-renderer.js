@@ -161,8 +161,8 @@ function renderPreview(canvas,id,geometry,style){
  else if(geometry==='line'){
   ctx.strokeStyle=c;ctx.lineWidth=Math.max(1.4,(style?.lineWidthMm||metaStyle.lineWidthMm||.2)*9);ctx.lineCap='round';
   ctx.setLineDash(style?.pattern==='dashed'?[7,4]:style?.pattern==='dotted'?[1,4]:[]);
-  ctx.beginPath();ctx.moveTo(3,h*.66);ctx.bezierCurveTo(w*.3,h*.05,w*.55,h*.95,w-3,h*.35);ctx.stroke();ctx.setLineDash([]);
-  decorateLine(ctx,id,[{x:3,y:h*.66},{x:w*.33,y:h*.36},{x:w*.68,y:h*.6},{x:w-3,y:h*.35}],null,1,style)
+  ctx.beginPath();ctx.moveTo(3,h*.66);ctx.lineTo(w-3,h*.35);ctx.stroke();ctx.setLineDash([]);
+  decorateLine(ctx,id,[{x:3,y:h*.66},{x:w-3,y:h*.35}],null,1,style)
  }
  else {
   ctx.beginPath();ctx.rect(4,3,w-8,h-6);
