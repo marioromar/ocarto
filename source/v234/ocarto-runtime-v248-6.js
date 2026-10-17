@@ -438,7 +438,7 @@ if(typeof window!=='undefined')window.OcartoUrbanWidthTools={offsetRing};
     const ensureMenu=(label)=>{let d=findMenu(label);if(d)return d;d=document.createElement('details');const s=document.createElement('summary');s.textContent=label;const box=document.createElement('div');box.className='oc-dropdown';d.append(s,box);menu.append(d);return d};
     const menuBox=(label)=>ensureMenu(label).querySelector('.oc-dropdown');
     const editBox=menuBox('EDICIÓN'), viewBox=menuBox('VER'), toolsBox=menuBox('HERRAMIENTAS'), fileBox=menuBox('MAPA');
-    const menuActionIds=new Set(['newProject','openProject','restoreLocalBackup','saveProject','exportMap','undo','redo','selectAllObjects','duplicateSelected','copySelected','cutSelected','pasteSelected','deleteSelected','clearMap','zoomIn','zoomOut','layersNav','symbolsNav' ,'selectMode','smoothConservative','smoothGeometric','validateGeometry','measureSelection','projectSettings','mapCrs']);
+    const menuActionIds=new Set(['newProject','openProject','restoreLocalBackup','saveProject','exportMap','undo','redo','selectAllObjects','duplicateSelected','copySelected','cutSelected','pasteSelected','deleteSelected','clearMap','zoomIn','zoomOut','layersNav','symbolsNav' ,'selectMode','smoothConservative','smoothGeometric','validateGeometry','measureSelection']);
     menu.querySelectorAll('[data-menu-target]').forEach(button=>{if(menuActionIds.has(button.dataset.menuTarget))button.remove()});
     ['#extendDistance','#joinSelectedLines','#createParallel'].forEach(sel=>{const node=document.querySelector(sel);if(node)editBox.append(node.parentElement)});
     ['MAPA','EDICIÓN','VER','HERRAMIENTAS','LIDAR','PLANTILLAS','GPS','CONFIGURACIÓN'].forEach(label=>{const item=findMenu(label);if(item)menu.append(item)});
