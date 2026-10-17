@@ -144,3 +144,6 @@ html,body,.app{background:#101923;color:#e7edf3}
 
 /* v268: fallback visible for the world selector when map tiles are unavailable. */
 .source-map-fallback{position:absolute;inset:0;z-index:0;display:grid;place-content:center;justify-items:center;gap:5px;color:#3b6172;background-color:#dbe9ef;background-image:linear-gradient(#a9c8d455 1px,transparent 1px),linear-gradient(90deg,#a9c8d455 1px,transparent 1px);background-size:32px 32px;text-align:center;pointer-events:none}.source-map-fallback strong{font-size:18px}.source-map-fallback span{font-size:11px}.source-map.has-tiles .source-map-fallback{display:none}
+
+/* v268: símbolo context menu needs dark readable text on its light surface. */
+.symbol-context-menu{background:#fff!important;color:#24323d!important;border:1px solid #b9c9d3!important;box-shadow:0 8px 24px #14212b35!important}.symbol-context-menu button{color:#24323d!important;background:#fff!important}.symbol-context-menu button:hover{background:#e8f2f7!important;color:#123f55!important}
