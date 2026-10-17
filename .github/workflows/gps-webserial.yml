@@ -20,6 +20,8 @@ jobs:
         run: node --check source/v234/gps-webserial.js
       - name: Tests NMEA y filtros de track
         run: node --test source/v234/tests/gps-webserial.test.cjs
+      - name: Verificar dibujo y edición Bézier
+        run: node --test source/v234/tests/bezier-drawing.test.cjs
       - name: Verificar sintaxis del runtime Ocarto
         run: node --check source/v234/ocarto-runtime-v248-6.js
       - name: Verificar sintaxis de editor Ocarto
