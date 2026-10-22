@@ -472,6 +472,111 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
   function geotiffAffine(image,sourceWidth,sourceHeight,width,height){const fd=image.fileDirectory,keys=image.getGeoKeys?.()||{},matrix=fd.getValue('ModelTransformation');let g=null;if(matrix?.length>=16)g={a:matrix[0]*sourceWidth/width,b:matrix[1]*sourceHeight/height,c:matrix[3],d:matrix[4]*sourceWidth/width,e:matrix[5]*sourceHeight/height,f:matrix[7],source:'GeoTIFF'};else{const scale=fd.getValue('ModelPixelScale'),ties=fd.getValue('ModelTiepoint');if(scale?.length>=2&&ties?.length>=6){const[px,py,,gx,gy]=ties;g={a:scale[0]*sourceWidth/width,b:0,c:gx-px*scale[0],d:0,e:-scale[1]*sourceHeight/height,f:gy+py*scale[1],source:'GeoTIFF'}}}const epsg=Number(keys.ProjectedCSTypeGeoKey||keys.GeographicTypeGeoKey||0);if(g&&epsg>0&&epsg!==32767)g.crs=`EPSG:${epsg}`;return g}
   async function decodeGeoTiffTemplate(file){if(!geoTiffTemplateLib){await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/image-import/geotiff.js';script.onload=resolve;script.onerror=()=>reject(Error('No se pudo cargar el lector GeoTIFF'));document.head.append(script)});geoTiffTemplateLib=window.GeoTIFF}const tiff=await geoTiffTemplateLib.fromBlob(file),image=await tiff.getImage(),sourceWidth=image.getWidth(),sourceHeight=image.getHeight(),scale=Math.min(1,6000/Math.max(sourceWidth,sourceHeight)),width=Math.max(1,Math.round(sourceWidth*scale)),height=Math.max(1,Math.round(sourceHeight*scale)),rgb=await image.readRGB({width,height}),channels=Math.max(1,Math.round(rgb.length/(width*height))),rgba=new Uint8ClampedArray(width*height*4);for(let i=0,j=0;i<rgb.length;i+=channels,j+=4){rgba[j]=rgb[i];rgba[j+1]=channels>1?rgb[i+1]:rgb[i];rgba[j+2]=channels>2?rgb[i+2]:rgb[i];rgba[j+3]=channels>3?rgb[i+3]:255}const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.getContext('2d').putImageData(new ImageData(rgba,width,height),0,0);const dataUrl=canvas.toDataURL('image/png'),img=await dataUrlImage(dataUrl),georef=geotiffAffine(image,sourceWidth,sourceHeight,width,height);return{img,dataUrl,georef,crs:georef?.crs||null,name:file.name}}
   async function decodeTemplateFile(file){if(/\.pdf$/i.test(file.name)||file.type==='application/pdf')return decodePdfTemplate(file);if(/\.(tif|tiff|geotiff)$/i.test(file.name)||/image\/tiff/i.test(file.type))return decodeGeoTiffTemplate(file);const dataUrl=await asDataUrl(file);try{return{img:await dataUrlImage(dataUrl),dataUrl,name:file.name}}catch(error){if(!('createImageBitmap'in window))throw Error(`${file.name}: el navegador no puede abrir este formato`);let bitmap;try{bitmap=await createImageBitmap(file);const c=document.createElement('canvas');c.width=bitmap.width;c.height=bitmap.height;c.getContext('2d').drawImage(bitmap,0,0);const png=c.toDataURL('image/png');return{img:await dataUrlImage(png),dataUrl:png,name:file.name}}catch(_){throw Error(`${file.name}: el navegador no puede abrir este formato`)}finally{bitmap?.close?.()}}}
+  // El TIFF es una PLANTILLA ráster, no datos LAS/LAZ. Vectorizarlo no
+  // requiere el botón de análisis LiDAR; las clases por color son propuestas
+  // y nunca se les asignan alturas o transitabilidad inventadas.
+  $('vectorizeTemplateRaster').onclick=async()=>{
+    const btn=$('vectorizeTemplateRaster'),status=$('rasterVectorStatus');
+    if(btn.disabled)return;
+    btn.disabled=true;
+    try{
+      const layer=activeTemplate();
+      if(!layer?.img)throw Error('Primero carga el TIFF/GeoTIFF como plantilla y selecciónalo como activo');
+      if(layer.source==='wms')throw Error('No se vectorizan capturas WMS; carga un TIFF, GeoTIFF o PNG local');
+      const img=layer.img,fullW=img.naturalWidth||img.width,
+        fullH=img.naturalHeight||img.height;
+      if(!fullW||!fullH)throw Error('La imagen aún no tiene dimensiones válidas');
+      if(layer.georef&&!layer.georef.localMap){
+        const currentCrs=$('mapCrs').value.trim().toUpperCase();
+        if(layer.crs&&currentCrs&&layer.crs.toUpperCase()!==currentCrs)
+          throw Error('CRS distinto entre TIFF y mapa: '+layer.crs+' frente a '+currentCrs+'. Configura el mismo EPSG antes de vectorizar');
+      }
+      draw(); // Actualiza S.renderGeo antes de transformar coordenadas.
+      if(layer.georef&&!layer.georef.localMap&&!S.renderGeo)
+        throw Error('La georreferenciación de este TIFF no está activa. Revisa EPSG y plantilla');
+      // La vista previa TIFF importada puede llegar a 6000 px de ancho.
+      // Se vectoriza a una escala de muestreo limitada para no bloquear RAM.
+      const factor=Math.min(1,1200/Math.max(fullW,fullH));
+      const width=Math.max(1,Math.round(fullW*factor)),
+        height=Math.max(1,Math.round(fullH*factor));
+      const scratch=document.createElement('canvas');
+      scratch.width=width;scratch.height=height;
+      const context=scratch.getContext('2d',{willReadFrequently:true});
+      context.imageSmoothingEnabled=false;
+      try{context.drawImage(img,0,0,width,height)}catch(_){
+        throw Error('No se puede leer esta plantilla. Usa una imagen TIFF/PNG local, no un servicio externo');
+      }
+      let rgba;
+      try{rgba=context.getImageData(0,0,width,height).data}
+      catch(_){throw Error('Los píxeles de esta imagen no están disponibles; comprueba el origen local del TIFF')}
+      const maxClasses=Math.max(1,Math.min(8,Math.floor(Number($('rasterVecClasses').value)||6)));
+      const minPixels=Math.max(4,Math.floor(Number($('rasterVecMinPixels').value)||35));
+      status.textContent='Reconociendo hasta '+maxClasses+' colores en '+width+' × '+height+
+        ' píxeles. La plantilla no se modifica…';
+      await new Promise(resolve=>setTimeout(resolve,30));
+      const vector=OcartoRasterVector.vectorize(rgba,width,height,
+        {maxClasses,minPixels,tolerance:.8,maxTotalPolygons:650});
+      const georef=layer.georef&&!layer.georef.localMap?layer.georef:null;
+      const displayScale=Math.min(W()*.72/fullW,H()*.72/fullH);
+      function mapRing(points){
+        return points.map(([x,y])=>{
+          const px=x*fullW/width,py=y*fullH/height;
+          if(georef){
+            const rawX=georef.a*px+georef.b*py+georef.c;
+            const rawY=georef.d*px+georef.e*py+georef.f;
+            const local=worldToLocal(rawX,rawY);
+            return {...local,rawX,rawY};
+          }
+          return {x:(px-fullW/2)*displayScale,y:(py-fullH/2)*displayScale};
+        });
+      }
+      let vertices=0;
+      for(const feature of vector.features){
+        vertices+=feature.outer.length;
+        for(const hole of feature.holes)vertices+=hole.length;
+      }
+      if(vertices>90000)throw Error('Demasiados vértices ('+vertices+'). Aumenta el área mínima o reduce las clases para evitar bloqueos');
+      // Construye antes de modificar el mapa: un fallo a mitad no debe
+      // dejar objetos parciales ni tocar la capa de imagen original.
+      const proposed=vector.features.map(feature=>({
+        type:'area',points:mapRing(feature.outer),
+        holes:feature.holes.map(mapRing),symbol:'vegetation',
+        properties:{
+          sourceRaster:layer.name,
+          sourceColor:feature.color,
+          colorClass:feature.classId+1,
+          sourcePixels:feature.pixels,
+          derivedFrom:'raster-color-segmentation',
+          needsReview:true,
+          georeferenced:!!georef,
+          approximate:true
+        }
+      }));
+      const before=snapshotMap();
+      const mapLayer={
+        id:'raster-vector-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+        name:'Vector TIFF · '+layer.name.slice(0,27),
+        color:'#008b62',visible:true
+      };
+      S.vectorLayers.push(mapLayer);
+      for(const feature of proposed){
+        feature.layerId=mapLayer.id;
+        S.features.push(feature);
+      }
+      S.activeLayerId=mapLayer.id;
+      S.selection=null;S.multiSelection=[];S.selectedVertices=[];
+      recordMapEdit(before);
+      renderVectorLayers();updateLidarButtons();draw();
+      status.textContent=proposed.length+' polígonos editables creados en capa nueva. '+
+        vector.palette.length+' colores detectados (muestra '+width+' × '+height+
+        '). Conservada la imagen original. Los colores se guardan como metadatos; asigna símbolos IOF tras revisarlos.';
+      toast('TIFF vectorizado: '+proposed.length+' áreas editables, pendientes de revisar');
+    }catch(err){
+      status.textContent='No se pudo vectorizar: '+(err?.message||err);
+      toast(status.textContent);
+    }finally{btn.disabled=false}
+  };
+
   $('templateFile').onchange=async e=>{const files=[...e.target.files];if(!files.length)return;const assets=files.filter(f=>/\.(pdf|png|jpe?g|webp|tif|tiff|geotiff|bmp|gif|svg|avif|heic|heif)$/i.test(f.name)||f.type.startsWith('image/')),sidecars=files.filter(f=>/\.(jgw|jpgw|pgw|pngw|tfw|tifw|tiffw|pdfw|wld|prj)$/i.test(f.name));if(!assets.length){toast('Selecciona al menos una imagen o PDF');e.target.value='';return}try{for(const f of assets){const result=await decodeTemplateFile(f),world=findSidecar(f,sidecars,['jgw','jpgw','pgw','pngw','tfw','tifw','tiffw','pdfw','wld'].map(x=>'.'+x)),prj=findSidecar(f,sidecars,['.prj']);let georef=result.georef||null;if(world)georef=await parseWorldFile(world);const crs=await readPrjCrs(prj)||result.crs||null,layer={id:`template-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,img:result.img,url:'',name:result.name||f.name,dataUrl:result.dataUrl,vegetationRole:'auto',opacity:.65,displayMode:'transparent',visible:true,georef,crs,controlPoints:[]};S.templates.push(layer);S.activeTemplateId=layer.id}S.template=activeTemplate();S.georef=S.template?.georef||null;S.controlPoints=S.template?.controlPoints||[];S.awaitingControlPoint=!!S.template&&!S.template.georef;S.pendingPixel=null;if(S.template?.crs&&$('mapCrs').value.trim()&&S.template.crs!==$('mapCrs').value.trim().toUpperCase())toast(`CRS de plantilla ${S.template.crs} distinto del mapa ${$('mapCrs').value.trim()}`);if(S.template?.img)S.templateDisplayScale=Math.min(W()*.72/S.template.img.width,H()*.72/S.template.img.height);renderTemplateLayers();syncLegacyTemplateControls();$('controlPointEditor').hidden=!S.awaitingControlPoint;draw();toast(S.awaitingControlPoint?'No se encontró georreferenciación: ajusta la plantilla con parejas de puntos':assets.length===1?'Plantilla georreferenciada añadida':'Plantillas añadidas')}catch(err){toast(err.message||'No se pudo abrir una de las plantillas')}finally{e.target.value=''}};
   $('worldFile').onchange=async e=>{const f=e.target.files[0],layer=activeTemplate();if(!f)return;if(!layer){toast('Carga primero la imagen de referencia');return}try{if(/\.prj$/i.test(f.name)){layer.crs=await readPrjCrs(f);if(!layer.crs)throw Error('No se pudo identificar un EPSG en el PRJ')}else{layer.georef=await parseWorldFile(f);layer.controlPoints=[];S.controlPoints=layer.controlPoints;S.awaitingControlPoint=false;S.pendingPixel=null;$('controlPointEditor').hidden=true}S.template=layer;S.georef=layer.georef;renderControlPointStatus();draw();toast(/\.prj$/i.test(f.name)?`CRS de plantilla: ${layer.crs}`:'Georreferenciación asociada cargada; se usan sus coordenadas')}catch(err){toast(err.message)}finally{e.target.value=''}};
   $('armControlPoint').onclick=()=>{if(!S.template){toast('Carga primero la imagen de referencia');return}if(S.awaitingControlPoint){S.awaitingControlPoint=false;S.pendingPixel=null;$('controlPointEditor').hidden=true;renderControlPointStatus();toast('Ajuste cancelado');return}if(S.pendingPixel){toast('Completa o cancela el ajuste pendiente');return}if(S.georef&&!S.georef.localMap){toast('La imagen ya está georreferenciada; se colocan sus coordenadas automáticamente');return}S.awaitingControlPoint=true;$('controlPointEditor').hidden=false;$('pendingPixelText').textContent=S.controlPoints.length?`Marca un detalle en la imagen y luego el mismo en el mapa (${S.controlPoints.length} parejas guardadas)`:'Haz clic en un detalle reconocible de la plantilla; después marca ese mismo detalle en el mapa';renderControlPointStatus();toast('Marca un detalle de la imagen')};$('clearGeoref').onclick=()=>{if(!S.template)return;S.template.georef=null;S.template.controlPoints=[];S.georef=null;S.controlPoints=S.template.controlPoints;S.awaitingControlPoint=false;S.pendingPixel=null;$('controlPointEditor').hidden=true;renderControlPointStatus();draw();toast('Georreferenciación y puntos de control quitados')};
