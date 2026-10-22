@@ -134,6 +134,8 @@ test('integración: importaciones y candidatos usan el motor, conservando el ori
  assert(html.includes("if(!S.candidates.length)return;"));
  assert(html.includes('id="acceptDetections"'));
  assert(html.includes('id="acceptDetectionsEditable"'));
+ assert(html.includes('curveCount=fresh.filter(f=>f.curve'));
+ assert(html.includes('contornos originales conservados por seguridad'));
 });
 
 test('salida de agua clase 9 del detector anterior puede suavizarse sin perder el hueco',()=>{
