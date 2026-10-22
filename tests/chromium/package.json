@@ -1,0 +1,10 @@
+{
+  "name": "ocarto-chromium-lidar-tests",
+  "private": true,
+  "scripts": {
+    "test:lidar-browser": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}
