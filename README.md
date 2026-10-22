@@ -1,5 +1,20 @@
 # Ocarto — editor cartográfico de orientación
 
+## Nuevo en v282 · Curvas naturales editables y protegidas
+
+- **[Descargar Ocarto v282 completo](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v282-natural-bezier.zip)**.
+- **[Guía de suavizado y revisión de curvas](CURVAS-AUTOMATICAS-v282.md)**.
+
+Sobre la rama avanzada v281 (sin sustituir nada anterior), la versión v282 convierte
+los polígonos de vegetación, agua y claros y los ejes de caminos detectados en
+**curvas Bézier cúbicas editables**. Puedes elegir intensidad baja, media o alta.
+Conserva los agujeros interiores y protege las formas; edificios, ruinas y muros
+conservan esquinas rectas. Si no puede garantizar una curva válida, deja la
+geometría anterior intacta. Pruebas sintéticas superadas, pero aún falta
+confirmar la integración en Chromium y con el LAZ PNOA real.
+
+---
+
 **Editor web avanzado: v281 (detección vectorial desde LAZ y contraste con ortofoto, experimental). Aplicación Windows Flutter: v257.**
 
 ## Nuevo en v281 · Detección vectorial preliminar

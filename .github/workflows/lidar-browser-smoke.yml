@@ -5,6 +5,7 @@ on:
     branches:
       - 'ocarto-v280-chromium-lidar-smoke'
       - 'ocarto-v281-auto-vector-elements'
+      - 'ocarto-v282-natural-bezier'
   workflow_dispatch:
 
 permissions:
