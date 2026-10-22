@@ -1,7 +1,7 @@
 const { defineConfig } = require('@playwright/test');
 const path = require('node:path');
 module.exports = defineConfig({
-  testDir: '../e2e',
+  testDir: '.',
   testMatch: 'lidar-browser.spec.cjs',
   timeout: 90_000,
   expect: { timeout: 35_000 },
