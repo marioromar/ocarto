@@ -1,5 +1,20 @@
 # Ocarto — editor cartográfico de orientación
 
+## Nuevo en v284 · GeoJSON y KMZ de curvas Bézier sin pérdida de coordenadas
+
+- **[Descargar Ocarto v284 completo](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v284-bezier-geojson-fix.zip)**.
+- [Guía: corrección de curvas Bézier al exportar](EXPORTACION-BEZIER-GEOJSON-v284.md).
+
+La v284 continúa sobre la rama avanzada v283 y corrige la exportación del
+inventario y del mapa completo: las **líneas y polígonos Bézier se guardan con
+sus coordenadas georreferenciadas**, incluyendo los **huecos interiores** de
+las superficies naturales. Conserva el editor, sus símbolos, GPS y menús.
+**Ocho pruebas nuevas** comprueban coordenadas UTM, mosaicos LAZ, traslados
+y geometrías antiguas. Falta la comprobación final en Chromium/Windows
+con el LAZ PNOA real.
+
+---
+
 ## Nuevo en v283 · Contornos grandes con curvas y protección topológica
 
 - **[Descargar Ocarto v283 completo](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v283-scalable-natural-curves.zip)**.

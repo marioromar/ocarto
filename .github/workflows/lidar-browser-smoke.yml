@@ -7,6 +7,7 @@ on:
       - 'ocarto-v281-auto-vector-elements'
       - 'ocarto-v282-natural-bezier'
       - 'ocarto-v283-scalable-natural-curves'
+      - 'ocarto-v284-bezier-geojson-fix'
   workflow_dispatch:
 
 permissions:
