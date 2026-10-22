@@ -10,7 +10,8 @@ Esta función se encuentra en el **editor web completo**. No requiere abrir un L
 4. Comprueba que el TIFF se visualiza bien y que el sistema de coordenadas del mapa y de la plantilla coincide. Puedes cambiar de plantilla activa en el panel **Plantillas**.
 5. En el mismo panel pulsa **Vectorizar TIFF / colores → áreas editables**.
 6. Elige **Colores máximos** (inicialmente 6) y el **Área mínima** (35 píxeles de la imagen de trabajo). Si se crean demasiadas motas, aumenta el área mínima.
-7. El programa crea una **capa vectorial independiente** llamada `Vector TIFF · ...`. Las zonas aparecen con sus colores de origen y puedes seleccionar sus polígonos y modificar sus vértices. Los huecos interiores se conservan.
+7. Si el blanco corresponde a **bosque blanco** u otra clase relevante, activa **Incluir áreas blancas**; déjalo desactivado si es solamente el fondo de la imagen.
+8. El programa crea una **capa vectorial independiente** llamada `Vector TIFF · ...`. Las zonas aparecen con sus colores de origen y puedes seleccionar sus polígonos y modificar sus vértices. Los huecos interiores se conservan.
 
 ## Lo que hace realmente
 
