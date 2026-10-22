@@ -1,5 +1,27 @@
 # Ocarto — editor cartográfico de orientación
 
+**Editor web avanzado: v281 (detección vectorial desde LAZ y contraste con ortofoto, experimental). Aplicación Windows Flutter: v257.**
+
+## Nuevo en v281 · Detección vectorial preliminar
+
+- **[Descargar Ocarto v281 completo](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v281-auto-vector-elements.zip)**.
+- [Guía: detectar y revisar edificios, vías, agua y vegetación](PRUEBA-VECTOR-AUTOMATICO-v281.md).
+- [Pruebas automáticas LiDAR](https://github.com/marioromar/ocarto/actions/workflows/lidar-worker.yml).
+
+La v281 se ha creado **sobre v280/v279**, no desde `main` antiguo, y conserva las herramientas anteriores.
+Además de los detectores LiDAR existentes (vegetación, edificios, relieve), añade **ejes candidatos
+de vías clase LAS 11** y **polígonos de agua clase 9**, cuando esos puntos estén clasificados,
+y contrasta los ejes de caminos de la ortofoto con la información LiDAR disponible.
+**Todos son candidatos para revisión: nada se acepta automáticamente.**
+No están validados con el LAZ PNOA real de millones de puntos.
+
+**Abrir en Windows:** descomprime el ZIP, ejecuta `ABRIR-OCARTO.bat` y deja abierto el
+servidor local; no ejecutes directamente `index.html` desde `file://`.
+
+---
+
+## Histórico v279
+
 **Editor profesional web: v279 (basado en v278, vectorización de imágenes LiDAR de altura de vegetación) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
 
 ## Nuevo: imágenes LiDAR de altura de vegetación → áreas editables (v279)

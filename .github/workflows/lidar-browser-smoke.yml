@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'ocarto-v280-chromium-lidar-smoke'
+      - 'ocarto-v281-auto-vector-elements'
   workflow_dispatch:
 
 permissions:
