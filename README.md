@@ -1,5 +1,20 @@
 # Ocarto — editor cartográfico de orientación
 
+## Nuevo en v283 · Contornos grandes con curvas y protección topológica
+
+- **[Descargar Ocarto v283 completo](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v283-scalable-natural-curves.zip)**.
+- [Guía de curvas grandes y pruebas](CURVAS-GRANDES-v283.md).
+
+La v283 continúa la rama v282 y reemplaza la antigua comprobación cuadrática
+por una validación espacial que permite suavizar contornos naturales de **miles
+de vértices** sin renunciar a proteger huecos, curvas existentes ni esquinas
+artificiales. El inventario ahora indica cuántas curvas se generaron y cuántas
+geometrías originales se mantuvieron por seguridad. Se mantiene la regla de no
+revertir nada ya implementado. Esta versión todavía requiere prueba real en
+Chromium con el archivo PNOA del usuario.
+
+---
+
 ## Nuevo en v282 · Curvas naturales editables y protegidas
 
 - **[Descargar Ocarto v282 completo](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v282-natural-bezier.zip)**.
