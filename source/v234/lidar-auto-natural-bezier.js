@@ -1,6 +1,7 @@
-/* Ocarto v282: guarded native cubic Bezier conversion for detected natural shapes.
+/* Ocarto v283: scalable guarded native cubic Bezier conversion for detected natural shapes.
    Never change the source geometry; return the original if the smoothed outline
    self-intersects, crosses a hole, or deviates excessively from sampled data.
+   Large-contour topology is checked through spatial buckets with hard budget caps.
    Building and constructed objects retain explicit straight/corner vertices. */
 (function(root,factory){
  const api=factory();
@@ -97,16 +98,58 @@ function segments(r,closed){
  const edges=[];for(let i=0;i<(closed?r.length:r.length-1);i++)edges.push([r[i],r[(i+1)%r.length]]);
  return edges;
 }
-function selfCrosses(r,closed){
- const edges=segments(r,closed);
- for(let i=0;i<edges.length;i++)for(let j=i+2;j<edges.length;j++){
-  if(closed&&i===0&&j===edges.length-1)continue;
-  if(intersects(...edges[i],...edges[j]))return true;
- }return false;
-}
-function ringCrosses(a,b){
- const ea=segments(a,true),eb=segments(b,true);
- for(const x of ea)for(const y of eb)if(intersects(...x,...y))return true;
+/* Uniform spatial index: compare only segments overlapping nearby spatial buckets.
+   Unlike the former all-pairs check this is usable on long contours with
+   thousands of vertices. Resource guardrails fail closed (preserve polyline).
+   Shared vertices of adjoining segments are deliberately excluded. */
+function spatiallyCrosses(rings,closed){
+ const edges=[];let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+ for(let ringId=0;ringId<rings.length;ringId++){
+   const paths=segments(rings[ringId],closed),size=paths.length;
+   for(let k=0;k<size;k++){
+     const [a,b]=paths[k];if(!Number.isFinite(a.x)||!Number.isFinite(a.y)||
+       !Number.isFinite(b.x)||!Number.isFinite(b.y))return true;
+     const x0=Math.min(a.x,b.x),x1=Math.max(a.x,b.x);
+     const y0=Math.min(a.y,b.y),y1=Math.max(a.y,b.y);
+     minX=Math.min(minX,x0);maxX=Math.max(maxX,x1);
+     minY=Math.min(minY,y0);maxY=Math.max(maxY,y1);
+     if(Math.hypot(a.x-b.x,a.y-b.y)<EPS)return true;
+     edges.push({a,b,ringId,k,size,x0,x1,y0,y1,id:edges.length});
+   }
+ }
+ if(!edges.length||edges.length>100000)return true;
+ const length=Math.max(maxX-minX,maxY-minY);
+ if(!Number.isFinite(length)||length<=EPS)return true;
+ // Ensure boxes that share a boundary fall into a common bucket.
+ const side=Math.max(8,Math.min(512,Math.ceil(Math.sqrt(edges.length))));
+ const cell=length/side;
+ const buckets=new Map(),pairs=new Set();
+ let entries=0,checks=0;
+ for(const edge of edges){
+   const col0=Math.floor((edge.x0-minX)/cell),col1=Math.floor((edge.x1-minX)/cell);
+   const row0=Math.floor((edge.y0-minY)/cell),row1=Math.floor((edge.y1-minY)/cell);
+   const occupied=(col1-col0+1)*(row1-row0+1);
+   if(occupied>50000||entries+occupied>400000)return true; // complex/degenerate extent
+   for(let row=row0;row<=row1;row++)for(let col=col0;col<=col1;col++){
+     const tag=col+','+row;
+     let bucket=buckets.get(tag);
+     if(!bucket){bucket=[];buckets.set(tag,bucket);}
+     for(const id of bucket){
+       const other=edges[id];
+       if(edge.ringId===other.ringId &&
+         (Math.abs(edge.k-other.k)===1||(closed&&
+          ((edge.k===0&&other.k===edge.size-1)||(other.k===0&&edge.k===other.size-1)))))continue;
+       const low=Math.min(id,edge.id),high=Math.max(id,edge.id),
+         pairId=low*edges.length+high;
+       if(pairs.has(pairId))continue;
+       pairs.add(pairId);
+       if(++checks>600000)return true;
+       if(intersects(edge.a,edge.b,other.a,other.b))return true;
+     }
+     bucket.push(edge.id);
+     entries++;
+   }
+ }
  return false;
 }
 function inside(p,ring){
@@ -120,19 +163,25 @@ function inside(p,ring){
 function validShape(geometry,closed,allowedOffset){
  const samples=[],all=closed?[geometry.points,...(geometry.holes||[])]:[geometry.points];
  let totalPoints=0;
+ if(closed&&all.length>128)return false; // Unverified quantity of holes.
  for(const ring of all){
    const f=flatten(ring,closed);totalPoints+=f.sample.length;
-   if(totalPoints>2300)return false; // Explicitly do NOT alter huge/unverified shapes.
+   if(totalPoints>100000)return false; // Limit memory/CPU in browser.
    if(f.deviations.some(d=>d>allowedOffset+EPS))return false;
-   if(selfCrosses(f.sample,closed))return false;
-   if(closed&&Math.abs(signedArea(f.sample))<EPS)return false;
+   if(closed){
+     const oldArea=signedArea(ring),newArea=signedArea(f.sample);
+     if(Math.abs(newArea)<EPS||oldArea*newArea<=0)return false;
+   }
    samples.push(f.sample);
  }
+ // The index checks both intra-ring self-intersections and all crossings
+ // between exterior and hole boundaries, in a single guarded pass.
+ if(spatiallyCrosses(samples,closed))return false;
  if(!closed)return true;
  for(let i=1;i<samples.length;i++){
-   if(!inside(samples[i][0],samples[0])||ringCrosses(samples[0],samples[i]))return false;
-   for(let j=1;j<i;j++)if(ringCrosses(samples[i],samples[j])||
-     inside(samples[i][0],samples[j])||inside(samples[j][0],samples[i]))return false;
+   if(!inside(samples[i][0],samples[0]))return false;
+   for(let j=1;j<i;j++)if(inside(samples[i][0],samples[j])||
+     inside(samples[j][0],samples[i]))return false;
  }
  return true;
 }
