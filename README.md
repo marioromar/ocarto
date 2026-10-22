@@ -1,20 +1,28 @@
 # Ocarto — editor cartográfico de orientación
 
-**Editor profesional web: v275 (interfaz cartográfica y auditoría de bordes LiDAR) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
+**Editor profesional web: v276 (vectorización de colores TIFF/GeoTIFF, GPS y LiDAR) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
 
 ## Descargar la aplicación
 
-- **[Ocarto v275 — ZIP de la rama con GPS y LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v275.zip)**
+- **[Ocarto v276 — ZIP con vectorización de TIFF/GeoTIFF](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v276.zip)**
 - **[Código y versiones de Ocarto](source/v234/index.html)**
 - **[Cambios y comprobaciones OCAD v249](source/v234/OCAD-v249.md)**
 
-**Para probar LiDAR en Windows:** descarga el ZIP de la rama v275, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v275.md).
+**Para probar LiDAR en Windows:** descarga el ZIP de la rama v276, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v275.md).
+
+## Vectorización de TIFF / GeoTIFF y PNG en el editor web v276
+
+El TIFF importado se puede abrir como plantilla y **vectorizar directamente a áreas editables**, sin analizar una nube LAS/LAZ. En **Plantillas → Vectorizar TIFF / colores**, Ocarto reconoce hasta ocho clases de color, transforma sus fronteras en polígonos (incluidos los huecos interiores), aplica las coordenadas de la georreferenciación cuando existen y crea una **capa vectorial nueva**, conservando la imagen original intacta.
+
+Los polígonos se muestran con su color de origen y quedan marcados para revisión. **No se asignan automáticamente códigos IOF**: una tonalidad verde, por ejemplo, no demuestra por sí sola un grado de penetrabilidad. El usuario puede elegir después el símbolo cartográfico correcto. El análisis del color funciona sobre una muestra reducida de la plantilla, con un máximo de 1.200 píxeles por lado; por tanto, es una **primera vectorización aproximada**, no una digitalización de precisión garantizada.
+
+[Instrucciones de vectorización TIFF v276](PRUEBA-RASTER-v276.md) · [Pruebas de polígonos y conservación de huecos](https://github.com/marioromar/ocarto/actions/workflows/lidar-worker.yml)
 
 ## Revisión OCAD 2018
 
 En **Archivo → Revisar símbolos y tintas OCAD…** se puede abrir un archivo de Bobadilla y comprobar en modo **solo lectura** símbolos, colores CMYK y orden provisional de impresión. La auditoría permite descargar un informe JSON, y **no sustituye los símbolos, colores ni las prioridades actuales**. Falta verificar el resultado visualmente contra OCAD 2018 antes de aprobar nuevos predeterminados.
 
-La rama `ocarto-v275` incorpora GPS, mejoras de menús y símbolos, y el procesamiento LiDAR por ventanas en el mismo editor web profesional, sin sustituir sus herramientas. El ZIP enlazado es el archivo de esta misma rama GitHub.
+La rama `ocarto-v276` incorpora GPS, mejoras de menús y símbolos, y el procesamiento LiDAR por ventanas en el mismo editor web profesional, sin sustituir sus herramientas. El ZIP enlazado es el archivo de esta misma rama GitHub.
 
 ## LiDAR v275 · Auditoría de uniones y revisión de la interfaz
 
