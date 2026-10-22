@@ -197,7 +197,10 @@ function terrainBin(grid,x,y,z,cls,i) {
   grid.insert(x,y,(ii,jj)=>({i:ii,j:jj,x:(ii+0.5)*grid.cell,y:(jj+0.5)*grid.cell,z,n:0}),
     p=>{p.n++;if(z<p.z)p.z=z;});
 }
-function vegetationBin(grid,x,y,z,cls) {
+function vegetationBin(grid,x,y,z,cls,allowRoadClass11=true) {
+  // In LAS 1.3 and older, class 11 was reserved; only interpret it as road
+  // when an LAS 1.4 file supplies that standard classification.
+  if(cls===11&&!allowRoadClass11)return;
   if(![2,3,4,5,6,9,11,14,15].includes(cls))return;
   grid.insert(x,y,(ii,jj)=>({i:ii,j:jj,x:(ii+0.5)*grid.cell,y:(jj+0.5)*grid.cell,
     ground_points:0,vegetation_points:0,building_points:0,water_points:0,road_points:0,wire_points:0,tower_points:0,
@@ -238,7 +241,7 @@ async function analysis(type,m) {
         candidates:[...grid.cells.values()].filter(p=>p.n>=minCount).map(p=>[p.x,p.y,p.z])});
     } else if(type==='vegetation') {
       const grid=makeGrid(cell);let classifiedPoints=0;
-      await forPoints(cloud,job,(x,y,z,cls)=>{if([2,3,4,5,6,9,11,14,15].includes(cls)){classifiedPoints++;vegetationBin(grid,x,y,z,cls)}},'vegetation');
+      await forPoints(cloud,job,(x,y,z,cls)=>{if([2,3,4,5,6,9,11,14,15].includes(cls)&&(cls!==11||cloud.meta.minor>=4)){classifiedPoints++;vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4)}},'vegetation');
       send({type:'vegetation',jobId:m.jobId,cellSize:cell,cells:grid.cells.size,classifiedPoints,
         rows:vegetationRows(grid),quality:'preliminar; solo celdas observadas'});
     } else if(type==='feature-map') {
@@ -293,7 +296,7 @@ async function addAreaTile(m) {
       if(!inside(x,y,area.aoi))return;
       used++;addBounds(b,x,y);
       terrainBin(area.terrain,x,y,z,cls,i);
-      vegetationBin(area.vegetation,x,y,z,cls);
+      vegetationBin(area.vegetation,x,y,z,cls,cloud.meta.minor>=4);
     },'area');
     if(used){area.tiles++;area.points+=used;}
     send({type:'area-tile-done',sessionId:m.sessionId,jobId:m.jobId,skipped:used===0,
