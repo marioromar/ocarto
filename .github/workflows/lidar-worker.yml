@@ -14,6 +14,7 @@ on:
       - 'ocarto-v281-auto-vector-elements'
       - 'ocarto-v282-natural-bezier'
       - 'ocarto-v283-scalable-natural-curves'
+      - 'ocarto-v284-bezier-geojson-fix'
   workflow_dispatch:
 
 jobs:
@@ -45,6 +46,8 @@ jobs:
         run: node --test source/v234/tests/lidar-transport-water.test.cjs
       - name: Validate editable natural curves and protected topology
         run: node --test source/v234/tests/lidar-auto-natural-bezier.test.cjs
+      - name: Verify curved GeoJSON export and UTM metadata
+        run: node --test source/v234/tests/lidar-curved-geojson.test.cjs
       - name: Verify offline LAZ dependencies
         run: |
           test -s source/v234/vendor/laz-perf.js
