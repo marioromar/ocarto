@@ -63,6 +63,14 @@ test('respeta alfa transparente y fondo blanco',()=>{
  assert.equal(result.features.length,1);
  assert.equal(result.features[0].pixels,17*17);
 });
+test('puede incluir zonas blancas cuando el usuario las selecciona para vectorizar',()=>{
+ const data=raster(40,32,(x,y)=>
+   (x>=2&&x<18&&y>=2&&y<26)?white:(x>=23&&x<39&&y>=2&&y<26)?green:[0,0,0,0]);
+ const withWhite=v.vectorize(data,40,32,{minPixels:30,ignoreWhite:false,maxClasses:2,tolerance:0});
+ assert.equal(withWhite.features.length,2);
+ const withoutWhite=v.vectorize(data,40,32,{minPixels:30,maxClasses:2,tolerance:0});
+ assert.equal(withoutWhite.features.length,1);
+});
 test('descarta motas de color por debajo de área mínima',()=>{
  const data=raster(50,30,(x,y)=>
     (x>=2&&x<22&&y>=2&&y<22)||(x>=36&&x<39&&y>=25&&y<28)
@@ -79,6 +87,8 @@ test('la interfaz abre TIFF en plantilla y ofrece vectorización independiente d
  const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
  assert(html.includes('<script src="raster-color-vectorizer.js"></script>'));
  assert(html.includes('id="vectorizeTemplateRaster"'));
+ assert(html.includes('id="rasterVecIncludeWhite"'));
+ assert(html.includes("ignoreWhite:!$('rasterVecIncludeWhite').checked"));
  assert(html.includes("'vectorizeTemplateRaster').onclick=async()=>"));
  assert(html.includes('OcartoRasterVector.vectorize('));
  assert(html.includes('layerId=mapLayer.id'));
