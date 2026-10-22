@@ -6,6 +6,7 @@ on:
       - 'ocarto-v280-chromium-lidar-smoke'
       - 'ocarto-v281-auto-vector-elements'
       - 'ocarto-v282-natural-bezier'
+      - 'ocarto-v283-scalable-natural-curves'
   workflow_dispatch:
 
 permissions:
