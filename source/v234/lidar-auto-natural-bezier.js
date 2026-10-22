@@ -121,7 +121,7 @@ function spatiallyCrosses(rings,closed){
  const length=Math.max(maxX-minX,maxY-minY);
  if(!Number.isFinite(length)||length<=EPS)return true;
  // Ensure boxes that share a boundary fall into a common bucket.
- const side=Math.max(8,Math.min(512,Math.ceil(Math.sqrt(edges.length))));
+ const side=Math.max(8,Math.min(2048,Math.ceil(Math.sqrt(edges.length)*5)));
  const cell=length/side;
  const buckets=new Map(),pairs=new Set();
  let entries=0,checks=0;
