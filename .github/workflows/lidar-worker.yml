@@ -12,6 +12,7 @@ on:
       - 'ocarto-v275'
       - 'ocarto-v279-vegetation-height-vector'
       - 'ocarto-v281-auto-vector-elements'
+      - 'ocarto-v282-natural-bezier'
   workflow_dispatch:
 
 jobs:
@@ -34,12 +35,15 @@ jobs:
           node --check source/v234/lidar-height-image-vector.js
           node --check source/v234/lidar-transport-water.js
           node --check source/v234/lidar-ortho-fusion.js
+          node --check source/v234/lidar-auto-natural-bezier.js
       - name: Test real LAS / LAZ decoder
         run: node --test source/v234/tests/lidar-worker.test.cjs source/v234/tests/lidar-reader-integration.test.cjs source/v234/tests/lidar-tiling.test.cjs source/v234/tests/lidar-export.test.cjs source/v234/tests/lidar-source-index.test.cjs source/v234/tests/lidar-seams.test.cjs source/v234/tests/lidar-mdt-audit.test.cjs
       - name: Vectorize PNG vegetation height raster tests
         run: node --test source/v234/tests/lidar-height-image-vector.test.cjs
       - name: Vector roads and water + LiDAR/orthophoto regression tests
         run: node --test source/v234/tests/lidar-transport-water.test.cjs
+      - name: Validate editable natural curves and protected topology
+        run: node --test source/v234/tests/lidar-auto-natural-bezier.test.cjs
       - name: Verify offline LAZ dependencies
         run: |
           test -s source/v234/vendor/laz-perf.js
