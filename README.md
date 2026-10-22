@@ -1,6 +1,18 @@
 # Ocarto — editor cartográfico de orientación
 
-**Editor profesional web: v275 (interfaz cartográfica y auditoría de bordes LiDAR) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
+**Editor profesional web: v279 (basado en v278, vectorización de imágenes LiDAR de altura de vegetación) · Aplicación Windows Flutter: v257.** Ambas aplicaciones permanecen en este mismo repositorio Ocarto; Windows sigue en desarrollo y todavía no integra todas las herramientas del editor web.
+
+## Nuevo: imágenes LiDAR de altura de vegetación → áreas editables (v279)
+
+En el menú **LiDAR e IA → Vectorizar imagen LiDAR de altura de vegetación · PNG + PGW** ahora puedes importar una imagen de altura coloreada y su worldfile, convertir sus cuatro bandas configurables de altura en polígonos georreferenciados, **conservar claros y huecos interiores**, exportar GeoJSON e incorporar voluntariamente las superficies al mapa como objetos editables. No se cambian las plantillas, botones, símbolos ni proyectos anteriores.
+
+El resultado es una **propuesta vectorial basada en colores de altura**, no una determinación automática de penetrabilidad ni un mapa IOF aprobado. Los símbolos de vegetación definitivos deben revisarse y asignarse con los ejemplos y el PDF reglamentario.
+
+- [Guía paso a paso de la vectorización](VECTOR-ALTURA-VEGETACION-v279.md)
+- [Código y descarga de la misma rama GitHub v279](https://github.com/marioromar/ocarto/tree/ocarto-v279-vegetation-height-vector)
+- [Pruebas LiDAR, vectorización e inicio de Windows](https://github.com/marioromar/ocarto/actions/workflows/lidar-worker.yml)
+
+**Versión base:** `ocarto-v278-pnoa-lidar-sources`, la rama más reciente encontrada previamente. La v279 añade esta función sin restaurar la antigua v275.
 
 ## Probar la vista preliminar v276 (símbolos y Bézier)
 
@@ -12,11 +24,11 @@ El ZIP es un artefacto de prueba de la rama `fix/symbols-v275`, no una versión 
 
 ## Descargar la aplicación
 
-- **[Ocarto v275 — ZIP de la rama con GPS y LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v275.zip)**
+- **[Ocarto v279 — ZIP completo con vectorización de altura LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v279-vegetation-height-vector.zip)**
 - **[Código y versiones de Ocarto](source/v234/index.html)**
 - **[Cambios y comprobaciones OCAD v249](source/v234/OCAD-v249.md)**
 
-**Para probar LiDAR en Windows:** descarga el ZIP de la rama v275, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [comprobaciones paso a paso](PRUEBA-LIDAR-v275.md).
+**Para probar LiDAR en Windows:** descarga el ZIP de la rama v279, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [guía de vectorización de altura de vegetación](VECTOR-ALTURA-VEGETACION-v279.md).
 
 ## Revisión OCAD 2018
 
