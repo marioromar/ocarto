@@ -73,15 +73,53 @@ test('mantiene vértices marcados como esquina y curvas preexistentes',()=>{
  assert.equal(auto.apply(existing),existing);
 });
 
-test('un polígono complejo no se suaviza si hay riesgo o no cabe validar',()=>{
- const r=[];
- for(let i=0;i<500;i++){const a=2*Math.PI*i/500;r.push({x:50+35*Math.cos(a),y:50+35*Math.sin(a)})}
- const f=area(r,{holes:[rectangle(45,45,6,6)]});
+test('regresión v283: un contorno de 3.000 vértices conserva huecos y se curva',()=>{
+ const circle=(n,r,x=0,y=0)=>Array.from({length:n},(_,i)=>{
+  const a=2*Math.PI*i/n;return{x:x+r*Math.cos(a),y:y+r*Math.sin(a)};
+ });
+ const outline=circle(3000,150);
+ const f=area(outline,{holes:[circle(96,12)],candidateKind:'agua-superficie-candidata-clase9-lidar'});
+ const before=JSON.stringify(f);
+ const out=auto.apply(f,{level:'medium',gridSizeLocal:1});
+ assert.equal(out.curve,'bezier','Los polígonos grandes ya no deben rechazarse por el límite antiguo de 2300 puntos muestreados');
+ assert.equal(out.holes.length,1);
+ assert.equal(out.points.length,3000);
+ assert(out.autoCurveValidated);
+ assert.equal(JSON.stringify(f),before,'El original no puede sufrir mutaciones');
+});
+
+test('un polígono natural muy extenso se puede curvar sin comprobación cuadrática',()=>{
+ const n=8000,r=200,points=Array.from({length:n},(_,i)=>({
+  x:r*Math.cos(2*Math.PI*i/n),y:r*Math.sin(2*Math.PI*i/n)
+ }));
+ const f=area(points);
+ const out=auto.apply(f,{level:'low',gridSizeLocal:1});
+ assert.equal(out.curve,'bezier','Los contornos extensos necesitan validación espacial');
+ assert.equal(out.points.length,n);
+ assert(out.points.some(p=>p.tangent));
+});
+
+test('geometría excesivamente grande mantiene el trazado original y sus huecos',()=>{
+ const n=18000,r=200,points=Array.from({length:n},(_,i)=>({
+  x:r*Math.cos(2*Math.PI*i/n),y:r*Math.sin(2*Math.PI*i/n)
+ }));
+ const f=area(points,{holes:[rectangle(45,45,6,6)]});
  const out=auto.apply(f,{level:'high',gridSizeLocal:1});
- assert(!out.curve,'Se conserva la polilínea original cuando excede el límite de validación');
+ assert(!out.curve,'Si rebasa el presupuesto seguro se deja la forma original');
  assert(out.autoCurveWarning);
  assert.equal(out.points.length,f.points.length);
  assert.equal(out.holes.length,1);
+});
+
+test('polígono autointersecado y hueco fuera del contorno no se aprueban',()=>{
+ const crossing=area([{x:0,y:0},{x:10,y:10},{x:0,y:10},{x:10,y:0}]);
+ const out=auto.apply(crossing,{level:'medium',gridSizeLocal:1});
+ assert(!out.curve);
+ assert(out.autoCurveWarning);
+ const badHole=area(rectangle(0,0,12,12),{holes:[rectangle(20,20,4,4)]});
+ const outHole=auto.apply(badHole,{level:'medium',gridSizeLocal:1});
+ assert(!outHole.curve);
+ assert.equal(outHole.holes.length,1);
 });
 
 test('integración: importaciones y candidatos usan el motor, conservando el original',()=>{
