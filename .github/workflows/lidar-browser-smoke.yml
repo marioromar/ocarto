@@ -1,0 +1,41 @@
+name: Ocarto Chromium LiDAR real UI smoke
+
+on:
+  push:
+    branches:
+      - 'ocarto-v280-chromium-lidar-smoke'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-lidar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: tests/chromium
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install isolated browser dependencies (not Electron)
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium and native browser dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Verify Ocarto GUI and real LAS/LAZ import
+        run: npm run test:lidar-browser
+      - name: Save screenshots and traces on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ocarto-lidar-chromium-diagnostics
+          path: |
+            tests/chromium/playwright-report/
+            tests/chromium/test-results/
+          if-no-files-found: ignore
