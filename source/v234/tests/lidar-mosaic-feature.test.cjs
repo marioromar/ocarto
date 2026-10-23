@@ -132,3 +132,34 @@ test('une ambas teselas Feature Map en UNA imagen PNG sin perder el encaje PGW',
  });
  assert.equal(skip,null,'Las áreas demasiado grandes se quedan con el VRT');
 });
+
+
+test('Feature Map conjunto mantiene obstáculo de 1m bajo copa de 8m',()=>{
+ const mixed=[
+  {x:384000.25,y:4114000.25,ground_height_source:'observed',
+   vegetation_points:4,other_points:1,
+   canopy_max_above_ground_m:8,
+   feature_max_above_ground_m:8,feature_min_above_ground_m:1},
+  {x:384000.75,y:4114000.25,ground_height_source:'observed',
+   vegetation_points:1,other_points:1,
+   feature_max_above_ground_m:8,feature_min_above_ground_m:.5},
+  {x:384001.25,y:4114000.25,ground_height_source:'observed',
+   vegetation_points:2,other_points:0,
+   feature_max_above_ground_m:8,feature_min_above_ground_m:8}
+ ];
+ const result=feature.buildCells(mixed,.5,0,2);
+ assert.deepEqual(result.cells.height,[1,.5]);
+ assert.equal(result.summary.selectedCells,2);
+ assert.equal(result.summary.excludedByHeight,1);
+ assert.equal(result.summary.measuredGroundCells,2);
+ assert.match(result.summary.limits,/máximos y mínimos/);
+});
+test('Feature Map no inventa retornos intermedios cuando ninguno de los extremos está en la franja',()=>{
+ const data=[{x:384000.25,y:4114000.25,ground_height_source:'observed',
+   vegetation_points:1,other_points:1,
+   feature_max_above_ground_m:8,feature_min_above_ground_m:.5}];
+ const result=feature.buildCells(data,.5,3,5);
+ assert.equal(result.summary.selectedCells,0);
+ assert.equal(result.summary.excludedByHeight,1);
+ assert(!result.cells.height.length);
+});
