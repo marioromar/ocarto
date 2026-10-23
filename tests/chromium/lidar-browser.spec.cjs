@@ -35,3 +35,18 @@ for (const extension of ['las', 'laz']) {
     await expect(page.locator('#terrainBtn')).toBeEnabled();
   });
 }
+
+
+test('v285: selección de tres capas visible y no destructiva sin mapa georreferenciado', async ({ page }) => {
+  await page.goto('/index.html');
+  for(const id of ['vegReviewedPanel','vegReviewedFiles','vegReviewedDark',
+    'vegReviewedHatch','vegReviewedYellow','vegReviewedImport','vegReviewedStatus'])
+    await expect(page.locator('#'+id)).toHaveCount(1);
+  const before=await page.locator('#featureCount').textContent();
+  await page.evaluate(()=>{
+    document.getElementById('vegReviewedYellow').checked=false;
+    document.getElementById('vegReviewedImport').click();
+  });
+  await expect(page.locator('#vegReviewedStatus')).toContainText('No se importó ningún cambio');
+  await expect(page.locator('#featureCount')).toHaveText(before);
+});
