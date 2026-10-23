@@ -42,6 +42,8 @@ jobs:
           node --check source/v234/lidar-auto-natural-bezier.js
       - name: Test real LAS / LAZ decoder
         run: node --test source/v234/tests/lidar-worker.test.cjs source/v234/tests/lidar-reader-integration.test.cjs source/v234/tests/lidar-tiling.test.cjs source/v234/tests/lidar-export.test.cjs source/v234/tests/lidar-source-index.test.cjs source/v234/tests/lidar-seams.test.cjs source/v234/tests/lidar-mdt-audit.test.cjs
+      - name: LAS/LAZ reader fallback and truncation tests
+        run: node --test source/v234/tests/lidar-stream-fallback.test.cjs
       - name: Vectorize PNG vegetation height raster tests
         run: node --test source/v234/tests/lidar-height-image-vector.test.cjs
       - name: Validate selective vegetation GeoJSON layers
