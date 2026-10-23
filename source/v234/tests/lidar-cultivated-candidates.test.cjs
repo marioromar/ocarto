@@ -257,3 +257,54 @@ test('integración real: GeoJSON amarillo a inventario georreferenciado con huec
  assert.equal(c.candidateProperties.crop_confirmed,false);
  assert.equal(JSON.stringify(fc),snapshot,'La entrada GeoJSON debe permanecer intacta');
 });
+
+test('muestra píxeles de ortofoto alineados con LiDAR al reducir tamaño y con afín rotado',()=>{
+ const html=fs.readFileSync(path.join(base,'index.html'),'utf8');
+ const begin=html.indexOf('function vegetationRowsBounds(rows)');
+ const end=html.indexOf('\n  function vegetationOrthoTemplate()',begin);
+ assert(begin>=0&&end>begin,'Falta la transformación de ortofoto');
+ const source=html.slice(begin,end);
+ const cases=[
+  {w:4800,h:2400,px:3000,py:1400,g:{a:1,b:.2,c:500000,d:.1,e:-1,f:4100000}},
+  {w:1800,h:900,px:1400,py:650,g:{a:1,b:0,c:500000,d:0,e:-1,f:4100000}},
+  {w:4400,h:2101,px:3100,py:1300,g:{a:.5,b:-.1,c:500000,d:.15,e:-.5,f:4100000}}
+ ];
+ for(const {w,h,px,py,g} of cases){
+  const ratio=Math.min(1,2400/Math.max(w,h));
+  const width=Math.max(1,Math.round(w*ratio)),height=Math.max(1,Math.round(h*ratio));
+  const row={x:g.a*px+g.b*py+g.c,y:g.d*px+g.e*py+g.f};
+  // Generador de píxeles virtual: no reserva decenas de MB ni necesita navegador.
+  const data=new Proxy({}, {get(_obj,k){
+   const n=Number(k);if(!Number.isInteger(n))return undefined;
+   const p=Math.floor(n/4),x=p%width,y=Math.floor(p/width),channel=n%4;
+   return channel===3?255:channel===0?(x>=width/2?240:30):
+    channel===1?(y>=height/2?200:15):5;
+  }});
+  let draws=0;
+  const sandbox={
+   vegetationRows:[row],
+   normalizeCrsName:x=>x,
+   $:()=>({value:'EPSG:25830'}),
+   S:{templates:[{id:'orto',source:'local',crs:'EPSG:25830',
+    vegetationRole:'orthophoto',img:{width:w,height:h},georef:g}]},
+   reusableVegetationImageModel:{templateId:'orto'},
+   vegetationOrthoTemplate:()=>null,
+   vegetationOrthoSampleCache:null,
+   document:{createElement:()=>({getContext:()=>({
+    drawImage(){draws++},
+    getImageData:()=>({data})
+   })})}
+  };
+  const sample=vm.runInNewContext('(function(){'+source+
+   '\nreturn vegetationRowsWithOrtho;})()',sandbox);
+  const result=sample([row]);
+  assert.equal(draws,1,'La ortofoto debe rasterizarse para muestreo');
+  assert.equal(result.length,1);
+  assert.equal(result[0].ortho_r,240,
+   'X muestreada incorrectamente para '+w+'x'+h);
+  assert.equal(result[0].ortho_g,200,
+   'Y muestreada incorrectamente para '+w+'x'+h);
+  assert.equal(result[0].ortho_b,5);
+  assert.equal(row.ortho_r,undefined,'La celda LiDAR fuente debe quedar intacta');
+ }
+});
