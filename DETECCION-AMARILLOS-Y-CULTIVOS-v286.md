@@ -44,6 +44,14 @@ En **LiDAR e IA → Claros y arbolado alto** se añade **«Detectar y vectorizar
 **Comprobación directa:** 4 casos sintéticos superados (suelo medido, suelo cercano, falta de soporte y desnivel incompatible). Se añadieron pruebas a `source/v234/tests/lidar-worker.test.cjs`. La prueba con el LAZ real de Bobadilla sigue pendiente; **no confundir estas comprobaciones con validación completa en Windows**.
 
 
+## Ensayos de compatibilidad LAZ PNOA y generación de modelos (23-10-2026)
+
+- **Prueba de formato PNOA:** archivo LAS 1.4 **formato 8 artificial**, ocho puntos, rejilla de 0,5 m; comprueba recuentos, clasificación 2 suelo / 5 vegetación / 6 edificio / 9 agua / 11 carretera, suelo interpolado de cuatro celdas vecinas, altura de copa de 8 m y Feature Map con una celda estimada, sin alterar el suelo medido.
+- **Prueba de compresión real:** archivo de ensayo `1815.laz` del repositorio, decodificado con `laz-perf.wasm`; se pasa de carga por bloques a análisis MDT y vegetación. Como no contiene retornos de vegetación, el Feature Map **se rechaza** en vez de inventar alturas.
+- Las pruebas se ejecutan en `source/v234/tests/lidar-worker.test.cjs` y `source/v234/tests/lidar-reader-integration.test.cjs` mediante el flujo **Ocarto LiDAR smoke tests**. El flujo Chromium revisa importación e interfaz, no garantiza que cada funcionalidad cartográfica esté terminada.
+- Los tres LAZ PNOA aportados por el usuario (7,6 + 10,9 + 11,3 millones de puntos) **no se han procesado punto a punto en esta validación**. El mapa de alturas RGB conservado del TIFF anterior **no es** un modelo de alturas cuantitativo recién calculado; las curvas de nivel reales y el Feature Map de esas teselas **siguen pendientes**.
+- Evitar cualquier etiqueta de «curvado generado», «Feature Map real calculado» o «símbolo impasable confirmado» hasta que existan las salidas reales con trazabilidad de datos y revisión de campo.
+
 ## Pruebas
 
 `node --test source/v234/tests/lidar-cultivated-candidates.test.cjs`
