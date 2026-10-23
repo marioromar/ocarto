@@ -141,6 +141,6 @@ test('la interfaz ejecuta unión automáticamente sin cargar todo el mosaico en 
  assert(html.includes("OcartoLidarMosaicExport.appendCsv("));
  assert(html.includes("OcartoLidarMosaicExport.writeVrt("));
  assert(html.includes("OcartoLidarSeams.exportTile(folder,manifest,tile,"));
- assert(html.includes("manifest.mosaic.state='complete'"));
+ assert(html.includes("manifest.mosaic.state=manifest.mosaic.outputs.vector?'complete':'partial'"),'No dar el mosaico por completo si falla la vectorización de clases');
  assert(html.includes('heightRaster={...saved,bounds:grid.bounds'));
 });
