@@ -202,6 +202,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <script src="lidar-tile-export.js"></script>
 <script src="lidar-mosaic-export.js"></script>
 <script src="lidar-mosaic-feature.js"></script>
+<script src="lidar-mosaic-vector.js"></script>
 <script src="lidar-mosaic-contours.js"></script>
 <script src="lidar-tile-seams.js"></script>
 <script src="lidar-mdt-audit.js"></script>
@@ -951,11 +952,33 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
               ' bloques · '+p.lines.toLocaleString('es-ES')+' líneas';
           }
         });
-      manifest.mosaic.state='complete';
+      // Un único polígono de análisis para ambos LAZ: vectorizar el CSV
+      // georreferenciado conjunto, no imágenes TIFF ni PNG de terceros.
+      // Si excede el límite conservador de memoria, no inventar resultados.
+      try{
+        $('tiledAreaStatus').textContent='Vectorizando las tres clases candidatas de la zona completa desde LAS/LAZ…';
+        manifest.mosaic.outputs.vector=await OcartoLidarMosaicVector.exportGeojson(
+          folder,manifest,{
+            onProgress:p=>{
+              if(p.rows)$('tiledAreaStatus').textContent='Clasificando '+p.rows.toLocaleString('es-ES')+
+                ' celdas LiDAR de la zona completa';
+            },
+            signal:null
+          });
+        manifest.mosaic.vectorization={state:'complete',reviewRequired:true,
+          confirmedCartographicSymbols:false};
+      }catch(error){
+        if(tiledAreaStopped||error.name==='AbortError')throw error;
+        manifest.mosaic.vectorization={state:'error',error:error.message};
+        manifest.warnings.push('Vectorización de zona conjunta pendiente: '+error.message+
+          '. Suelo/alturas/Feature Map y curvado preliminar guardados.');
+      }
+      manifest.mosaic.state=manifest.mosaic.outputs.vector?'complete':'partial';
       await writeTiledManifest(folder,manifest);
-      $('tiledAreaStatus').textContent='Zona completa LiDAR terminada: '+files.length+
-        ' LAZ/LAS · '+plan.total+' bloques internos · un MDT y un mosaico de alturas'+
-        ' (archivos zona_completa_...). Feature Map sombreado de retornos y curvado preliminar disponibles; vectorización de clases aún pendiente.';
+      $('tiledAreaStatus').textContent='Zona LiDAR procesada: '+files.length+
+        ' LAZ/LAS juntos · MDT, alturas y Feature Map en mosaico'+
+        ' · curvado GeoJSON y '+(manifest.mosaic.outputs.vector?
+          '3 clases vectoriales candidatas revisables':'vectorización pendiente; revisar manifest.json');
       toast('Mosaico LiDAR de zona completa generado; abre los archivos zona_completa_... en tu visor GIS.');
       return manifest;
     }catch(err){
