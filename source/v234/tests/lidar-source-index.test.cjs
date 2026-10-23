@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const {parseBounds,indexFiles,forWindow,intersects,unionBounds,connectedUnionBounds,envelopeAoi,needsTiling}=require('../lidar-source-index.js');
+const {parseBounds,indexFiles,parseCrs,readCrs,forWindow,intersects,unionBounds,connectedUnionBounds,envelopeAoi,needsTiling}=require('../lidar-source-index.js');
 const plan=require('../lidar-tile-plan.js').plan;
 const fixtures=path.join(__dirname,'fixtures');
 function fromFixture(name){
@@ -220,4 +220,47 @@ test('la franja halo del mosaico incluye el segundo LAZ contiguo en la frontera'
  const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
  assert(html.includes('haloMetres:2'));
  assert(html.includes('forWindow(sourceIndex,haloWindow)'));
+});
+
+function syntheticPnoaGeokey(epsg=25830){
+ const bytes=new Uint8Array(545),d=new DataView(bytes.buffer);
+ bytes.set([76,65,83,70]); // LASF
+ d.setUint8(24,1);d.setUint8(25,4);
+ d.setUint16(94,375,true);d.setUint32(96,545,true);
+ d.setUint32(100,2,true);
+ d.setFloat64(179,385000,true);d.setFloat64(187,384000,true);
+ d.setFloat64(195,4115000,true);d.setFloat64(203,4114000,true);
+ for(const [i,ch] of [...'LASF_Projection'].entries())bytes[377+i]=ch.charCodeAt(0);
+ d.setUint16(375+18,34735,true);
+ d.setUint16(375+20,16,true);
+ for(const [i,value] of [1,1,0,1,3072,0,1,epsg].entries())
+  d.setUint16(375+54+i*2,value,true);
+ for(const [i,ch] of [...'laszip encoded'].entries())bytes[447+i]=ch.charCodeAt(0);
+ d.setUint16(445+18,22204,true);d.setUint16(445+20,46,true);
+ return bytes;
+}
+test('detecta de la cabecera LAS/LAZ PNOA el EPSG:25830 sin descomprimir puntos',async()=>{
+ const data=syntheticPnoaGeokey();
+ assert.equal(parseCrs(data.buffer),'EPSG:25830');
+ const file=new Blob([data]);
+ assert.equal(await readCrs(file),'EPSG:25830');
+ assert.equal(parseBounds(data.buffer).minX,384000);
+});
+test('bloquea EPSG incorrectos de teselas distintas y no inventa CRS ausente',async()=>{
+ const a=syntheticPnoaGeokey(25830),b=syntheticPnoaGeokey(32630);
+ assert.equal(parseCrs(a.buffer),'EPSG:25830');
+ assert.equal(parseCrs(b.buffer),'EPSG:32630');
+ assert.equal(await readCrs(new Blob([a])),'EPSG:25830');
+ const noCrs=syntheticPnoaGeokey();
+ new DataView(noCrs.buffer).setUint32(100,0,true);
+ assert.equal(parseCrs(noCrs.buffer),null);
+ const truncated=a.slice(0,444);
+ assert.equal(parseCrs(truncated.buffer),null);
+});
+test('Ocarto contrasta EPSG real de todos los LAZ antes de crear resultados',()=>{
+ const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ assert(html.includes('OcartoLidarSourceIndex.readCrs(f)'));
+ assert(html.includes('Los LAS/LAZ seleccionados declaran sistemas EPSG diferentes'));
+ assert(html.includes('. Corrige el EPSG antes de procesar; no se reproyectan puntos automáticamente.'));
+ assert(html.includes('crsDeclared:sourceCrs[i]'));
 });
