@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const {parseBounds,indexFiles,forWindow,intersects,unionBounds,envelopeAoi,needsTiling}=require('../lidar-source-index.js');
+const {parseBounds,indexFiles,forWindow,intersects,unionBounds,connectedUnionBounds,envelopeAoi,needsTiling}=require('../lidar-source-index.js');
 const plan=require('../lidar-tile-plan.js').plan;
 const fixtures=path.join(__dirname,'fixtures');
 function fromFixture(name){
@@ -128,4 +128,59 @@ test('mosaico pequeño conserva flujo habitual y no se autoriza área con cabece
  assert.equal(unionBounds([{verified:true,bounds:b},{verified:false,bounds:null}]),null);
  assert.equal(unionBounds([]),null);
  assert.equal(envelopeAoi(null),null);
+});
+
+test('unión automática de las dos teselas PNOA 384 y 385 contiguas',async()=>{
+ const tiles=[
+  synthetic('PNOA_2024_AND_384-4115_H30_NPC01.laz',
+   {minX:384000,maxX:385000,minY:4114000,maxY:4115000}),
+  synthetic('PNOA_2024_AND_385-4115_H30_NPC01.laz',
+   {minX:385000,maxX:386000,minY:4114000,maxY:4115000})
+ ];
+ const entries=await indexFiles(tiles);
+ assert.deepEqual(connectedUnionBounds(entries),
+  {minX:384000,maxX:386000,minY:4114000,maxY:4115000});
+ const aoi=envelopeAoi(connectedUnionBounds(entries));
+ const grid=plan(aoi.bounds,.5,.5);
+ assert(grid.total>2);
+ assert.equal(grid.tiles.length,grid.total);
+ const chosen=grid.tiles.reduce((sum,t)=>sum+forWindow(entries,t.window).selected.length,0);
+ assert(chosen>=grid.total && chosen<=grid.total*2);
+ assert(grid.tiles.every(t=>t.window.maxX-t.window.minX<1000));
+});
+test('muchas teselas contiguas se unen sin perder superficie ni duplicar geometría',async()=>{
+ const files=[];
+ for(let j=0;j<4;j++)for(let i=0;i<5;i++)
+  files.push(synthetic('PNOA_'+i+'_'+j+'.laz',{
+   minX:384000+i*1000,maxX:385000+i*1000,
+   minY:4114000+j*1000,maxY:4115000+j*1000}));
+ const entries=await indexFiles(files);
+ const b=connectedUnionBounds(entries);
+ assert.deepEqual(b,{minX:384000,maxX:389000,minY:4114000,maxY:4118000});
+ assert(needsTiling(b,.5,1));
+ const plan20=plan(b,.5,1);
+ assert(plan20.total>20 && plan20.total<512);
+ const allWindowsArea=plan20.tiles.reduce((sum,x)=>sum+
+  (x.window.maxX-x.window.minX)*(x.window.maxY-x.window.minY),0);
+ assert(Math.abs(allWindowsArea-20e6)<.01);
+});
+test('nunca extender automáticamente un mosaico hacia un LAZ remoto o corrupto',async()=>{
+ const files=[
+  synthetic('bobadilla.laz',{minX:384000,maxX:385000,minY:4114000,maxY:4115000}),
+  synthetic('remoto.laz',{minX:279000,maxX:280000,minY:4084000,maxY:4085000})
+ ];
+ const b=await indexFiles(files);
+ assert.equal(connectedUnionBounds(b),null);
+ const broken={file:files[0],bounds:null,verified:false};
+ assert.equal(connectedUnionBounds([b[0],broken]),null);
+ assert.equal(connectedUnionBounds([]),null);
+});
+test('la interfaz enruta importación de muchos LAZ grandes al planificador y confirma EPSG',()=>{
+ const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+ assert(html.includes("if(OcartoLidarSourceIndex.needsTiling(b,terrainCell,vegCell))"));
+ assert(html.includes("tiledSelectedFiles=files;"));
+ assert(html.includes("const inferredBounds=selectedAoi?null:OcartoLidarSourceIndex.connectedUnionBounds(sourceIndex)"));
+ assert(html.includes("if(!selectedAoi&&!$('tiledAreaConfirmCrs').checked)"));
+ assert(html.includes("id=\"tiledAreaConfirmCrs\""));
+ assert(!html.includes("if(!currentLidarPolygon())throw Error('Selecciona primero un polígono del mapa')"));
 });
