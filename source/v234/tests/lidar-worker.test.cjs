@@ -511,3 +511,48 @@ test('halo LiDAR de 2m recupera suelo vecino sin exportar celdas ni puntos dupli
  assert.equal(withHalo.vegetationRows[0].ground_height_source,'nearby_estimate');
  assert.equal(withHalo.vegetationRows[0].feature_max_above_ground_m,8);
 });
+
+
+function syntheticPnoaWithUnderstorey(){
+ // Añadir a la misma celda de la copa de 8 m un retorno LAS 1.4 clase 1
+ // a solo 1 m del suelo. No convertirlo en vegetación: sirve al Feature Map.
+ const base=syntheticPnoa14Format8(),bytes=new Uint8Array(base.length+38);
+ bytes.set(base);
+ const dv=new DataView(bytes.buffer),pos=base.length;
+ dv.setBigUint64(247,9n,true);
+ dv.setInt32(pos,750,true);dv.setInt32(pos+4,750,true);
+ dv.setInt32(pos+8,1000,true);
+ dv.setUint8(pos+14,1);dv.setUint8(pos+16,1);
+ return bytes;
+}
+test('Feature Map 0-2m detecta un retorno bajo aun cuando hay copa de 8m en la misma celda',async()=>{
+ const worker=makeWorker();
+ const raw=syntheticPnoaWithUnderstorey();
+ await worker.loadBytes(raw);
+ await worker.send({type:'feature-map',jobId:1801,options:{cell:.5,minHeight:0,maxHeight:2}});
+ const f=worker.messages.findLast(m=>m.jobId===1801);
+ assert.equal(f.type,'feature-map',JSON.stringify(f));
+ const i=Math.round((384000+.75)/.5-.5),j=Math.round((4114000+.75)/.5-.5);
+ const p=f.cells.i.findIndex((x,k)=>x===i&&f.cells.j[k]===j);
+ assert(p>=0,'Una copa alta no debe ocultar un elemento bajo de la misma celda');
+ assert.equal(f.cells.height[p],1);
+});
+test('mosaico LiDAR conserva extremos bajo y alto por separado sin falsear la altura de vegetación',async()=>{
+ const worker=makeWorker(),sessionId=1840;
+ await worker.send({type:'area-start',sessionId,terrainCell:.5,vegetationCell:.5,
+  window:{minX:384000,maxX:384002,minY:4114000,maxY:4114002},
+  haloMetres:0});
+ assert.equal(worker.messages.at(-1).type,'area-ready');
+ await worker.loadBytes(syntheticPnoaWithUnderstorey(),sessionId);
+ await worker.send({type:'area-add',sessionId,jobId:1841});
+ await worker.send({type:'area-finish',sessionId,jobId:1842});
+ const area=worker.messages.findLast(m=>m.jobId===1842);
+ assert.equal(area.type,'area-finished',JSON.stringify(area));
+ const cell=area.vegetationRows.find(r=>r.vegetation_points&&r.other_points);
+ assert(cell);
+ assert.equal(cell.canopy_max_above_ground_m,8,
+  'La altura de vegetación sigue usando exclusivamente retornos de vegetación');
+ assert.equal(cell.feature_max_above_ground_m,8);
+ assert.equal(cell.feature_min_above_ground_m,1);
+ assert.equal(cell.other_points,1);
+});
