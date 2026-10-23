@@ -153,3 +153,37 @@ test('mosaico no descarta tesela LAS si su cabecera intersecta el área',async()
  assert.equal(b.queued.filter(x=>x==='load-chunk').length,
    Math.ceil(fixture.size/128));
 });
+
+async function runAnalysisViaBridge(bridge,type,jobId,options={}) {
+ return await new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>{
+     bridge.worker.removeEventListener('message',listener);
+     reject(Error('Tiempo de espera agotado en análisis '+type));
+   },30000);
+   const listener=({data})=>{
+     if(data.jobId!==jobId || (data.type!==type&&data.type!=='error'))return;
+     clearTimeout(timer);
+     bridge.worker.removeEventListener('message',listener);
+     resolve(data);
+   };
+   bridge.worker.addEventListener('message',listener);
+   bridge.worker.postMessage({type,jobId,options});
+ });
+}
+test('LAZ real pasa de lector a MDT y vegetación sin inventar alturas ausentes',async()=>{
+ const loaded=await loadUsingReader('1815.laz',1024),bridge=loaded.bridge;
+ const terrain=await runAnalysisViaBridge(bridge,'terrain',4001,{cell:25,minCount:1});
+ assert.equal(terrain.type,'terrain',JSON.stringify(terrain));
+ assert(terrain.matchingPoints>0,'La tesela real contiene puntos de suelo');
+ assert(terrain.candidates.length>0,'El MDT debe tener celdas con puntos de suelo');
+ const vegetation=await runAnalysisViaBridge(bridge,'vegetation',4002,{cell:25});
+ assert.equal(vegetation.type,'vegetation',JSON.stringify(vegetation));
+ assert(vegetation.rows.length>0);
+ assert(vegetation.rows.every(row=>row.vegetation_points===0),
+  'La tesela de prueba 1815.laz carece de clases vegetales 3-5');
+ const feature=await runAnalysisViaBridge(bridge,'feature-map',4003,
+   {cell:25,minHeight:0,maxHeight:30});
+ assert.equal(feature.type,'error',
+  'Sin copas de vegetación, no debe inventar un Feature Map de alturas');
+ assert.match(feature.message,/No hay alturas de vegetación/);
+});
