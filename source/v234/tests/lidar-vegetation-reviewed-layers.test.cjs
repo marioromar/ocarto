@@ -73,3 +73,42 @@ test('el editor incluye panel y lógica de importación atómica y deshacer',()=
     'vegetationReviewSourceId','reviewRequired:true,autoSymbol:false'])
     assert(html.includes(s),'Missing editor integration '+s);
 });
+test('lee el ZIP Bobadilla sin descomprimir el TIFF ni los PNG',async()=>{
+ const names=['verde_oscuro','rayado','amarillo'];
+ let imageReads=0;
+ const files=Object.fromEntries(names.map((name,i)=>[
+   name+'.geojson',{name:name+'.geojson',dir:false,
+     _data:{uncompressedSize:1000},
+     async:async()=>JSON.stringify(fc(poly(String(i),name)))}
+ ]));
+ files['Bobadilla_alturas_recorte_referencia.tif']={
+   name:'Bobadilla_alturas_recorte_referencia.tif',dir:false,
+   _data:{uncompressedSize:200000000},
+   async:async()=>{imageReads++;throw Error('TIFF must not be opened')}
+ };
+ const zip={loadAsync:async()=>({files})};
+ const raw=[{name:'Ocarto_Bobadilla_v4_capas_seleccionables.zip',size:22*1024*1024}];
+ const sources=await v.readSources(raw,zip);
+ assert.equal(sources.length,3);
+ assert.equal(imageReads,0);
+ const result=v.prepare(sources,names,opts);
+ assert.equal(result.total,3);
+ assert.equal(result.grouped.verde_oscuro.length,1);
+});
+test('ZIP rechaza extracción excesiva y clases repetidas',async()=>{
+ const zipSize={loadAsync:async()=>({files:{'rayado.geojson':{
+   name:'rayado.geojson',dir:false,_data:{uncompressedSize:11*1024*1024},
+   async:async()=>'{ }'}}})};
+ await assert.rejects(v.readSources([{name:'bob.zip',size:3000}],zipSize),/10 MB/);
+ const duplicate={loadAsync:async()=>({files:{
+   'rayado.geojson':{name:'rayado.geojson',dir:false,_data:{uncompressedSize:20},async:async()=>'{ }'},
+   'sub/rayado.geojson':{name:'sub/rayado.geojson',dir:false,_data:{uncompressedSize:20},async:async()=>'{ }'}
+ }})};
+ await assert.rejects(v.readSources([{name:'bob.zip',size:3000}],duplicate),/duplicada/);
+});
+test('acepta GeoJSON individual sin ZIP y rechaza formatos no admitidos',async()=>{
+ const source=JSON.stringify(fc(poly('G1','amarillo')));
+ const sources=await v.readSources([{name:'amarillo.geojson',size:source.length,text:async()=>source}],null);
+ assert.equal(v.prepare(sources,['amarillo'],opts).total,1);
+ await assert.rejects(v.readSources([{name:'Bobadilla.tif',size:1000}],null),/Solo se admiten/);
+});
