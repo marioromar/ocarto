@@ -1020,7 +1020,11 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     };
     lasWorker.onerror=e=>{lidarLoadError='El Worker LiDAR no pudo iniciar: '+e.message;$('lidarStatus').textContent='No se pudo iniciar el procesador LiDAR: '+e.message;toast('Error del Worker LiDAR: '+e.message);if(cloudReadController)cloudReadController.abort();lidarOperation='idle';updateLidarButtons()};
   }
-  $('pointFile').onchange=async e=>{if(location.protocol==='file:'){const message='Para cargar LAS/LAZ, abre Ocarto con ABRIR-OCARTO.bat (servidor local), no con doble clic en index.html. Los navegadores bloquean Workers desde file://.';$('lidarStatus').textContent=message;toast(message);e.target.value='';return}const files=Array.from(e.target.files||[]);if(!files.length)return;tiledSelectedFiles=null;if(files.length>1||/\.(las|laz)$/i.test(files[0].name)){
+  $('pointFile').onchange=async e=>{if(location.protocol==='file:'){const message='Para cargar LAS/LAZ, abre Ocarto con ABRIR-OCARTO.bat (servidor local), no con doble clic en index.html. Los navegadores bloquean Workers desde file://.';$('lidarStatus').textContent=message;toast(message);e.target.value='';return}const files=Array.from(e.target.files||[]);if(!files.length)return;tiledSelectedFiles=null;
+    // Un archivo pequeño permite vista previa directa aunque su cabecera cubra una
+    // zona extensa: no forzarle el flujo de exportación de mosaicos.
+    // Archivos PNOA grandes (o varios archivos) siguen el plan seguro por teselas.
+    if(files.length>1||(/\.(las|laz)$/i.test(files[0].name)&&files[0].size>=1048576)){
       try {
         if(files.some(f=>!/\.(las|laz)$/i.test(f.name)))throw Error('Para unir varios archivos selecciona solo LAS o LAZ');
         const sources=await OcartoLidarSourceIndex.indexFiles(files);
