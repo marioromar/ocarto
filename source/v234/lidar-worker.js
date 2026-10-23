@@ -106,10 +106,11 @@ function fileOutsideAoi(probe, aoi) {
   const selection=bounds();
   for (const p of aoi.rings[0]) addBounds(selection,p[0],p[1]);
   if (area?.window) {
-    selection.minX=Math.max(selection.minX,area.window.minX);
-    selection.maxX=Math.min(selection.maxX,area.window.maxX);
-    selection.minY=Math.max(selection.minY,area.window.minY);
-    selection.maxY=Math.min(selection.maxY,area.window.maxY);
+    const halo=area.haloMetres||0;
+    selection.minX=Math.max(selection.minX,area.window.minX-halo);
+    selection.maxX=Math.min(selection.maxX,area.window.maxX+halo);
+    selection.minY=Math.max(selection.minY,area.window.minY-halo);
+    selection.maxY=Math.min(selection.maxY,area.window.maxY+halo);
   }
   return tile.maxX<selection.minX || tile.minX>selection.maxX ||
       tile.maxY<selection.minY || tile.minY>selection.maxY;
@@ -178,8 +179,11 @@ async function loadEnd(message) {
   } finally {if(busy===job) busy=null;}
 }
 function inside(x,y,aoi) {
-  if(area?.window && (x<area.window.minX || y<area.window.minY ||
-      x>=area.window.maxX || y>=area.window.maxY))return false;
+  if(area?.window){
+    const halo=area.haloMetres||0;
+    if(x<area.window.minX-halo||y<area.window.minY-halo||
+       x>=area.window.maxX+halo||y>=area.window.maxY+halo)return false;
+  }
   if(!aoi?.rings?.length) return true;
   function inRing(ring) {
     let yes=false;
@@ -347,24 +351,33 @@ async function addAreaTile(m) {
   if(!area || area.id!==m.sessionId) throw Error('Sesión de mosaico LiDAR no iniciada');
   if(!cloud)throw Error('No se ha cargado la tesela');
   const job={id:m.jobId,cancelled:false};if(busy)throw Error('Proceso LiDAR ocupado');busy=job;
-  const b=bounds();let used=0;
+  const b=bounds();let used=0,haloPoints=0;
   try {
     await forPoints(cloud,job,(x,y,z,cls,i)=>{
       if(!inside(x,y,area.aoi))return;
-      used++;addBounds(b,x,y);
+      const w=area.window;
+      if(!w||(x>=w.minX&&x<w.maxX&&y>=w.minY&&y<w.maxY)){
+        used++;addBounds(b,x,y);
+      }else haloPoints++;
+      // El suelo vecino se usa para estimar alturas, pero nunca se exporta
+      // ni se contabiliza dos veces como celda de la zona principal.
       terrainBin(area.terrain,x,y,z,cls,i);
       vegetationBin(area.vegetation,x,y,z,cls,cloud.meta.minor>=4);
     },'area');
     if(used){area.tiles++;area.points+=used;}
     send({type:'area-tile-done',sessionId:m.sessionId,jobId:m.jobId,skipped:used===0,
-      points:used,bounds:used?b:null,nodes:0,visitedPoints:cloud.meta.count});
+      points:used,haloPoints,bounds:used?b:null,nodes:0,visitedPoints:cloud.meta.count});
     cloud=null; // Release the decoded tile's original compressed bytes.
   }finally{if(busy===job)busy=null;}
 }
 function finishArea(m) {
   if(!area || area.id!==m.sessionId)throw Error('Sesión de mosaico inexistente');
-  const terrain=[...area.terrain.cells.values()].map(p=>[p.x,p.y,p.z]);
-  const rows=vegetationRows(area.vegetation);
+  const w=area.window;
+  const belongs=p=>!w||(p.x>=w.minX&&p.x<w.maxX&&
+    p.y>=w.minY&&p.y<w.maxY);
+  const terrain=[...area.terrain.cells.values()].filter(belongs).map(p=>[p.x,p.y,p.z]);
+  // Calcular con las celdas halo en memoria; exportar solo la ventana propia.
+  const rows=vegetationRows(area.vegetation).filter(belongs);
   send({type:'area-finished',sessionId:m.sessionId,jobId:m.jobId,points:area.points,window:area.window,
     tiles:area.tiles,terrain,vegetationRows:rows,terrainCells:terrain.length,vegetationCells:rows.length});
   area=null;
@@ -433,18 +446,24 @@ onmessage=async event=>{
       const terrain=makeGrid(m.terrainCell),vegetation=makeGrid(m.vegetationCell);
       let capacity;
       const window=m.window??null;
+      const haloMetres=m.haloMetres===undefined?0:Number(m.haloMetres);
+      if(!Number.isFinite(haloMetres)||haloMetres<0||haloMetres>2)
+        throw Error('Halo LiDAR no válido: máximo 2 metros');
       if(window && (![window.minX,window.maxX,window.minY,window.maxY].every(Number.isFinite) ||
           window.maxX<=window.minX||window.maxY<=window.minY))
         throw Error('Ventana de tesela LiDAR no válida');
       if(aoi?.rings?.length||window){
-        const extent=window?{...window}:{minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};
+        const extent=window?{
+          minX:window.minX-haloMetres,maxX:window.maxX+haloMetres,
+          minY:window.minY-haloMetres,maxY:window.maxY+haloMetres
+        }:{minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};
         if(!window)for(const ring of aoi.rings)for(const p of ring)addBounds(extent,p[0],p[1]);
         const estimate=cell=>Math.ceil((extent.maxX-extent.minX)/cell+1)*Math.ceil((extent.maxY-extent.minY)/cell+1);
         capacity={terrainCells:estimate(terrain.cell),vegetationCells:estimate(vegetation.cell),maxCells:MAX_CELLS};
         if(capacity.terrainCells>MAX_CELLS || capacity.vegetationCells>MAX_CELLS)
           throw Error('El área seleccionada excede el máximo de un millón de celdas por modelo. Aumenta la celda o recorta el área.');
       }
-      area={id:m.sessionId,aoi,window,terrain,vegetation,tiles:0,points:0};
+      area={id:m.sessionId,aoi,window,haloMetres,terrain,vegetation,tiles:0,points:0};
       send({type:'area-ready',sessionId:m.sessionId,...(capacity?{capacity}:{})});return;
     }
     if(type==='area-add') {await addAreaTile(m);return;}
