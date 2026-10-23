@@ -115,3 +115,72 @@ test('la interfaz integra vectorización directa de los LAZ de toda la zona',()=
  assert(html.includes("manifest.mosaic.outputs.vector="));
  assert(html.includes('heightRaster,featureRaster'));
 });
+
+
+test('suelo PNOA disperso: agrega retornos de 0,5 m para detectar amarillo grande sin TIFF',async()=>{
+ const c=.5,minX=384000,minY=4114000,width=20,height=20,lines=[hdr];
+ for(let j=0;j<height;j++)for(let i=0;i<width;i++){
+  // Un retorno de suelo por 0,5 m: las reglas antiguas descartaban todas.
+  lines.push(csv(minX+(i+.5)*c,minY+(j+.5)*c,
+    {ground:1,vegetation:0,source:'observed'}));
+ }
+ const fakeManifest={cellVegetation:c,selectedArea:{bounds:{
+  minX,maxX:minX+width*c,minY,maxY:minY+height*c
+ }}};
+ const shape=vector.aggregationGeometry(fakeManifest);
+ assert.equal(shape.cell,2);
+ assert.equal(shape.width,5);
+ assert.equal(shape.height,5);
+ const loaded=await vector.loadAggregatedMask(new Blob([lines.join('\n')+'\n']),shape);
+ assert.equal(loaded.rows,400);
+ assert.deepEqual(loaded.count,[0,0,0,25]);
+ const areas=vector.vectorizeMask(loaded.mask,shape);
+ assert.equal(areas.features.length,1);
+ assert.equal(areas.features[0].properties.clase,'amarillo');
+ assert.equal(areas.features[0].properties.review_required,true);
+ assert.equal(areas.features[0].properties.estimated_area_m2,100);
+});
+test('mosaico LiDAR de 2 LAZ: un verde oscuro continuo con suelo y copas reales',async()=>{
+ const minX=384000,minY=4114000,c=.5,lines=[hdr];
+ // 6m x 10m con vegetación densa, atravesando x=384003.
+ for(let j=0;j<20;j++)for(let i=0;i<12;i++)
+  lines.push(csv(minX+(i+.5)*c,minY+(j+.5)*c,
+    {ground:1,vegetation:3,canopy:4.8,density:.75,source:'observed'}));
+ const fakeManifest={cellVegetation:c,selectedArea:{bounds:{
+  minX,maxX:minX+6,minY,maxY:minY+10
+ }}};
+ const shape=vector.aggregationGeometry(fakeManifest);
+ const loaded=await vector.loadAggregatedMask(new Blob([lines.join('\n')+'\n']),shape);
+ const v=vector.vectorizeMask(loaded.mask,shape,
+   {minAreas:{verde_oscuro:25,rayado:25,amarillo:25}});
+ assert.equal(v.features.length,1);
+ assert.equal(v.features[0].properties.clase,'verde_oscuro');
+ const xs=v.features[0].geometry.coordinates[0].map(p=>p[0]);
+ assert(Math.min(...xs)<384003&&Math.max(...xs)>384003);
+ assert.equal(loaded.count[1],15);
+});
+test('el área no se recorta cuando contiene más de 12 millones de celdas originales',()=>{
+ const huge={cellVegetation:.5,selectedArea:{bounds:{
+  minX:384000,maxX:394000,minY:4114000,maxY:4124000
+ }}};
+ const a=vector.aggregationGeometry(huge);
+ assert(a.width*a.height<=12000000);
+ assert(a.cell>=2);
+ assert.equal((a.cell/.5)%1,0);
+ assert(a.width*a.height>0);
+});
+test('el agregado excluye celdas con carreteras/edificios y rechaza datos de origen inválidos',async()=>{
+ const maskData=[
+  csv(384000.25,4114000.25,{ground:1,vegetation:3,canopy:5,density:.75}),
+  csv(384000.75,4114000.25,{ground:1,vegetation:3,canopy:5,density:.75,road:1}),
+  csv(384001.25,4114000.25,{ground:1,vegetation:3,canopy:5,density:.75}),
+ ];
+ const shape=vector.aggregationGeometry({cellVegetation:.5,
+   selectedArea:{bounds:{minX:384000,maxX:384002,minY:4114000,maxY:4114002}}});
+ const loaded=await vector.loadAggregatedMask(
+   new Blob([hdr+'\n'+maskData.join('\n')+'\n']),shape);
+ assert.equal(loaded.count[0],1,'Una carretera impide sugerir verde sobre su celda');
+ assert.deepEqual(loaded.count.slice(1),[0,0,0]);
+ await assert.rejects(vector.loadAggregatedMask(
+   new Blob([hdr+'\n'+csv(400000.25,4114000.25,{ground:1})+'\n']),shape),/fuera/);
+});
