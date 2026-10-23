@@ -187,3 +187,62 @@ test('LAZ real pasa de lector a MDT y vegetación sin inventar alturas ausentes'
   'Sin copas de vegetación, no debe inventar un Feature Map de alturas');
  assert.match(feature.message,/No hay alturas de vegetación/);
 });
+
+
+// Dos LAZ efectivamente COMPRIMIDOS y decodificados por laz-perf, no cabeceras
+// sintéticas. El segundo reutiliza una copia de la fixture pública con el
+// origen UTM trasladado exactamente al borde del primero; no son los PNOA del usuario.
+test('dos LAZ comprimidos reales se descodifican juntos en una sola sesión MDT',async()=>{
+ const source=fs.readFileSync(path.join(root,'tests','fixtures','1815.laz'));
+ const first=Object.assign(new Blob([source]),{name:'laz_real_izquierdo.laz'});
+ const bytes=Buffer.from(source),d=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+ const xMin=d.getFloat64(187,true),xMax=d.getFloat64(179,true);
+ const yMin=d.getFloat64(203,true),yMax=d.getFloat64(195,true);
+ const offset=xMax-xMin;
+ assert(offset>0&&yMax>yMin,'Extensión real LAZ inválida');
+ d.setFloat64(155,d.getFloat64(155,true)+offset,true); // X offset LAS
+ d.setFloat64(179,xMax+offset,true);
+ d.setFloat64(187,xMin+offset,true);
+ const second=Object.assign(new Blob([bytes]),{name:'laz_real_contiguo_trasladado.laz'});
+ const bounds={minX:xMin,maxX:xMax+offset,minY:yMin,maxY:yMax};
+ const b=bridge(),sessionId=711;
+ async function request(message,expected){
+  return new Promise((resolve,reject)=>{
+   const timeout=setTimeout(()=>reject(Error('Timeout '+message.type)),30000);
+   function listener({data}){
+    if(data.sessionId!==sessionId&&data.jobId!==message.jobId)return;
+    if(data.type!==expected&&data.type!=='error')return;
+    clearTimeout(timeout);b.worker.removeEventListener('message',listener);
+    if(data.type==='error')reject(Error(data.message));else resolve(data);
+   }
+   b.worker.addEventListener('message',listener);b.worker.postMessage(message);
+  });
+ }
+ const ready=await request({type:'area-start',sessionId,
+   terrainCell:25,vegetationCell:25,
+   aoi:{bounds,rings:[[
+    [bounds.minX,bounds.minY],[bounds.maxX,bounds.minY],
+    [bounds.maxX,bounds.maxY],[bounds.minX,bounds.maxY]
+   ]]}},'area-ready');
+ assert(ready);
+ const input=[first,second],used=[];
+ for(let i=0;i<2;i++){
+  const loaded=await reader.streamFileToWorker(input[i],b.worker,{
+   sessionId,jobId:713+i*2,chunkSize:512
+  });
+  assert.equal(loaded.type,'loaded',JSON.stringify(loaded));
+  assert.match(loaded.version,/LAZ/);
+  assert.equal(loaded.headerOnly,true);
+  const tile=await request({type:'area-add',sessionId,jobId:714+i*2},'area-tile-done');
+  assert(tile.points>0,'No se descomprimieron puntos del LAZ '+i);
+  used.push(tile.points);
+ }
+ const finished=await request({type:'area-finish',sessionId,jobId:720},'area-finished');
+ assert.equal(finished.tiles,2);
+ assert.equal(finished.points,used[0]+used[1]);
+ assert(finished.terrainCells>0,'Los dos LAZ no generaron suelo');
+ assert(finished.vegetationCells>0,'Los dos LAZ no generaron estadísticos');
+ assert(finished.terrain.some(([x])=>x<xMax));
+ assert(finished.terrain.some(([x])=>x>=xMax));
+ assert(!b.events.some(msg=>msg.type==='error'));
+});
