@@ -38,7 +38,7 @@ test('verdes, agua, carretera y clase 6 de edificio no se convierten en cultivo'
   xy(0,0,'amarillo'),xy(1,0,'amarillo'),xy(2,0,'amarillo'),
   xy(3,0,'verde3'),xy(4,0,'amarillo',{building_points:3}),
   xy(5,0,'amarillo',{road_points:2}),
-  xy(6,0,'rayado')
+  xy(6,0,'rayado'),xy(7,0,'amarillo',{water_points:3})
  ];
  const fc=run(rows,{minArea:1});
  assert.equal(fc.properties.labeled_cells,3);
