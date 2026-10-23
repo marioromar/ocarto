@@ -66,6 +66,8 @@ test('el editor incluye panel y lógica de importación atómica y deshacer',()=
   for(const s of ['lidar-vegetation-reviewed-layers.js','id="vegReviewedPanel"',
     'id="vegReviewedFiles"','id="vegReviewedDark"','id="vegReviewedHatch"',
     'id="vegReviewedYellow"','id="vegReviewedConfirmCrs"','id="vegReviewedImport"',
+    'id="vegReviewedAsTemplate"','referenceOnly:asTemplate',
+    "if(!asTemplate)S.activeLayerId=layers[0].id",
     'OcartoVegetationReviewedLayers.prepare','const before=snapshotMap();',
     'S.vectorLayers.push(...layers)','S.features.push(...staged)','recordMapEdit(before)',
     'vegetationReviewSourceId','reviewRequired:true,autoSymbol:false'])
