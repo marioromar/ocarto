@@ -142,22 +142,25 @@ function makeAdjacentLas(x0,vegetated) {
       points.push({x:x0+x,y:4100000+y,z:101,cls:1});
     }
   }
-  const bytes=Buffer.alloc(227+points.length*20);
+  // LAS 1.4 / formato 8, idéntico al tipo de registro PNOA de Bobadilla.
+  const bytes=Buffer.alloc(375+points.length*38);
   const d=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
   d.setUint32(0,0x4653414c,true); // LASF
-  d.setUint8(24,1);d.setUint8(25,2);
-  d.setUint16(94,227);d.setUint32(96,227);
-  d.setUint8(104,0);d.setUint16(105,20);d.setUint32(107,points.length,true);
+  d.setUint8(24,1);d.setUint8(25,4);
+  d.setUint16(94,375);d.setUint32(96,375);
+  d.setUint8(104,8);d.setUint16(105,38);
+  d.setBigUint64(247,BigInt(points.length),true);
   for(const at of [131,139,147])d.setFloat64(at,.01,true);
   d.setFloat64(179,x0+10,true);d.setFloat64(187,x0,true);
   d.setFloat64(195,4100010,true);d.setFloat64(203,4100000,true);
   d.setFloat64(211,vegetated?105:100,true);d.setFloat64(219,100,true);
   for(const [i,p] of points.entries()){
-    const at=227+i*20;
+    const at=375+i*38;
     d.setInt32(at,Math.round(p.x*100),true);
     d.setInt32(at+4,Math.round(p.y*100),true);
     d.setInt32(at+8,Math.round(p.z*100),true);
-    d.setUint8(at+15,p.cls);
+    d.setUint8(at+14,0x11);
+    d.setUint8(at+16,p.cls);
   }
   return bytes;
 }
