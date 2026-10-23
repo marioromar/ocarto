@@ -34,6 +34,7 @@ jobs:
           node --check source/v234/lidar-tile-plan.js
           node --check source/v234/lidar-tile-export.js
           node --check source/v234/lidar-mosaic-export.js
+          node --check source/v234/lidar-mosaic-contours.js
           node --check source/v234/lidar-source-index.js
           node --check source/v234/lidar-tile-seams.js
           node --check source/v234/lidar-mdt-audit.js
@@ -47,6 +48,8 @@ jobs:
         run: node --test source/v234/tests/lidar-worker.test.cjs source/v234/tests/lidar-reader-integration.test.cjs source/v234/tests/lidar-tiling.test.cjs source/v234/tests/lidar-export.test.cjs source/v234/tests/lidar-source-index.test.cjs source/v234/tests/lidar-seams.test.cjs source/v234/tests/lidar-mdt-audit.test.cjs
       - name: Unified LiDAR mosaic across two or many LAZ, VRT and CSV
         run: node --test source/v234/tests/lidar-mosaic-export.test.cjs
+      - name: LiDAR mosaic contours across LAZ file and grid boundaries
+        run: node --test source/v234/tests/lidar-mosaic-contours.test.cjs
       - name: LAS/LAZ reader fallback and truncation tests
         run: node --test source/v234/tests/lidar-stream-fallback.test.cjs
       - name: Vectorize PNG vegetation height raster tests
