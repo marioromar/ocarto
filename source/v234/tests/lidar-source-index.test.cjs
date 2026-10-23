@@ -180,7 +180,26 @@ test('la interfaz enruta importación de muchos LAZ grandes al planificador y co
  assert(html.includes("if(OcartoLidarSourceIndex.needsTiling(b,terrainCell,vegCell))"));
  assert(html.includes("tiledSelectedFiles=files;"));
  assert(html.includes("const inferredBounds=selectedAoi?null:OcartoLidarSourceIndex.connectedUnionBounds(sourceIndex)"));
- assert(html.includes("if(!selectedAoi&&!$('tiledAreaConfirmCrs').checked)"));
+ assert(html.includes("if(!$('tiledAreaConfirmCrs').checked)"));
+ assert(html.includes("$('tiledAreaConfirmCrs').checked=false; // No reutilizar confirmación UTM de otro proyecto."));
  assert(html.includes("id=\"tiledAreaConfirmCrs\""));
  assert(!html.includes("if(!currentLidarPolygon())throw Error('Selecciona primero un polígono del mapa')"));
+});
+
+test('un solo PNOA de 1 km² a 0,5 m también activa mosaico automático',async()=>{
+ const file=synthetic('PNOA_2024_AND_384-4115_H30_NPC01.laz',
+  {minX:384000,maxX:385000,minY:4114000,maxY:4115000});
+ const entries=await indexFiles([file]),bounds=connectedUnionBounds(entries);
+ assert.deepEqual(bounds,{minX:384000,maxX:385000,minY:4114000,maxY:4115000});
+ assert.equal(needsTiling(bounds,.5,.5),true);
+ const blocks=plan(bounds,.5,.5);
+ assert(blocks.total>1&&blocks.total<=512);
+ const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+ assert(html.includes("if(files.length>1||/\\.(las|laz)$/i.test(files[0].name))"),
+  'La carga individual debe comprobar el tamaño de la zona antes de reservar la rejilla');
+ assert(html.includes("if(b&&OcartoLidarSourceIndex.needsTiling(b,terrainCell,vegCell))"));
+ assert(html.includes("if(files.length>1){void processAreaFiles(files);return;}"),
+  'La lectura individual ordinaria sigue funcionando cuando cabe en memoria');
+ assert(html.includes("if(!files.length)return;tiledSelectedFiles=null;"),
+  'No conservar selección de una importación anterior');
 });
