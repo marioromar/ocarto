@@ -32,6 +32,18 @@ En **LiDAR e IA → Claros y arbolado alto** se añade **«Detectar y vectorizar
 - Los polígonos conservan huecos interiores, propiedades de revisión y coordenadas originales de la rejilla LiDAR. Se exportan como GeoJSON candidato, no como mapa CART aceptado.
 - Las pruebas ejecutadas directamente con el motor vectorial confirmaron siete casos sintéticos. Además se comprobó directamente la integración GeoJSON amarillo → inventario: un polígono con hueco quedó como Bézier editable y candidato, con X/Y UTM conservadas y sin incorporar automáticamente al mapa. Se añadieron pruebas de regresión al repositorio; **no equivale a validación en Chromium/Windows ni en Bobadilla real**.
 
+## Alturas de vegetación y Feature Map: suelo vecino v286
+
+- **Problema encontrado:** en rejillas LiDAR de 0,5 m muchas copas no comparten celda con retornos de suelo. Antes se dejaban sin altura y se excluían del Feature Map.
+- **Corrección:** si la celda tiene retornos vegetales pero carece de suelo, buscar suelo real en celdas cercanas, con un radio físico de hasta 2 m (como máximo cuatro celdas por eje para limitar trabajo en resoluciones muy finas). Exigir al menos tres celdas medidas; usar hasta ocho vecinas próximas y ponderarlas por distancia. Rechazar la estimación si sus cotas difieren más de 2 m.
+- Los datos observados **no se sustituyen**: `ground_min_z` solo recoge el suelo realmente medido en esa celda. Cuando se estima la cota, se registra `estimated_ground_z_m`, `ground_height_source=nearby_estimate` y `ground_estimation_support_cells`. Cuando faltan referencias o existe un desnivel contradictorio, la altura sigue siendo **desconocida**.
+- El **Feature Map** usa los mismos valores de altura que los indicadores de vegetación. Procesa las celdas una a una, sin crear otra copia de toda la rejilla, e informa cuántas alturas proceden de suelo medido y cuántas de suelo estimado.
+- Los CSV de vegetación conservan sus columnas anteriores y añaden la procedencia de la cota estimada. También se corrige la antigua columna `ground_z_min` del CSV normal, cuyo valor no encontraba la propiedad interna `ground_min_z`.
+- **Precaución:** esta interpolación local no equivale a un MDT/CHM científicamente contrastado, ni verifica si un terreno es transitable. No atribuir clases de vegetación definitivas por estas cotas aisladas. En laderas abruptas, copas densas y ausencia de suelo cercano, se deben usar modelos de terreno más completos.
+
+**Comprobación directa:** 4 casos sintéticos superados (suelo medido, suelo cercano, falta de soporte y desnivel incompatible). Se añadieron pruebas a `source/v234/tests/lidar-worker.test.cjs`. La prueba con el LAZ real de Bobadilla sigue pendiente; **no confundir estas comprobaciones con validación completa en Windows**.
+
+
 ## Pruebas
 
 `node --test source/v234/tests/lidar-cultivated-candidates.test.cjs`
