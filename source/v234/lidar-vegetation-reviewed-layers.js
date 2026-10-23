@@ -84,5 +84,50 @@
     return {grouped,total,counts:Object.fromEntries(CLASSES.map(c=>[c.key,grouped[c.key].length])),
       crs:String(mapCrs).toUpperCase(),reviewRequired:true};
   }
-  return Object.freeze({CLASSES,classKey,prepare});
+  // Open only the three expected GeoJSON members of the Ocarto ZIP.
+  // Never decompress the TIFF or PNG images bundled alongside the vectors.
+  async function readSources(rawFiles,zipLib){
+    if(!Array.isArray(rawFiles)||!rawFiles.length||rawFiles.length>12)
+      throw Error('Selecciona uno o varios GeoJSON o un ZIP de Bobadilla');
+    const extracted=[],allowed=new Set(CLASSES.map(c=>c.key+'.geojson'));
+    for(const file of rawFiles){
+      const name=String(file?.name||'');
+      if(/\.zip$/i.test(name)){
+        if(!zipLib||typeof zipLib.loadAsync!=='function')
+          throw Error('No se ha podido abrir ZIP: falta JSZip');
+        if(!Number.isFinite(file.size)||file.size>60*1024*1024)
+          throw Error('El ZIP supera el límite de 60 MB');
+        const archive=await zipLib.loadAsync(file);
+        const entries=Object.values(archive.files||{});
+        if(entries.length>1500)throw Error('El ZIP contiene demasiados archivos');
+        const matches=entries.filter(e=>{
+          const base=String(e.name||'').split('/').at(-1).toLowerCase();
+          return !e.dir&&allowed.has(base);
+        });
+        if(matches.length<1||matches.length>3)
+          throw Error('El ZIP debe incluir verde_oscuro.geojson, rayado.geojson o amarillo.geojson');
+        const seen=new Set();
+        for(const entry of matches){
+          const base=entry.name.split('/').at(-1).toLowerCase();
+          if(seen.has(base))throw Error('El ZIP contiene una clase duplicada: '+base);
+          seen.add(base);
+          const declaredSize=entry._data?.uncompressedSize;
+          if(!Number.isFinite(declaredSize)||declaredSize<1||declaredSize>10*1024*1024)
+            throw Error('Un GeoJSON del ZIP supera el límite de 10 MB');
+          const content=await entry.async('string');
+          if(content.length>10*1024*1024)
+            throw Error('GeoJSON demasiado grande al extraer el ZIP');
+          extracted.push({name:base,content});
+        }
+      }else if(/\.(geojson|json)$/i.test(name)){
+        if(!Number.isFinite(file.size)||file.size>10*1024*1024)
+          throw Error('Cada GeoJSON debe ser inferior a 10 MB');
+        extracted.push({name,content:await file.text()});
+      }else throw Error('Solo se admiten ZIP y GeoJSON para las clases de vegetación');
+    }
+    if(!extracted.length||extracted.length>12)
+      throw Error('No se encontraron clases GeoJSON compatibles');
+    return extracted;
+  }
+  return Object.freeze({CLASSES,classKey,prepare,readSources});
 });
