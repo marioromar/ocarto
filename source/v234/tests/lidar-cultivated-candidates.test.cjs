@@ -100,3 +100,25 @@ test('calcula límites de mosaicos LiDAR de 220.000 celdas sin desbordar argumen
   'El cálculo acotado debe utilizarse tanto en selección de ortofoto como en muestreo');
  assert(!html.includes('Math.min(...rows.map(r=>r.x))'));
 });
+
+test('v286 reutiliza la ortofoto del lote sin buscarla para cada celda',()=>{
+ const html=fs.readFileSync(path.join(base,'index.html'),'utf8');
+ const start=html.indexOf('function predictVegetationRow(');
+ const end=html.indexOf('\n  function trainVegetationExamples(',start);
+ assert(start>=0&&end>start,'Falta el predictor de ejemplos');
+ let selectionCount=0;
+ const sandbox={
+   reusableVegetationModel:{predict:()=> 'amarillo'},
+   reusableVegetationImageModel:{templateId:'orto-1',predict:()=> 'amarillo'},
+   vegetationOrthoTemplate:()=>{selectionCount++;return{id:'orto-1'};}
+ };
+ const predict=vm.runInNewContext('('+html.slice(start,end)+')',sandbox);
+ const selected=sandbox.vegetationOrthoTemplate();
+ for(let i=0;i<3000;i++)
+  assert.equal(predict({x:i+.5,y:.5},selected),'amarillo');
+ assert.equal(selectionCount,1,'La ortofoto no debe volver a buscarse por celda');
+ assert.equal(predict({x:.5,y:.5}),'amarillo','Conservar el uso antiguo sin argumento');
+ assert.equal(selectionCount,2,'El predictor estándar sigue obteniendo su referencia');
+ assert(html.includes('const predictYellowRow=row=>predictVegetationRow(row,yellowTemplate)'),
+  'La detección v286 debe usar la referencia elegida para el lote');
+});
