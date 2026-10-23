@@ -135,6 +135,10 @@ test('amarillos del inventario se presentan en amarillo sin símbolo IOF definit
  assert.equal(yellow[0],'Amarillo · terreno abierto (revisar)');
  assert.equal(yellow[1],'#e9cf49');
  assert.equal(yellow[2],'vegetation','La representación es una capa candidata, no un símbolo IOF aceptado');
+ assert(html.includes("candidate?(f.candidateLayerColor?rgba(f.candidateLayerColor,.42):'rgba(239,148,85,.20)')"),
+  'La previsualización candidata debe utilizar realmente el amarillo del inventario');
+ assert(html.includes("f.candidateLayerColor==='#e9cf49'?'#94750a'"),
+  'El contorno amarillo necesita contraste suficiente');
  const fc=run([xy(0,0)],{minArea:1});
  assert.equal(fc.features[0].properties.map_symbol,null);
  assert.equal(fc.features[0].properties.auto_accept,false);
