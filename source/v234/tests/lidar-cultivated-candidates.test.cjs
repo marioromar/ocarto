@@ -161,8 +161,9 @@ test('no inicia vectorización sin confirmar coordenadas LiDAR, mapa y EPSG',()=
  $('cultivatedCandidatesConfirmCrs').checked=false;
  let prepared=0;
  const sandbox={
-  $,S:{georef:{a:1},renderGeo:{cx:0}},
-  normalizeCrsName:v=>v,
+  $,S:{georef:{a:1},renderGeo:{cx:0},projectCrs:'EPSG:25830'},
+  normalizeCrsName:v=>typeof v==='string'?v:null,
+  activeTemplate:()=>null,
   vegetationRows:[{x:.5,y:.5}],
   reusableVegetationModel:{predict:()=> 'amarillo'},
   reusableVegetationImageModel:null,
@@ -177,4 +178,38 @@ test('no inicia vectorización sin confirmar coordenadas LiDAR, mapa y EPSG',()=
  $('cultivatedCandidatesConfirmCrs').checked=true;
  $('detectCultivatedCandidates').onclick();
  assert.equal(prepared,1,'Con confirmación puede iniciarse el análisis');
+});
+
+test('rechaza EPSG escrito pero no reproyectado y plantilla activa en CRS distinto',()=>{
+ const html=fs.readFileSync(path.join(base,'index.html'),'utf8');
+ const begin=html.indexOf("  $('detectCultivatedCandidates').onclick=()=>{");
+ const end=html.indexOf('\n  let heightRasterDraft=',begin);
+ assert(begin>=0&&end>begin);
+ const elements={};
+ const $=id=>elements[id]||(elements[id]={checked:false,value:'',textContent:''});
+ $('mapCrs').value='EPSG:25830';
+ $('cultivatedCandidatesConfirmCrs').checked=true;
+ const S={georef:{a:1},renderGeo:{scale:1},projectCrs:'EPSG:32630',template:{crs:'EPSG:25830'}};
+ let analyses=0;
+ const sandbox={
+  $,S,activeTemplate:()=>S.template,
+  normalizeCrsName:v=>typeof v==='string'?v:null,
+  vegetationRows:[{x:.5,y:.5}],
+  reusableVegetationModel:{predict:()=> 'amarillo'},
+  reusableVegetationImageModel:null,
+  vegetationRowsWithOrtho:()=>{analyses++;return[{x:.5,y:.5}]},
+  toast:()=>{}
+ };
+ vm.runInNewContext(html.slice(begin,end),sandbox);
+ $('detectCultivatedCandidates').onclick();
+ assert.equal(analyses,0);
+ assert.match($('cultivatedCandidatesStatus').textContent,/reproyecta el mapa/);
+ S.projectCrs='EPSG:25830';
+ S.template.crs='EPSG:32630';
+ $('detectCultivatedCandidates').onclick();
+ assert.equal(analyses,0);
+ assert.match($('cultivatedCandidatesStatus').textContent,/plantilla activa/);
+ S.template.crs='EPSG:25830';
+ $('detectCultivatedCandidates').onclick();
+ assert.equal(analyses,1);
 });
