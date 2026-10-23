@@ -530,8 +530,9 @@ async function streamFileToWorker(file,worker,{jobId,sessionId,signal,onProgress
    for(let offset=0;offset<bytes.byteLength;offset+=chunkSize){
     if(signal?.aborted)throw abortError();
     const chunk=bytes.slice(offset,Math.min(bytes.byteLength,offset+chunkSize));
+    const length=chunk.byteLength; // Transfer detaches the buffer immediately in Chromium.
     sequence++;worker.postMessage({type:'load-chunk',jobId,sequence,offset:done,chunk},[chunk.buffer]);
-    done+=chunk.byteLength;onProgress(done,file.size);await waitFor('chunk');
+    done+=length;onProgress(done,file.size);await waitFor('chunk');
     if(skipped)break;
    }
   };
