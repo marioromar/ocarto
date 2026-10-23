@@ -18,6 +18,7 @@ En **LiDAR e IA → Claros y arbolado alto** se añade **«Detectar y vectorizar
 
 - Un área amarilla **no demuestra que sea un cultivo**: podría ser pastizal, parcela sin sembrar, suelo desnudo o claro. Todos los polígonos llevan `crop_confirmed: false`, `review_required: true` y `auto_accept: false`.
 - Las celdas LiDAR que tienen puntos clasificados como edificaciones (clase 6), agua (clase 9) o vías (clase 11) se excluyen de la propuesta amarilla.
+- Además de la confirmación manual, Ocarto detiene la vectorización si el EPSG registrado del proyecto o de la plantilla activa difiere del campo del mapa. Cambiar el campo no sustituye reproyectar el proyecto.
 - Sin ejemplos aprendidos de Amarillo **no se inventan polígonos agrícolas**.
 - LiDAR original, TIFF original, las capas existentes y la v285 no se modifican.
 - No se ha comprobado todavía la precisión con una zona real de cultivos de Bobadilla ni se ha confirmado el EPSG del TIFF de referencia.
@@ -28,7 +29,7 @@ En **LiDAR e IA → Claros y arbolado alto** se añade **«Detectar y vectorizar
 - El inventario de candidatos muestra las zonas amarillas con su propio nombre y tono amarillo `#e9cf49`; **no** se asigna automáticamente un símbolo definitivo de orientación.
 - La selección de ortofoto se reutiliza durante cada proceso de detección en lugar de buscarla para cada celda; el cálculo de límites del mosaico evita desbordamientos por listas de cientos de miles de celdas.
 - Los polígonos conservan huecos interiores, propiedades de revisión y coordenadas originales de la rejilla LiDAR. Se exportan como GeoJSON candidato, no como mapa CART aceptado.
-- Las pruebas ejecutadas directamente con el motor vectorial confirmaron siete casos sintéticos. Se añadieron pruebas de regresión al repositorio; **no equivale a validación en Chromium/Windows ni en Bobadilla real**.
+- Las pruebas ejecutadas directamente con el motor vectorial confirmaron siete casos sintéticos. Además se comprobó directamente la integración GeoJSON amarillo → inventario: un polígono con hueco quedó como Bézier editable y candidato, con X/Y UTM conservadas y sin incorporar automáticamente al mapa. Se añadieron pruebas de regresión al repositorio; **no equivale a validación en Chromium/Windows ni en Bobadilla real**.
 
 ## Pruebas
 
