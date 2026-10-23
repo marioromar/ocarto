@@ -130,7 +130,7 @@
    const key=terrain?'terrainFile':'vegetationFile';
    const expectedKey=terrain?'terrainCells':'vegetationCells';
    const header=terrain?'x_utm,y_utm,min_ground_z_m':
-     'x_utm,y_utm,ground_points,vegetation_points,building_points,wire_points,tower_points,ground_min_z_m,canopy_max_above_ground_m,canopy_mean_above_ground_m,vegetation_return_fraction,ground_height_source,estimated_ground_z_m,ground_estimation_support_cells';
+     'x_utm,y_utm,ground_points,vegetation_points,building_points,wire_points,tower_points,ground_min_z_m,canopy_max_above_ground_m,canopy_mean_above_ground_m,vegetation_return_fraction,ground_height_source,estimated_ground_z_m,ground_estimation_support_cells,water_points,road_points';
    const stream=await (await directory.getFileHandle(name,{create:true})).createWritable();
    let all=0,sourceFiles=0;
    try {
