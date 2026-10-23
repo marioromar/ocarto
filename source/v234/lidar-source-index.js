@@ -66,6 +66,28 @@
       return null;
     return b;
   }
+  // Solo dibujar un envolvente automático cuando las teselas de origen forman
+  // un conjunto geográfico conectado: nunca mezclar áreas remotas ni rellenar
+  // miles de kilómetros cuadrados entre archivos no contiguos.
+  function connectedUnionBounds(entries,tolerance=0.01) {
+    const b=unionBounds(entries);
+    if(!b)return null;
+    if(!Number.isFinite(tolerance)||tolerance<0||tolerance>1)
+      throw Error('Tolerancia de unión LAZ no válida');
+    const visited=new Set([0]),pending=[0];
+    while(pending.length){
+      const current=entries[pending.pop()].bounds;
+      for(let i=0;i<entries.length;i++){
+        if(visited.has(i))continue;
+        const next=entries[i].bounds;
+        if(current.minX<=next.maxX+tolerance&&current.maxX+tolerance>=next.minX&&
+           current.minY<=next.maxY+tolerance&&current.maxY+tolerance>=next.minY){
+          visited.add(i);pending.push(i);
+        }
+      }
+    }
+    return visited.size===entries.length?b:null;
+  }
   function envelopeAoi(b){
     if(!b||![b.minX,b.maxX,b.minY,b.maxY].every(Number.isFinite)||
       b.maxX<=b.minX||b.maxY<=b.minY)return null;
@@ -87,5 +109,5 @@
     return cells(terrainCell)>maxCells||cells(vegetationCell)>maxCells;
   }
   return Object.freeze({parseBounds,indexFiles,intersects,forWindow,
-    unionBounds,envelopeAoi,needsTiling});
+    unionBounds,connectedUnionBounds,envelopeAoi,needsTiling});
 });
