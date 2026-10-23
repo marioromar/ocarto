@@ -8,6 +8,7 @@
 - El inventario muestra estos candidatos en **amarillo**, pendientes de revisión; edificios LAS 6, aguas LAS 9 y vías LAS 11 (cuando esta clase es válida) quedan excluidos.
 - Para exportar el amarillo se exige **confirmar manualmente el EPSG y la coincidencia espacial de LiDAR/mapa/plantillas**; el permiso se reinicia cuando cambia el sistema de coordenadas o se abre otro mapa.
 - Correcciones de rendimiento al calcular límites de mosaicos y reutilizar la selección de ortofoto por lote, sin repetir el cálculo por celda.
+- **Alturas de vegetación más completas**: para copas sin retorno de suelo en la misma celda, se usa una estimación conservadora con al menos tres celdas de suelo próximas (máximo 2 m y cotas coherentes). Se conserva la medida original, se indica el origen de la altura y Feature Map comparte el resultado. El CSV muestra las alturas estimadas para revisión.
 - [Guía, límites y pruebas de v286](DETECCION-AMARILLOS-Y-CULTIVOS-v286.md).
 
 **Validación:** casos sintéticos de vectorización comprobados directamente, incluidos huecos interiores, filtros, conservación de datos originales y metadatos de revisión. La prueba del LAZ real PNOA/Bobadilla, la interfaz completa y la compilación de Windows **siguen pendientes**. La v285 permanece intacta.
