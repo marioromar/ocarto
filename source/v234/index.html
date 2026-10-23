@@ -141,7 +141,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       <section class="card"><div class="card-title">◎ Tipo, escala y coordenadas</div><label class="field">Modalidad cartográfica<select id="mapType"><option value="forest">Orientación a pie · ISOM</option><option value="sprint">Orientación sprint · ISSprOM</option><option value="mtbo_long">Orientación en bicicleta (OBM / MTBO) · larga distancia</option><option value="mtbo_middle">Orientación en bicicleta (OBM / MTBO) · media / relevos</option><option value="mtbo_sprint">Orientación en bicicleta (OBM / MTBO) · sprint</option><option value="other">Otro tipo</option></select></label><div class="small" id="symbolSpecStatus" role="status"></div><label class="field">Escala de impresión · 1:<input type="number" id="mapScale" value="15000" min="1" step="1000"></label><label class="field">CRS / sistema de coordenadas<input type="text" id="mapCrs" value="EPSG:32630" list="utmCrsOptions" placeholder="Ej.: EPSG:32630"><datalist id="utmCrsOptions"></datalist></label><button id="reprojectMap" class="secondary">Reproyectar el mapa completo</button><p class="small">La modalidad determina la simbología y las dimensiones oficiales disponibles. Cambiar la escala aplica el factor de ampliación de esa norma. El mapa se reproyecta como una unidad.</p></section>
       <section class="card"><div class="card-title">✣ Capas cartográficas <span class="iof-chip" id="drawnCount">0</span></div><div id="vectorLayerList"></div><div class="divider"></div><div class="card-title">🛤️ Ajuste experimental de caminos</div><p class="small">Selecciona una línea de camino ya dibujada o importada y activa una ortofoto local georreferenciada (no WMS). El resultado se descarga como propuesta; no altera el original.</p><label class="field">Color de muestra del camino<input type="color" id="roadReferenceColor" value="#cdbfaa"></label><label class="field">Desplazamiento máximo (m)<input type="number" id="roadMaxShift" value="5" min="1" max="20" step="1"></label><label class="field">Tolerancia del color de camino (5–120)<input type="number" id="roadDetectTolerance" value="26" min="5" max="120" step="1"></label><label class="field">Longitud mínima de camino detectado (m)<input type="number" id="roadDetectMinLength" value="25" min="4" max="500" step="5"></label><button class="action" id="detectRoadsFromImage" style="width:100%;margin-top:6px">Detectar caminos/senderos → GeoJSON y mapa</button><p class="small">v281: si has analizado la vegetación LiDAR, los candidatos de ortofoto se contrastan con clases de carretera, puntos de suelo y copas. Sin coincidencia no se confirma la vía; siguen siendo candidatos editables solo al aceptarlos.</p><p id="roadDetectionStatus" class="small">Necesita ortofoto local y su georreferenciación. Segmenta por color: los resultados son posibles caminos, no caminos verificados.</p><button class="action" id="proposeRoadAlign" style="width:100%;margin-top:6px">Proponer ajuste sobre ortofoto → GeoJSON</button><p class="small">Detecta similitud de color junto al trazado original. Todavía no identifica caminos desde cero; requiere revisión.</p><button class="action" id="addVectorLayer" style="width:100%;margin-top:8px">＋ Nueva capa</button><div class="small" style="margin-top:7px">Al revisar, elige «Guardar detecciones como plantilla» para dejarlas de referencia debajo del mapa, o «Abrir detecciones como mapa editable» para tratarlas como objetos normales. Desde una plantilla puedes copiar/pegar objetos sueltos o pulsar «Hacer editable» en una capa completa. Puedes ocultar o quitar cada capa y deshacer la incorporación; revisa las propuestas antes de cartografiar.</div></section>
       <section class="card" id="lidarCard"><div class="card-title">◌ LiDAR e IA · v286 <span class="iof-chip">experimental</span></div><label class="file-drop" for="pointFile"><b>+ Importar nube(s) de puntos</b>Selecciona una o varias teselas LAS/LAZ; con un polígono seleccionado se recortan a esa zona. También CSV/XYZ</label><input class="hidden-input" type="file" id="pointFile" multiple accept=".las,.laz,.csv,.xyz,.txt,text/csv,text/plain"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0">
-  <button class="action" id="tiledAreaBtn" type="button" title="Procesa cada bloque por separado; guarda los datos en una carpeta local sin juntar millones de celdas en memoria">▦ Área extensa · procesar por teselas</button>
+  <button class="action" id="tiledAreaBtn" type="button" title="Procesa cada bloque por separado; guarda los datos en una carpeta local sin juntar millones de celdas en memoria">▦ Procesar muchos LAZ · zona completa</button>
   <button class="action" id="tiledAreaCancel" type="button" hidden>✕ Detener al finalizar bloque</button>
   <button class="action" id="rebuildMdtBtn" type="button" title="Genera MDT preliminar por teselas en formato ASCII Grid, reutilizando datos de suelo vecinos sin volver a leer los LAZ">◫ MDT preliminar · unir bordes</button>
   <button class="action" id="rebuildMdtCancel" type="button" hidden>✕ Detener MDT</button>
@@ -200,6 +200,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <script src="symbol-renderer.js"></script>
 <script src="lidar-tile-plan.js"></script>
 <script src="lidar-tile-export.js"></script>
+<script src="lidar-mosaic-export.js"></script>
 <script src="lidar-tile-seams.js"></script>
 <script src="lidar-mdt-audit.js"></script>
 <script src="lidar-source-index.js"></script>
@@ -788,7 +789,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
             reject(Error('No se pudo dibujar la imagen de alturas LiDAR')),'image/png'));
           const saved=await OcartoLidarTileExport.writeRasterTriplet(folder,
             label+'_alturas_lidar',png,grid.worldFile,wkt);
-          heightRaster={...saved,width:grid.width,height:grid.height,
+          heightRaster={...saved,bounds:grid.bounds,width:grid.width,height:grid.height,
             cellSize:grid.cell,source:'LAS/LAZ procesado',transparentNoData:true,
             measuredGroundCells:result.vegetationRows.filter(row=>Number.isFinite(row.canopy_max_above_ground_m)&&row.ground_height_source==='observed').length,
             estimatedGroundCells:result.vegetationRows.filter(row=>Number.isFinite(row.canopy_max_above_ground_m)&&row.ground_height_source==='nearby_estimate').length};
@@ -804,10 +805,63 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
           ' · CSV y PNG/PGW/PRJ de alturas LiDAR guardados en la carpeta seleccionada';
         await new Promise(resolve=>setTimeout(resolve,0));
       }
-      manifest.state='complete';await writeTiledManifest(folder,manifest);
-      $('tiledAreaStatus').textContent='Área procesada: '+plan.total+
-        ' bloques exportados. Revisa manifest.json, CSV y PNG/PGW/PRJ de alturas derivados del LiDAR.';
-      toast('Área extensa procesada por '+plan.total+' teselas. Falta unión de modelos/curvas entre bloques.');
+      // Las teselas ya forman un solo mosaico espacial: ahora publicar también
+      // SALIDAS DE ZONA ÚNICA sin cargar todas las celdas en memoria.
+      manifest.state='complete';
+      manifest.mosaic={state:'building',sources:files.length,
+        note:'Un área LiDAR georreferenciada; los bloques físicos son internos, sin duplicar fronteras.',
+        outputs:{}};
+      await writeTiledManifest(folder,manifest);
+      const notifyMosaic=p=>{
+        $('tiledAreaStatus').textContent='Uniendo toda la zona · archivos '+p.sourceFiles+'/'+p.totalFiles+
+          ' · '+p.rows.toLocaleString('es-ES')+' celdas';
+      };
+      manifest.mosaic.outputs.terrainCsv=await OcartoLidarMosaicExport.appendCsv(
+        folder,'zona_completa_suelo_medido.csv',manifest,'terrain',
+        {shouldCancel:()=>tiledAreaStopped,onProgress:notifyMosaic});
+      await writeTiledManifest(folder,manifest);
+      manifest.mosaic.outputs.vegetationCsv=await OcartoLidarMosaicExport.appendCsv(
+        folder,'zona_completa_vegetacion_lidar.csv',manifest,'vegetation',
+        {shouldCancel:()=>tiledAreaStopped,onProgress:notifyMosaic});
+      await writeTiledManifest(folder,manifest);
+      if(manifest.completed.some(t=>t.heightRaster)){
+        manifest.mosaic.outputs.vegetationRaster=await OcartoLidarMosaicExport.writeVrt(
+          folder,'zona_completa_alturas_lidar.vrt',manifest,'canopy');
+        await writeTiledManifest(folder,manifest);
+      }
+      // Mosaico MDT continuo: el halo utiliza también puntos de las dos
+      // teselas LiDAR originales si cruzan la misma ventana de trabajo.
+      // No se inventan curvas ni cotas cuando faltan retornos de suelo.
+      manifest.dtmSeams={state:'incomplete',
+        method:'IDW conservador de suelo medido; halo compartido entre bloques',
+        haloCells:2,format:'ESRI ASCII Grid por bloque, VRT de zona completa',
+        completed:[]};
+      await writeTiledManifest(folder,manifest);
+      for(let i=0;i<manifest.completed.length;i++){
+        if(tiledAreaStopped)throw Object.assign(
+          Error('Unión MDT detenida'),{name:'AbortError'});
+        const tile=manifest.completed[i];
+        $('tiledAreaStatus').textContent='Reconstruyendo MDT continuo '+(i+1)+'/'+manifest.completed.length;
+        const stats=await OcartoLidarSeams.exportTile(folder,manifest,tile,{
+          radiusCells:2,onProgress:p=>{
+            if(p.stage==='raster')$('tiledAreaStatus').textContent=
+              'MDT conjunto '+(i+1)+'/'+manifest.completed.length+
+              ' · '+tile.name+' · '+p.row+'/'+p.total+' filas';
+          }
+        });
+        manifest.dtmSeams.completed.push(stats);
+        await writeTiledManifest(folder,manifest);
+        await new Promise(resolve=>setTimeout(resolve,0));
+      }
+      manifest.dtmSeams.state='complete';
+      manifest.mosaic.outputs.terrainRaster=await OcartoLidarMosaicExport.writeVrt(
+        folder,'zona_completa_mdt_preliminar.vrt',manifest,'mdt');
+      manifest.mosaic.state='complete';
+      await writeTiledManifest(folder,manifest);
+      $('tiledAreaStatus').textContent='Zona completa LiDAR terminada: '+files.length+
+        ' LAZ/LAS · '+plan.total+' bloques internos · un MDT y un mosaico de alturas'+
+        ' (archivos zona_completa_...). Curvado vectorial y Feature Map completos aún pendientes.';
+      toast('Mosaico LiDAR de zona completa generado; abre los archivos zona_completa_... en tu visor GIS.');
       return manifest;
     }catch(err){
       manifest.state=tiledAreaStopped||err.name==='AbortError'?'cancelled':'error';
@@ -855,7 +909,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     }
     tiledSelectedFiles=files;
     $('tiledAreaBtn').textContent='▦ Elegir carpeta y procesar '+files.length+' archivo(s)';
-    $('tiledAreaStatus').textContent='Seleccionados '+files.length+' LAS/LAZ. Pulsa «Elegir carpeta» para guardar el resultado, por bloques independientes.';
+    $('tiledAreaStatus').textContent='Seleccionados '+files.length+' LAS/LAZ. Pulsa «Elegir carpeta»: se procesarán conjuntamente y se exportará un mosaico de la zona completa.';
   };
   $('tiledAreaCancel').onclick=()=>{
     tiledAreaStopped=true;
