@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const {parseBounds,indexFiles,forWindow,intersects}=require('../lidar-source-index.js');
+const {parseBounds,indexFiles,forWindow,intersects,unionBounds,envelopeAoi,needsTiling}=require('../lidar-source-index.js');
 const plan=require('../lidar-tile-plan.js').plan;
 const fixtures=path.join(__dirname,'fixtures');
 function fromFixture(name){
@@ -101,4 +101,31 @@ test('recorta un mosaico de 9 km2 a bloques con resolución 0,5 y 1m',()=>{
   const tiled=plan({minX:350000,maxX:353000,minY:4070000,maxY:4073000},.5,1);
   assert(tiled.total>=36);
   assert(tiled.tiles.every(tile=>tile.window.maxX>tile.window.minX));
+});
+
+test('dos LAZ contiguos PNOA Bobadilla detectan 8 millones de celdas posibles y requieren teselas',async()=>{
+ const files=[
+  synthetic('PNOA_2024_AND_384-4115_H30_NPC01.laz',
+   {minX:384000,maxX:385000,minY:4114000,maxY:4115000}),
+  synthetic('PNOA_2024_AND_385-4115_H30_NPC01.laz',
+   {minX:385000,maxX:386000,minY:4114000,maxY:4115000}),
+ ];
+ const entries=await indexFiles(files);
+ const bounds=unionBounds(entries);
+ assert.deepEqual(bounds,{minX:384000,maxX:386000,minY:4114000,maxY:4115000});
+ assert.equal(needsTiling(bounds,.5,.5),true);
+ assert.equal(needsTiling(bounds,.5,1),true);
+ const aoi=envelopeAoi(bounds);
+ assert.equal(aoi.rings[0].length,4);
+ assert.equal(aoi.bounds.minX,384000);
+ const p=plan(bounds,.5,.5);
+ assert(p.total>1&&p.total<=512,'Planificación automática sin desbordar memoria');
+ assert(p.tiles.every(tile=>tile.window.minX>=bounds.minX&&tile.window.maxX<=bounds.maxX));
+});
+test('mosaico pequeño conserva flujo habitual y no se autoriza área con cabecera inválida',async()=>{
+ const b={minX:100,maxX:150,minY:200,maxY:250};
+ assert.equal(needsTiling(b,.5,.5),false);
+ assert.equal(unionBounds([{verified:true,bounds:b},{verified:false,bounds:null}]),null);
+ assert.equal(unionBounds([]),null);
+ assert.equal(envelopeAoi(null),null);
 });
