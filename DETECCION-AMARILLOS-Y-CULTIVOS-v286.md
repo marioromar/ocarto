@@ -23,6 +23,13 @@ En **LiDAR e IA → Claros y arbolado alto** se añade **«Detectar y vectorizar
 - No se ha comprobado todavía la precisión con una zona real de cultivos de Bobadilla ni se ha confirmado el EPSG del TIFF de referencia.
 - El flujo no identifica de forma fiable tipos agrícolas (cultivo herbáceo, olivar, viñedo). Los símbolos 413/414 y las geometrías exactas necesitan revisión cartográfica.
 
+## Revisión del inventario y optimización
+
+- El inventario de candidatos muestra las zonas amarillas con su propio nombre y tono amarillo `#e9cf49`; **no** se asigna automáticamente un símbolo definitivo de orientación.
+- La selección de ortofoto se reutiliza durante cada proceso de detección en lugar de buscarla para cada celda; el cálculo de límites del mosaico evita desbordamientos por listas de cientos de miles de celdas.
+- Los polígonos conservan huecos interiores, propiedades de revisión y coordenadas originales de la rejilla LiDAR. Se exportan como GeoJSON candidato, no como mapa CART aceptado.
+- Las pruebas ejecutadas directamente con el motor vectorial confirmaron siete casos sintéticos. Se añadieron pruebas de regresión al repositorio; **no equivale a validación en Chromium/Windows ni en Bobadilla real**.
+
 ## Pruebas
 
 `node --test source/v234/tests/lidar-cultivated-candidates.test.cjs`
