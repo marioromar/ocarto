@@ -160,9 +160,9 @@
      };
      const g=count(2),v=count(3);
      const excluded=[4,5,6,14,15].some(k=>count(k)>0);
-     ground[at]+=g;vegetation[at]+=v;
-     if(!Number.isSafeInteger(ground[at])||!Number.isSafeInteger(vegetation[at]))
+     if(g>4294967295-ground[at]||v>4294967295-vegetation[at])
        throw Error('Exceso de retornos en celda de vectorización');
+     ground[at]+=g;vegetation[at]+=v;
      if(excluded)blocked[at]=1;
      if(v>0&&c[8].trim()){
        const height=Number(c[8]);
@@ -361,12 +361,12 @@
    summary.features=features.length;
    return {features,summary};
  }
- async function exportGeojson(directory,manifest,{signal,onProgress,maxPixels=12000000}={}){
+ async function exportGeojson(directory,manifest,{signal,onProgress,maxPixels=12000000,targetCell=2}={}){
    if(manifest?.state!=='complete'||manifest.mosaic?.state!=='building'&&
      manifest.mosaic?.state!=='complete')
      throw Error('Primero termina el procesamiento conjunto de todos los LAZ');
    if(!/^EPSG:\d+$/.test(manifest.crs))throw Error('EPSG LiDAR no confirmado');
-   const shape=aggregationGeometry(manifest,{maxPixels});
+   const shape=aggregationGeometry(manifest,{maxPixels,targetCell});
    const file=await (await directory.getFileHandle('zona_completa_vegetacion_lidar.csv')).getFile();
    const loaded=await loadAggregatedMask(file,shape,{signal,onProgress});
    const {features,summary}=vectorizeMask(loaded.mask,shape,{signal,onProgress});
@@ -379,6 +379,7 @@
        source:'celdas del LAS/LAZ clasificadas y combinadas; NO TIFF',
        cell_m:shape.cell,source_lidar_cell_m:manifest.cellVegetation,
        aggregation_factor:shape.aggregationFactor,
+       requested_analysis_cell_m:targetCell,
        aggregation_method:shape.method,dimensions:[shape.width,shape.height],
        calculation:'verde oscuro, rayado, amarillo grande — reglas provisionales sin IA entrenada',
        limitations:'No clasifica transitabilidad, cultivos ni penetrabilidad con certeza; requiere revisión manual',
@@ -391,6 +392,7 @@
    try{await stream.write(JSON.stringify(fc));await stream.close();}
    catch(e){try{await stream.abort()}catch(_){}throw e;}
    return {name,features:features.length,crs:manifest.crs,
+     analysisCellM:shape.cell,sourceCellM:shape.sourceCell,
      classes:summary.candidates,method:'criterios conservadores desde puntos LiDAR; revisión obligatoria'};
  }
  return Object.freeze({CSV_HEADER,CLASSES,classifyColumns,geometry,loadMask,
