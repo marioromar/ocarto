@@ -215,16 +215,51 @@ function vegetationBin(grid,x,y,z,cls,allowRoadClass11=true) {
     else if(cls===15)p.tower_points++;
   });
 }
+// v286: alturas de copa sobre suelo cercano cuando no hay retorno de suelo
+// en la misma celda (frecuente a 0,5 m). La observación original nunca cambia.
 function vegetationRows(grid) {
+  const observed=new Map();
+  for(const p of grid.cells.values())if(Number.isFinite(p.ground_min_z))
+    observed.set(p.i+','+p.j,p.ground_min_z);
+  const radius=Math.max(1,Math.ceil(2/grid.cell)),r2=(2/grid.cell)**2+1e-8;
+  function nearbyGround(p){
+    const matches=[];
+    for(let dj=-radius;dj<=radius;dj++)for(let di=-radius;di<=radius;di++){
+      const d2=di*di+dj*dj;
+      if(!d2||d2>r2)continue;
+      const z=observed.get((p.i+di)+','+(p.j+dj));
+      if(z!==undefined)matches.push({z,d2});
+    }
+    // No extrapolar con una o dos medidas aisladas.
+    if(matches.length<3)return null;
+    matches.sort((a,b)=>a.d2-b.d2);
+    const chosen=matches.slice(0,8);
+    let minZ=Infinity,maxZ=-Infinity,sum=0,weight=0;
+    for(const m of chosen){
+      minZ=Math.min(minZ,m.z);maxZ=Math.max(maxZ,m.z);
+      const w=1/m.d2;sum+=m.z*w;weight+=w;
+    }
+    // Terreno escarpado o cotas contradictorias: mejor altura desconocida.
+    if(maxZ-minZ>2)return null;
+    return {z:sum/weight,support:chosen.length};
+  }
   return [...grid.cells.values()].map(p=>{
-    const g=Number.isFinite(p.ground_min_z)?p.ground_min_z:null;
-    const h=g!==null && Number.isFinite(p.canopy_max_z) ? Math.max(0,p.canopy_max_z-g):null;
+    const measured=Number.isFinite(p.ground_min_z)?p.ground_min_z:null;
+    const estimated=measured===null&&p.vegetation_points>0?nearbyGround(p):null;
+    const ground=measured===null?(estimated?.z??null):measured;
+    const h=ground!==null&&Number.isFinite(p.canopy_max_z)?
+      Math.max(0,p.canopy_max_z-ground):null;
     const n=p.ground_points+p.vegetation_points;
     return {x:p.x,y:p.y,ground_points:p.ground_points,vegetation_points:p.vegetation_points,
       building_points:p.building_points,water_points:p.water_points,road_points:p.road_points,
       wire_points:p.wire_points,tower_points:p.tower_points,
-      ground_min_z:g,canopy_max_above_ground_m:h,
-      canopy_mean_above_ground_m:g!==null&&p.vegetation_points?Math.max(0,p.canopy_sum_z/p.vegetation_points-g):null,
+      ground_min_z:measured,
+      estimated_ground_z_m:estimated?.z??null,
+      ground_height_source:measured!==null?'observed':estimated?'nearby_estimate':'unknown',
+      ground_estimation_support_cells:estimated?.support??0,
+      canopy_max_above_ground_m:h,
+      canopy_mean_above_ground_m:ground!==null&&p.vegetation_points?
+        Math.max(0,p.canopy_sum_z/p.vegetation_points-ground):null,
       vegetation_return_fraction:n?p.vegetation_points/n:0};
   });
 }
