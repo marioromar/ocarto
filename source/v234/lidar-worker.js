@@ -281,16 +281,22 @@ async function analysis(type,m) {
         rows:vegetationRows(grid),quality:'preliminar; solo celdas observadas'});
     } else if(type==='feature-map') {
       const grid=makeGrid(cell);
-      await forPoints(cloud,job,(x,y,z,cls)=>vegetationBin(grid,x,y,z,cls),'feature-ground');
+      await forPoints(cloud,job,(x,y,z,cls)=>vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4),'feature-ground');
       const minHeight=Math.max(0,Number(options.minHeight)||0);
       const maxHeight=Number.isFinite(Number(options.maxHeight))?Number(options.maxHeight):Infinity;
       const data={i:[],j:[],height:[]};let selected=0;
-      for(const p of grid.cells.values()){
-        if(!Number.isFinite(p.ground_min_z)||!Number.isFinite(p.canopy_max_z))continue;
-        const h=Math.max(0,p.canopy_max_z-p.ground_min_z);
-        if(h>=minHeight&&h<=maxHeight){data.i.push(p.i);data.j.push(p.j);data.height.push(h);selected+=p.vegetation_points}
+      // Usar la misma altura verificada que la imagen de vegetación, sin perder
+      // copas con suelo vecino y sin convertir estimaciones en medidas reales.
+      for(const r of vegetationRows(grid)){
+        const h=r.canopy_max_above_ground_m;
+        if(!Number.isFinite(h)||r.vegetation_points<=0)continue;
+        if(h>=minHeight&&h<=maxHeight){
+          data.i.push(Math.round(r.x/cell-.5));
+          data.j.push(Math.round(r.y/cell-.5));
+          data.height.push(h);selected+=r.vegetation_points;
+        }
       }
-      if(!data.i.length)throw Error('No hay celdas con suelo y vegetación para Feature Map');
+      if(!data.i.length)throw Error('No hay alturas de vegetación con suelo medido o vecino fiable para Feature Map');
       send({type:'feature-map',jobId:m.jobId,cellSize:cell,cells:data,selectedPoints:selected,minHeight,maxHeight});
     } else if(type==='detect') {
       const grid=makeGrid(cell),minZ=Number(options.minZ),maxZ=Number(options.maxZ),filter=options.classFilter||'all';
