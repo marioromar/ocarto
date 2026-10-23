@@ -203,3 +203,21 @@ test('un solo PNOA de 1 km² a 0,5 m también activa mosaico automático',async(
  assert(html.includes("if(!files.length)return;tiledSelectedFiles=null;"),
   'No conservar selección de una importación anterior');
 });
+
+
+test('la franja halo del mosaico incluye el segundo LAZ contiguo en la frontera',async()=>{
+ const files=[
+  synthetic('384-4115.laz',{minX:384000,maxX:385000,minY:4114000,maxY:4115000}),
+  synthetic('385-4115.laz',{minX:385000,maxX:386000,minY:4114000,maxY:4115000})
+ ];
+ const entries=await indexFiles(files);
+ const core={minX:384998,maxX:385000,minY:4114500,maxY:4114600};
+ assert.deepEqual(forWindow(entries,core).selected.map(f=>f.name),['384-4115.laz']);
+ const halo=2,expanded={minX:core.minX-halo,maxX:core.maxX+halo,
+  minY:core.minY-halo,maxY:core.maxY+halo};
+ assert.deepEqual(forWindow(entries,expanded).selected.map(f=>f.name),
+  ['384-4115.laz','385-4115.laz']);
+ const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ assert(html.includes('haloMetres:2'));
+ assert(html.includes('forWindow(sourceIndex,haloWindow)'));
+});
