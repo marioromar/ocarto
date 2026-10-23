@@ -727,6 +727,15 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     const aoi=selectedAoi||OcartoLidarSourceIndex.envelopeAoi(inferredBounds);
     const plan=OcartoLidarTilePlan.plan(aoi.bounds,cellTerrain,cellVegetation);
     const crs=normalizeCrsName($('mapCrs').value),wkt=OcartoLidarExports.prjWkt(crs);
+    // Comprobar EPSG real en VLR GeoTIFF del LAS/LAZ, si está declarado.
+    // Una marca manual no debe ocultar archivos de otra proyección.
+    const sourceCrs=await Promise.all(files.map(f=>OcartoLidarSourceIndex.readCrs(f)));
+    const declaredCrs=[...new Set(sourceCrs.filter(Boolean))];
+    if(declaredCrs.length>1)
+      throw Error('Los LAS/LAZ seleccionados declaran sistemas EPSG diferentes: '+declaredCrs.join(', '));
+    if(declaredCrs.length&&declaredCrs[0]!==crs)
+      throw Error('El LAZ declara '+declaredCrs[0]+' pero el mapa tiene '+crs+
+        '. Corrige el EPSG antes de procesar; no se reproyectan puntos automáticamente.');
     const heightStops=validateVegetationPalette();
     const featureMinHeight=Number($('featureMapMinHeight').value),
       featureMaxHeight=Number($('featureMapMaxHeight').value);
@@ -736,10 +745,10 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     const folder=await baseDirectory.getDirectoryHandle('ocarto_teselas_'+new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14),{create:true});
     const manifest={
       format:'Ocarto LiDAR tiled CSV v1',created:new Date().toISOString(),
-      sourceFiles:files.map(f=>({name:f.name,bytes:f.size})),
+      sourceFiles:files.map((f,i)=>({name:f.name,bytes:f.size,crsDeclared:sourceCrs[i]})),
       cellTerrain,cellVegetation,crs,selectedArea:aoi,plan,
       featureMap:{minHeight:featureMinHeight,maxHeight:featureMaxHeight,
-        cellSize:cellVegetation,method:'alturas máximas de retornos no suelo; puntos LAS/LAZ'},
+        cellSize:cellVegetation,method:'extremos observados de retornos no suelo por celda; puntos LAS/LAZ'},
       sourceIndex:{files:files.length,verified:files.length-unknownHeaders,
         unknown:unknownHeaders,bytesInspectedPerFile:227},
       state:'incomplete',completed:[],warnings:[
