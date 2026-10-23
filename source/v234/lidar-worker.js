@@ -209,14 +209,14 @@ function vegetationBin(grid,x,y,z,cls,allowRoadClass11=true) {
   grid.insert(x,y,(ii,jj)=>({i:ii,j:jj,x:(ii+0.5)*grid.cell,y:(jj+0.5)*grid.cell,
     ground_points:0,vegetation_points:0,building_points:0,water_points:0,road_points:0,wire_points:0,tower_points:0,
     ground_min_z:Infinity,canopy_max_z:-Infinity,canopy_sum_z:0,
-    other_points:0,other_max_z:-Infinity}),
+    other_points:0,other_max_z:-Infinity,feature_min_z:Infinity}),
   p=>{
     if(cls===2){p.ground_points++;p.ground_min_z=Math.min(p.ground_min_z,z)}
-    else if(cls>=3&&cls<=5){p.vegetation_points++;p.canopy_max_z=Math.max(p.canopy_max_z,z);p.canopy_sum_z+=z}
+    else if(cls>=3&&cls<=5){p.vegetation_points++;p.canopy_max_z=Math.max(p.canopy_max_z,z);p.canopy_sum_z+=z;p.feature_min_z=Math.min(p.feature_min_z,z)}
     else {
       // Preservar las clases oficiales y computar aparte retornos no suelo
       // para Feature Map; no llamar vegetación a edificios o no clasificados.
-      p.other_points++;p.other_max_z=Math.max(p.other_max_z,z);
+      p.other_points++;p.other_max_z=Math.max(p.other_max_z,z);p.feature_min_z=Math.min(p.feature_min_z,z);
       if(cls===6)p.building_points++;
       else if(cls===9)p.water_points++;
       else if(cls===11)p.road_points++;
@@ -265,9 +265,12 @@ function vegetationRows(grid,consumer=null) {
     const rawFeatureMax=Math.max(p.canopy_max_z,p.other_max_z);
     const featureMax=ground!==null&&Number.isFinite(rawFeatureMax)?
       Math.max(0,rawFeatureMax-ground):null;
+    const featureMin=ground!==null&&Number.isFinite(p.feature_min_z)?
+      Math.max(0,p.feature_min_z-ground):null;
     const row={x:p.x,y:p.y,ground_points:p.ground_points,vegetation_points:p.vegetation_points,
       building_points:p.building_points,water_points:p.water_points,road_points:p.road_points,
-      other_points:p.other_points,feature_max_above_ground_m:featureMax,
+      other_points:p.other_points,feature_min_above_ground_m:featureMin,
+      feature_max_above_ground_m:featureMax,
       wire_points:p.wire_points,tower_points:p.tower_points,
       ground_min_z:measured,
       estimated_ground_z_m:estimated?.z??null,
@@ -306,16 +309,20 @@ async function analysis(type,m) {
       // Usar la misma altura verificada que la imagen de vegetación, sin perder
       // copas con suelo vecino y sin convertir estimaciones en medidas reales.
       vegetationRows(grid,r=>{
-        const h=r.feature_max_above_ground_m;
-        if(!Number.isFinite(h)||r.vegetation_points+r.other_points<=0)return;
-        if(h>=minHeight&&h<=maxHeight){
+        const highest=r.feature_max_above_ground_m,lowest=r.feature_min_above_ground_m;
+        if(r.vegetation_points+r.other_points<=0)return;
+        // Si la copa es alta pero existe otro retorno bajo, conservar el bajo:
+        // solo extremos realmente medidos, sin inferir alturas intermedias.
+        const h=Number.isFinite(highest)&&highest>=minHeight&&highest<=maxHeight?
+          highest:Number.isFinite(lowest)&&lowest>=minHeight&&lowest<=maxHeight?lowest:null;
+        if(h!==null){
           data.i.push(Math.round(r.x/cell-.5));
           data.j.push(Math.round(r.y/cell-.5));
           data.height.push(h);selected+=r.vegetation_points+r.other_points;
           if(r.ground_height_source==='nearby_estimate')estimatedCells++;else measuredCells++;
         }
       });
-      if(!data.i.length)throw Error('No hay retornos no suelo con altura máxima y suelo fiable para Feature Map');
+      if(!data.i.length)throw Error('No hay retornos no suelo con extremos observados y suelo fiable para Feature Map');
       send({type:'feature-map',jobId:m.jobId,cellSize:cell,cells:data,selectedPoints:selected,minHeight,maxHeight,
         measuredGroundCells:measuredCells,estimatedGroundCells:estimatedCells});
     } else if(type==='detect') {
