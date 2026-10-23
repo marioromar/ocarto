@@ -264,3 +264,19 @@ test('Ocarto contrasta EPSG real de todos los LAZ antes de crear resultados',()=
  assert(html.includes('. Corrige el EPSG antes de procesar; no se reproyectan puntos automáticamente.'));
  assert(html.includes('crsDeclared:sourceCrs[i]'));
 });
+
+test('GeoTIFF con EPSG UTM proyectado y datum base prefiere el proyectado 25830',()=>{
+ const original=syntheticPnoaGeokey(25830);
+ const both=new Uint8Array(553);
+ both.set(original.subarray(0,445));
+ both.set(original.subarray(445),453);
+ const d=new DataView(both.buffer);
+ d.setUint32(96,553,true);
+ d.setUint16(375+20,24,true);
+ d.setUint16(429+6,2,true); // NumKeys de GeoTIFF
+ d.setUint16(445,2048,true); // GeogTypeGeoKey, ETRS89
+ d.setUint16(447,0,true);
+ d.setUint16(449,1,true);
+ d.setUint16(451,4258,true);
+ assert.equal(parseCrs(both.buffer),'EPSG:25830');
+});
