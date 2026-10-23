@@ -35,6 +35,7 @@ jobs:
           node --check source/v234/lidar-tile-export.js
           node --check source/v234/lidar-mosaic-export.js
           node --check source/v234/lidar-mosaic-feature.js
+          node --check source/v234/lidar-mosaic-vector.js
           node --check source/v234/lidar-mosaic-contours.js
           node --check source/v234/lidar-source-index.js
           node --check source/v234/lidar-tile-seams.js
@@ -51,6 +52,8 @@ jobs:
         run: node --test source/v234/tests/lidar-mosaic-export.test.cjs
       - name: Multi-LAZ Feature Map from classified and unclassified ground-referenced returns
         run: node --test source/v234/tests/lidar-mosaic-feature.test.cjs
+      - name: Vectorize full-area 3-class candidates from LAZ numeric cells
+        run: node --test source/v234/tests/lidar-mosaic-vector.test.cjs
       - name: LiDAR mosaic contours across LAZ file and grid boundaries
         run: node --test source/v234/tests/lidar-mosaic-contours.test.cjs
       - name: LAS/LAZ reader fallback and truncation tests
