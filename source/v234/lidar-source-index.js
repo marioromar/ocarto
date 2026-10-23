@@ -35,6 +35,49 @@
     }
     return entries;
   }
+  // EPSG declarado en VLR GeoTIFF (34735) de LAS/LAZ; comprueba CRS
+  // antes de descomprimir los millones de puntos. No inventar CRS si falta.
+  function parseCrs(buffer) {
+    if(!(buffer instanceof ArrayBuffer)||buffer.byteLength<227)return null;
+    const d=new DataView(buffer);
+    if(d.getUint32(0,true)!==0x4653414c||d.getUint8(24)!==1)return null;
+    const headerBytes=d.getUint16(94,true),numVlr=d.getUint32(100,true),
+      pointOffset=d.getUint32(96,true);
+    if(headerBytes<227||headerBytes>buffer.byteLength||numVlr>1000||
+       pointOffset<headerBytes||pointOffset>buffer.byteLength)return null;
+    let at=headerBytes,epsg=null;
+    for(let n=0;n<numVlr;n++){
+      if(at+54>pointOffset)return null;
+      const uid=Array.from(new Uint8Array(buffer,at+2,16))
+        .map(x=>String.fromCharCode(x)).join('').replace(/\0.*$/,'').trim();
+      const id=d.getUint16(at+18,true),length=d.getUint16(at+20,true);
+      if(at+54+length>pointOffset)return null;
+      if(uid==='LASF_Projection'&&id===34735&&length>=8){
+        const geo=at+54,count=d.getUint16(geo+6,true);
+        if(8+8*count>length)return null;
+        for(let k=0;k<count;k++){
+          const i=geo+8+k*8,key=d.getUint16(i,true),
+            tag=d.getUint16(i+2,true),copies=d.getUint16(i+4,true),
+            value=d.getUint16(i+6,true);
+          if([3072,2048].includes(key)&&tag===0&&copies===1&&
+             value>=1024&&value<=32766){
+            const crs='EPSG:'+value;
+            if(epsg&&epsg!==crs)return null;
+            epsg=crs;
+          }
+        }
+      }
+      at+=54+length;
+    }
+    return epsg;
+  }
+  async function readCrs(file) {
+    const start=await file.slice(0,375).arrayBuffer();
+    if(start.byteLength<227)return null;
+    const d=new DataView(start),offset=d.getUint32(96,true);
+    if(offset>65536||offset<227||offset>file.size)return null;
+    return parseCrs(await file.slice(0,offset).arrayBuffer());
+  }
   function intersects(bounds,window) {
     // Half-open windows [min,max): preserve points exactly on lower limits.
     if(!bounds)return true; // Never discard an unverified file.
@@ -108,6 +151,6 @@
       Math.ceil((bounds.maxY-bounds.minY)/c+1);
     return cells(terrainCell)>maxCells||cells(vegetationCell)>maxCells;
   }
-  return Object.freeze({parseBounds,indexFiles,intersects,forWindow,
+  return Object.freeze({parseBounds,indexFiles,parseCrs,readCrs,intersects,forWindow,
     unionBounds,connectedUnionBounds,envelopeAoi,needsTiling});
 });
