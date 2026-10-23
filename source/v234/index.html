@@ -1019,23 +1019,23 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     };
     lasWorker.onerror=e=>{lidarLoadError='El Worker LiDAR no pudo iniciar: '+e.message;$('lidarStatus').textContent='No se pudo iniciar el procesador LiDAR: '+e.message;toast('Error del Worker LiDAR: '+e.message);if(cloudReadController)cloudReadController.abort();lidarOperation='idle';updateLidarButtons()};
   }
-  $('pointFile').onchange=async e=>{if(location.protocol==='file:'){const message='Para cargar LAS/LAZ, abre Ocarto con ABRIR-OCARTO.bat (servidor local), no con doble clic en index.html. Los navegadores bloquean Workers desde file://.';$('lidarStatus').textContent=message;toast(message);e.target.value='';return}const files=Array.from(e.target.files||[]);if(!files.length)return;if(files.length>1){
+  $('pointFile').onchange=async e=>{if(location.protocol==='file:'){const message='Para cargar LAS/LAZ, abre Ocarto con ABRIR-OCARTO.bat (servidor local), no con doble clic en index.html. Los navegadores bloquean Workers desde file://.';$('lidarStatus').textContent=message;toast(message);e.target.value='';return}const files=Array.from(e.target.files||[]);if(!files.length)return;if(files.length>1||/\.(las|laz)$/i.test(files[0].name)){
       try {
         if(files.some(f=>!/\.(las|laz)$/i.test(f.name)))throw Error('Para unir varios archivos selecciona solo LAS o LAZ');
         const sources=await OcartoLidarSourceIndex.indexFiles(files);
         const aoi=currentLidarPolygon();
         const b=aoi?.bounds||OcartoLidarSourceIndex.connectedUnionBounds(sources);
-        if(!b)throw Error('No puedo determinar una zona continua de estos LAZ. Selecciona un polígono UTM o elige teselas contiguas');
+        if(!b&&files.length>1)throw Error('No puedo determinar una zona continua de estos LAZ. Selecciona un polígono UTM o elige teselas contiguas');
         const terrainCell=Math.max(.1,Number($('cellSize').value)||.5);
         const vegCell=Math.max(.1,Number($('vegetationCell').value)||.5);
-        if(OcartoLidarSourceIndex.needsTiling(b,terrainCell,vegCell)){
+        if(b&&OcartoLidarSourceIndex.needsTiling(b,terrainCell,vegCell)){
           tiledSelectedFiles=files;
           $('tiledAreaBtn').textContent='▦ Elegir carpeta y procesar '+files.length+' LAZ/LAS';
           $('tiledAreaStatus').textContent='Área extensa detectada automáticamente: '+files.length+' archivos, '+((b.maxX-b.minX)*(b.maxY-b.minY)/1e6).toFixed(2)+' km². Comprueba el EPSG, márcalo y pulsa «Elegir carpeta y procesar»; Ocarto dividirá todo en teselas.';
           e.target.value='';
           return;
         }
-        void processAreaFiles(files);return;
+        if(files.length>1){void processAreaFiles(files);return;}
       }catch(err){$('lidarStatus').textContent=err.message;toast('LiDAR: '+err.message);e.target.value='';return}
     }
     if(files.length===1&&S.selection?.collection==='feature'&&S.features[S.selection.index]?.type==='area'&&await OcartoLidarFileReader.hasCopcInfo(files[0])){void processAreaFiles(files);return}const f=files[0];if(/\.(las|laz)$/i.test(f.name)){try{if(lidarOperation!=='idle')throw Error('Ya hay una operación LiDAR en curso');installLASWorker();pendingCloudName=f.name;lidarLoadError=null;lidarJobId++;lidarOperation='load';cloudReadController=new AbortController();updateLidarButtons();$('lidarStatus').textContent='Leyendo archivo LAS/LAZ…';$('lidarProgress').style.display='block';$('lidarProgress').value=0;const jobId=lidarJobId;await OcartoLidarFileReader.streamFileToWorker(f,lasWorker,{jobId,signal:cloudReadController.signal,onProgress:(done,total)=>{if(lidarOperation==='load'&&jobId===lidarJobId){$('lidarProgress').value=Math.floor(100*done/total);$('lidarStatus').textContent='Leyendo y transfiriendo LAS/LAZ · '+$('lidarProgress').value+' %'}}});cloudReadController=null;}catch(err){const cancelled=err.name==='AbortError';cloudReadController=null;lidarOperation='idle';pendingCloudName=null;$('lidarProgress').style.display='none';if(cancelled&&!lidarLoadError){$('lidarStatus').textContent='Carga cancelada; se conserva la nube anterior'}else{lidarLoadError=lidarLoadError||String(err.message||'Error desconocido');$('lidarStatus').textContent='Error LAS/LAZ: '+lidarLoadError;updateLidarButtons();toast('Error LAS/LAZ: '+lidarLoadError)}updateLidarButtons()}finally{e.target.value=''}return}try{if(lidarOperation!=='idle')throw Error('Ya hay una operación LiDAR en curso');const raw=parseRows(await f.text());if(!raw.length)throw Error('No se encontraron filas XYZ');if(raw.length>250000)throw Error('El prototipo admite hasta 250 000 puntos por archivo');if(lasWorker){lasWorker.terminate();lasWorker=null}areaReady=false;terrainGrid=[];vegetationRows=[];lasTotal=0;let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;for(const p of raw){if(p.x<minX)minX=p.x;if(p.x>maxX)maxX=p.x;if(p.y<minY)minY=p.y;if(p.y>maxY)maxY=p.y}const maxSpan=Math.max(maxX-minX,maxY-minY)||1,scale=330/maxSpan;S.points=raw.map(p=>({x:(p.x-(minX+maxX)/2)*scale,y:-(p.y-(minY+maxY)/2)*scale,z:p.z,rawX:p.x,rawY:p.y}));S.cloudName=f.name;S.cloudTransform={centerX:(minX+maxX)/2,centerY:(minY+maxY)/2,scale};S.selection=null;S.multiSelection=[];S.candidates=[];$('pointInfo').hidden=false;$('cloudName').textContent=f.name;$('pointCount').textContent=raw.length.toLocaleString('es-ES');$('candidateCount').textContent='0';updateLidarButtons();draw();toast(`${raw.length.toLocaleString('es-ES')} puntos importados`)}catch(err){toast('Error al leer la nube: '+err.message)}finally{e.target.value=''}};
