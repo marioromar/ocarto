@@ -69,3 +69,62 @@ test('v285: selección de tres capas visible y no destructiva sin mapa georrefer
   await expect(page.locator('#vegReviewedStatus')).toContainText('No se importó ningún cambio');
   await expect(page.locator('#featureCount')).toHaveText(before);
 });
+
+
+test('v285: importar ZIP de 3 clases como plantilla protegida y rechazar duplicados', async ({page})=>{
+  await page.goto('/index.html');
+  const before=await page.evaluate(()=>({count:window.S.features.length,layers:window.S.vectorLayers.length}));
+  // Exercise the real JSZip library shipped with Ocarto and browser File input.
+  const archiveBytes=await page.evaluate(async()=>{
+    const archive=new JSZip();
+    const ring=[[500000,4100000],[500030,4100000],[500030,4100030],[500000,4100030],[500000,4100000]];
+    const hole=[[500010,4100010],[500020,4100010],[500020,4100020],[500010,4100020],[500010,4100010]];
+    for(const [name,id] of [['verde_oscuro','VO'],['rayado','VR'],['amarillo','AM']]){
+      const fc={type:'FeatureCollection',features:[{
+        type:'Feature',properties:{id:'BOB-TEST-'+id,clase:name,estado:'pendiente_revision'},
+        geometry:{type:'Polygon',coordinates:[ring,hole]}
+      }]};
+      archive.file(name+'.geojson',JSON.stringify(fc));
+    }
+    archive.file('Bobadilla_original.tif',new Uint8Array(200));
+    return Array.from(await archive.generateAsync({type:'uint8array'}));
+  });
+  await page.locator('#vegReviewedFiles').setInputFiles({
+    name:'Ocarto_Bobadilla_v4_capas_seleccionables.zip',mimeType:'application/zip',
+    buffer:Buffer.from(archiveBytes)
+  });
+  await page.evaluate(()=>{
+    // Synthetic georeferenced map: no EPSG inference from actual Bobadilla!
+    window.S.georef={a:.5,b:0,c:499800,d:0,e:-.5,f:4100200};
+    window.S.renderGeo={cx:500000,cy:4100000,scale:1};
+    document.getElementById('mapCrs').value='EPSG:32630';
+    document.getElementById('vegReviewedDark').checked=true;
+    document.getElementById('vegReviewedHatch').checked=false;
+    document.getElementById('vegReviewedYellow').checked=false;
+    document.getElementById('vegReviewedAsTemplate').checked=true;
+    document.getElementById('vegReviewedConfirmCrs').checked=true;
+    document.getElementById('vegReviewedImport').click();
+  });
+  await expect(page.locator('#vegReviewedStatus')).toContainText('plantillas vectoriales protegidas',{timeout:15000});
+  const result=await page.evaluate(()=>({
+    features:window.S.features.slice(-1),layers:window.S.vectorLayers.slice(-1),
+    total:window.S.features.length,layerCount:window.S.vectorLayers.length
+  }));
+  expect(result.total).toBe(before.count+1);
+  expect(result.layerCount).toBe(before.layers+1);
+  expect(result.layers[0].referenceOnly).toBe(true);
+  expect(result.layers[0].name).toContain('Verde oscuro');
+  expect(result.features[0].holes).toHaveLength(1);
+  expect(result.features[0].reviewRequired).toBe(true);
+  expect(result.features[0].vegetationReviewClass).toBe('verde_oscuro');
+  expect(result.features[0].vegetationReviewSourceId).toBe('BOB-TEST-VO');
+  // Duplicate import must not modify existing layers.
+  await page.evaluate(()=>{
+    window.S.georef={a:.5,b:0,c:499800,d:0,e:-.5,f:4100200};
+    window.S.renderGeo={cx:500000,cy:4100000,scale:1};
+    document.getElementById('vegReviewedImport').click();
+  });
+  await expect(page.locator('#vegReviewedStatus')).toContainText('No se importó ningún cambio',{timeout:15000});
+  const final=await page.evaluate(()=>({total:window.S.features.length,layers:window.S.vectorLayers.length}));
+  expect(final).toEqual({total:result.total,layers:result.layerCount});
+});
