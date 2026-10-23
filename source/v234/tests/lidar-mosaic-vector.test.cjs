@@ -47,8 +47,9 @@ test('un verde cruza la antigua frontera de dos LAZ: un único polígono curvo',
  assert.equal(f.properties.review_required,true);
  assert(ring.length>5,'Chaikin genera contorno redondeado');
  assert.deepEqual(ring[0],ring[ring.length-1]);
- assert(ring.some(p=>p[0]>384004&&p[0]<384006),
-  'El polígono atraviesa la frontera geográfica de los LAZ');
+ const xs=ring.map(p=>p[0]);
+ assert(Math.min(...xs)<384005&&Math.max(...xs)>384005,
+  'El polígono único debe cubrir ambos lados de la frontera geográfica entre LAZ');
 });
 test('amarillo grande con hueco interior preserva el hueco sin inventar cultivo',()=>{
  const w=15,h=15,mask=new Uint8Array(w*h);
