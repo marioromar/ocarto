@@ -201,3 +201,58 @@ test('la resolución de clasificación se puede ajustar por mapa sin cambiar el 
  assert(html.includes('id="vectorAggregationCell"'));
  assert(html.includes("targetCell:Number($('vectorAggregationCell').value)"));
 });
+
+test('las tres clases se exportan a tres plantillas GeoJSON separadas aunque una no tenga candidatos',async()=>{
+ const width=30,height=30,records=[hdr];
+ for(let j=0;j<height;j++)for(let i=0;i<width;i++){
+  const a=i<10?{ground:1,vegetation:3,canopy:5,density:.75,source:'observed'}:
+    i<20?{ground:3,vegetation:2,canopy:1.5,density:.4,source:'observed'}:
+      {ground:3,vegetation:0,source:'observed'};
+  records.push(csv(384000+i+.5,4114000+j+.5,a));
+ }
+ const folder=directory({'zona_completa_vegetacion_lidar.csv':records.join('\n')+'\n'});
+ const manifest={
+  state:'complete',crs:'EPSG:25830',cellVegetation:1,
+  selectedArea:{bounds:{minX:384000,maxX:384030,minY:4114000,maxY:4114030}},
+  sourceFiles:[{name:'384-4115.laz'},{name:'385-4115.laz'}],
+  plan:{total:2},mosaic:{state:'building'}
+ };
+ const result=await vector.exportGeojson(folder,manifest,{targetCell:2});
+ assert.equal(result.layers.length,3);
+ assert.equal(result.features,3);
+ assert.equal(result.analysisCellM,2);
+ for(const layer of result.layers){
+  assert(layer.name.startsWith('zona_completa_'));
+  assert.equal(layer.features,1);
+  assert.equal(layer.georeferenced,true);
+  const geo=JSON.parse(folder.files.get(layer.name));
+  assert.equal(geo.features.length,1);
+  assert(geo.features[0].properties.review_required);
+  assert.equal(geo.metadata.source_lidar_cell_m,1);
+  assert.equal(geo.metadata.aggregation_factor,2);
+  assert.equal(geo.crs.properties.name,'EPSG:25830');
+  assert.equal(geo.metadata.classKey,layer.clase);
+  assert.equal(geo.metadata.independentTemplate,true);
+  assert.equal(geo.metadata.autoIofSymbol,false);
+ }
+ const combined=JSON.parse(folder.files.get(result.name));
+ assert.equal(combined.features.length,3);
+ assert.deepEqual(result.layers.map(x=>x.clase),['verde_oscuro','rayado','amarillo']);
+});
+test('clases sin datos reales se exportan vacías, nunca con polígonos imaginados',async()=>{
+ const folder=directory({'zona_completa_vegetacion_lidar.csv':hdr+'\n'});
+ const manifest={
+  state:'complete',crs:'EPSG:25830',cellVegetation:1,
+  selectedArea:{bounds:{minX:384000,maxX:384020,minY:4114000,maxY:4114020}},
+  sourceFiles:[{name:'384-4115.laz'},{name:'385-4115.laz'}],
+  plan:{total:2},mosaic:{state:'building'}
+ };
+ const result=await vector.exportGeojson(folder,manifest);
+ assert.equal(result.features,0);
+ for(const layer of result.layers){
+  assert.equal(layer.features,0);
+  const geo=JSON.parse(folder.files.get(layer.name));
+  assert.deepEqual(geo.features,[]);
+  assert.equal(geo.metadata.status,'no-supported-candidates');
+ }
+});
