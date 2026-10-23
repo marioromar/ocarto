@@ -584,6 +584,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 
     const staged=await stageProject(projectData);
     $('cultivatedCandidatesConfirmCrs').checked=false; // Cada proyecto requiere verificar su referencia LiDAR.
+    $('tiledAreaConfirmCrs').checked=false; // No reutilizar confirmación UTM de otro proyecto.
     reusableVegetationModel=staged.vegetationModel;reusableVegetationImageModel=staged.vegetationImageModel;S.vegetationCorrections=staged.vegetationCorrections;S.vegetationPreview=null;$('classifyPreviewArea').disabled=true;$('multiPreviewSelect').checked=false;$('multiPreviewSelect').disabled=true;$('previewModeKeep').disabled=true;$('previewModeRemove').disabled=true;for(const [id,value] of Object.entries(staged.lidarSettings)){if(id==='vegetationHeightStops'){value.forEach((stop,i)=>{$('vegHeight'+(i+1)).value=stop.height;$('vegColor'+(i+1)).value=stop.color})}else $(id).type==='checkbox'?$(id).checked=value:$(id).value=value}S.projectName=staged.projectName;S.features=staged.features;S.vectorLayers=staged.layers;S.activeLayerId=staged.activeLayerId;S.templates=staged.templates;S.activeTemplateId=staged.activeTemplateId;S.cloudName=staged.cloudName;S.cloudTransform=staged.cloudTransform;S.symbolOverrides=staged.symbolOverrides;S.symbolStates=staged.symbolStates;S.symbol=staged.symbol;S.mapType=staged.mapType;$('mapType').value=staged.mapType;S.snapVertices=staged.snapVertices;S.zoom=staged.zoom;S.panX=staged.panX;S.panY=staged.panY;S.points=[];S.selection=null;S.multiSelection=[];S.selectedVertices=[];S.draft=null;S.draftHistory={undo:[],redo:[]};S.mapHistory={undo:[],redo:[]};S.vertexHistory.clear();S.traceGesture=null;S.insertVertexMode=false;S.awaitingControlPoint=false;S.pendingPixel=null;S.mapScale=staged.mapScale;S.freehandTolerance=staged.freehandTolerance;S.georef=null;S.controlPoints=[];
     $('mapScale').value=staged.mapScale;$('freehandTolerance').value=staged.freehandTolerance;$('freehandToleranceLabel').textContent=staged.freehandTolerance.toLocaleString('es-ES',{maximumFractionDigits:1})+' px';$('mapCrs').value=staged.mapCrs;S.projectCrs=staged.projectCrs;S.sourceCrs=staged.sourceCrs;S.mapCrsAuto=false;$('projectName').textContent=staged.projectName;
     S.template=activeTemplate();S.georef=S.template?.georef||null;S.controlPoints=S.template?.controlPoints||[];S.templateDisplayScale=S.template?.img?Math.min(W()*.72/S.template.img.width,H()*.72/S.template.img.height):1;
@@ -716,7 +717,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     const inferredBounds=selectedAoi?null:OcartoLidarSourceIndex.connectedUnionBounds(sourceIndex);
     if(!selectedAoi&&!inferredBounds)
       throw Error('Los archivos LAZ no son contiguos o alguna cabecera es ilegible. Selecciona un polígono georreferenciado que delimite la zona.');
-    if(!selectedAoi&&!$('tiledAreaConfirmCrs').checked)
+    if(!$('tiledAreaConfirmCrs').checked)
       throw Error('Confirma el EPSG del mapa y que coincide con las coordenadas métricas de los LAZ antes de procesar.');
     const aoi=selectedAoi||OcartoLidarSourceIndex.envelopeAoi(inferredBounds);
     const plan=OcartoLidarTilePlan.plan(aoi.bounds,cellTerrain,cellVegetation);
@@ -1019,7 +1020,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     };
     lasWorker.onerror=e=>{lidarLoadError='El Worker LiDAR no pudo iniciar: '+e.message;$('lidarStatus').textContent='No se pudo iniciar el procesador LiDAR: '+e.message;toast('Error del Worker LiDAR: '+e.message);if(cloudReadController)cloudReadController.abort();lidarOperation='idle';updateLidarButtons()};
   }
-  $('pointFile').onchange=async e=>{if(location.protocol==='file:'){const message='Para cargar LAS/LAZ, abre Ocarto con ABRIR-OCARTO.bat (servidor local), no con doble clic en index.html. Los navegadores bloquean Workers desde file://.';$('lidarStatus').textContent=message;toast(message);e.target.value='';return}const files=Array.from(e.target.files||[]);if(!files.length)return;if(files.length>1||/\.(las|laz)$/i.test(files[0].name)){
+  $('pointFile').onchange=async e=>{if(location.protocol==='file:'){const message='Para cargar LAS/LAZ, abre Ocarto con ABRIR-OCARTO.bat (servidor local), no con doble clic en index.html. Los navegadores bloquean Workers desde file://.';$('lidarStatus').textContent=message;toast(message);e.target.value='';return}const files=Array.from(e.target.files||[]);if(!files.length)return;tiledSelectedFiles=null;if(files.length>1||/\.(las|laz)$/i.test(files[0].name)){
       try {
         if(files.some(f=>!/\.(las|laz)$/i.test(f.name)))throw Error('Para unir varios archivos selecciona solo LAS o LAZ');
         const sources=await OcartoLidarSourceIndex.indexFiles(files);
