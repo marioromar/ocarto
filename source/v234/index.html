@@ -201,6 +201,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <script src="lidar-tile-plan.js"></script>
 <script src="lidar-tile-export.js"></script>
 <script src="lidar-mosaic-export.js"></script>
+<script src="lidar-mosaic-contours.js"></script>
 <script src="lidar-tile-seams.js"></script>
 <script src="lidar-mdt-audit.js"></script>
 <script src="lidar-source-index.js"></script>
@@ -902,6 +903,20 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       manifest.dtmSeams.state='complete';
       manifest.mosaic.outputs.terrainRaster=await OcartoLidarMosaicExport.writeVrt(
         folder,'zona_completa_mdt_preliminar.vrt',manifest,'mdt');
+      await writeTiledManifest(folder,manifest);
+      // Marching squares sobre un MDT único de toda la zona, tomando también
+      // los centros de celda de los bloques contiguos. No reutiliza ningún TIFF.
+      const contourInterval=Number($('contourDetailInterval').value)||1;
+      const contourName='zona_completa_curvas_'+String(contourInterval).replace('.','_')+'m.geojson';
+      manifest.mosaic.outputs.contours=await OcartoLidarMosaicContours.exportGeojson(
+        folder,manifest,contourName,contourInterval,{
+          connect:OcartoContours.connect,
+          signal:null,
+          onProgress:p=>{
+            $('tiledAreaStatus').textContent='Curvado de la zona completa '+p.completed+'/'+p.total+
+              ' bloques · '+p.lines.toLocaleString('es-ES')+' líneas';
+          }
+        });
       manifest.mosaic.state='complete';
       await writeTiledManifest(folder,manifest);
       $('tiledAreaStatus').textContent='Zona completa LiDAR terminada: '+files.length+
