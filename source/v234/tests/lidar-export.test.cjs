@@ -182,7 +182,7 @@ test('el mosaico importa alturas desde LAZ y las guarda sin tocar el TIFF anteri
  assert(html.includes("cellVegetation,'canopy',{heightStops}"));
  assert(html.includes('OcartoLidarTileExport.writeRasterTriplet(folder,'));
  assert(html.includes("label+'_alturas_lidar',png,grid.worldFile,wkt"));
- assert(html.includes('heightRaster={...saved,width:grid.width'));
+ assert(html.includes('heightRaster={...saved,bounds:grid.bounds,width:grid.width'));
  assert(html.includes('transparentNoData:true'));
  assert(html.includes('heightRaster});'));
 });
