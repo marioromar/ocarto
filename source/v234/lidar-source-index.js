@@ -50,5 +50,42 @@
     }
     return {selected,skipped};
   }
-  return Object.freeze({parseBounds,indexFiles,intersects,forWindow});
+  // Bounds calculated from LAS/LAZ headers, never from a guessed map extent.
+  // Unreadable headers must not silently define a geographic processing area.
+  function unionBounds(entries) {
+    if(!Array.isArray(entries)||!entries.length||entries.some(e=>!e?.verified||!e.bounds))
+      return null;
+    const b={minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};
+    for(const e of entries){
+      b.minX=Math.min(b.minX,e.bounds.minX);
+      b.maxX=Math.max(b.maxX,e.bounds.maxX);
+      b.minY=Math.min(b.minY,e.bounds.minY);
+      b.maxY=Math.max(b.maxY,e.bounds.maxY);
+    }
+    if(!Object.values(b).every(Number.isFinite)||b.minX>=b.maxX||b.minY>=b.maxY)
+      return null;
+    return b;
+  }
+  function envelopeAoi(b){
+    if(!b||![b.minX,b.maxX,b.minY,b.maxY].every(Number.isFinite)||
+      b.maxX<=b.minX||b.maxY<=b.minY)return null;
+    return {bounds:{...b},rings:[[
+      [b.minX,b.minY],[b.maxX,b.minY],
+      [b.maxX,b.maxY],[b.minX,b.maxY]
+    ]]};
+  }
+  // Exact same capacity estimate used by the worker's area-start.
+  function needsTiling(bounds,terrainCell,vegetationCell,maxCells=1000000){
+    if(!bounds||![bounds.minX,bounds.maxX,bounds.minY,bounds.maxY].every(Number.isFinite)||
+      bounds.maxX<=bounds.minX||bounds.maxY<=bounds.minY)
+      throw Error('Extensión LiDAR no válida para planificar el mosaico');
+    if(![terrainCell,vegetationCell].every(c=>Number.isFinite(c)&&c>=.1))
+      throw Error('Resolución LiDAR no válida para planificar el mosaico');
+    const cells=c=>
+      Math.ceil((bounds.maxX-bounds.minX)/c+1)*
+      Math.ceil((bounds.maxY-bounds.minY)/c+1);
+    return cells(terrainCell)>maxCells||cells(vegetationCell)>maxCells;
+  }
+  return Object.freeze({parseBounds,indexFiles,intersects,forWindow,
+    unionBounds,envelopeAoi,needsTiling});
 });
