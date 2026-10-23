@@ -177,7 +177,7 @@ test('nunca extender automáticamente un mosaico hacia un LAZ remoto o corrupto'
 });
 test('la interfaz enruta importación de muchos LAZ grandes al planificador y confirma EPSG',()=>{
  const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
- assert(html.includes("if(OcartoLidarSourceIndex.needsTiling(b,terrainCell,vegCell))"));
+ assert(html.includes("if(b&&OcartoLidarSourceIndex.needsTiling(b,terrainCell,vegCell))"));
  assert(html.includes("tiledSelectedFiles=files;"));
  assert(html.includes("const inferredBounds=selectedAoi?null:OcartoLidarSourceIndex.connectedUnionBounds(sourceIndex)"));
  assert(html.includes("if(!$('tiledAreaConfirmCrs').checked)"));
