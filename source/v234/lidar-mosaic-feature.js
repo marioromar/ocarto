@@ -51,5 +51,46 @@
    if(!data.summary.selectedCells)return {grid:null,...data};
    return {grid:featureRenderer.render(data.cells,cell),...data};
  }
- return Object.freeze({buildCells,render});
+
+ // Componer UNA imagen de toda la zona en memoria acotada, solo cuando
+ // <=12 millones de píxeles. Los VRT siguen siendo la salida para mapas enormes.
+ // Se reciben dependencias del navegador para poder verificar la geometría en Node.
+ async function saveWholePng(directory,manifest,{
+   planGeometry,decodeImage,createCanvas,writeTriplet,wkt,
+   shouldStop=()=>false,maxPixels=12000000
+ }={}){
+   if(![planGeometry,decodeImage,createCanvas,writeTriplet]
+        .every(fn=>typeof fn==='function')||!wkt)
+     throw Error('Herramientas del mosaico Feature Map incompletas');
+   const shape=planGeometry(manifest,manifest.cellVegetation);
+   if(shape.width*shape.height>maxPixels)return null;
+   const canvas=createCanvas(shape.width,shape.height),ctx=canvas?.getContext?.('2d');
+   if(!ctx)throw Error('No se pudo crear la imagen unificada Feature Map');
+   let tiles=0;
+   for(const tile of manifest.completed){
+     if(shouldStop())throw Object.assign(Error('Feature Map cancelado'),{name:'AbortError'});
+     const raster=tile.featureRaster;if(!raster)continue;
+     if(!raster.bounds||Math.abs(raster.cellSize-shape.cell)>1e-8)
+       throw Error('Feature Map desalineado en '+tile.name);
+     const image=await decodeImage(await(await directory.getFileHandle(raster.png)).getFile());
+     try{
+       const x=Math.round((raster.bounds.left-shape.left)/shape.cell),
+         y=Math.round((shape.top-raster.bounds.top)/shape.cell);
+       if(image.width!==raster.width||image.height!==raster.height||x<0||y<0||
+          x+image.width>shape.width||y+image.height>shape.height)
+         throw Error('Desplazamiento inválido Feature Map '+tile.name);
+       ctx.drawImage(image,x,y);tiles++;
+     }finally{image.close?.();}
+   }
+   if(!tiles)return null;
+   if(shouldStop())throw Object.assign(Error('Feature Map cancelado'),{name:'AbortError'});
+   const png=await new Promise((resolve,reject)=>canvas.toBlob(blob=>
+     blob?resolve(blob):reject(Error('PNG de Feature Map no disponible')),'image/png'));
+   const world=[shape.cell,0,0,-shape.cell,shape.left+shape.cell/2,
+     shape.top-shape.cell/2].join('\n')+'\n';
+   const data=await writeTriplet(directory,'zona_completa_feature_map_lidar',png,world,wkt);
+   return {...data,width:shape.width,height:shape.height,cellSize:shape.cell,
+     sources:tiles,method:'retornos no suelo LAS/LAZ; una sola imagen georreferenciada'};
+ }
+ return Object.freeze({buildCells,render,saveWholePng});
 });
