@@ -34,6 +34,12 @@ Los GeoJSON tienen georreferencia UTM confirmada. Las tres clases de vegetación
 
 El Feature Map **selecciona según la altura máxima del retorno no suelo por celda**. No demuestra que todos los retornos individuales de esa celda estén en el intervalo seleccionado y no equivale a una clasificación automática de piedras o muros.
 
+## Continuidad real de la vegetación entre archivos LAZ
+
+La v286 procesa cada bloque interno con **2 m adicionales de puntos LiDAR como halo**. Al calcular alturas y Feature Map, consulta retornos de suelo también del LAZ contiguo, y **exporta solo las celdas de la ventana principal**. Esto evita duplicar superficies y reduce franjas vacías artificiales a lo largo de la frontera `384-4115` / `385-4115`. Las teselas vecinas se seleccionan por la intersección de su cabecera con la ventana ampliada. Los puntos de halo no cuentan dos veces como puntos propios.
+
+La estimación de suelo exige observaciones suficientes y coherentes en un radio máximo de 2 m. Cuando no existen, se conserva **sin dato**, no se inventan alturas. En la zona de unión y en todo el mapa debe revisarse la calidad del MDT antes de aceptar colores IOF.
+
 ## Mosaicos mayores
 
 Para otros mapas, se pueden seleccionar **muchos LAZ contiguos**. El cálculo se divide en bloques georreferenciados para evitar agotar memoria. Los mosaicos VRT permiten disponer de una imagen lógica continua sin construir una única imagen gigantesca en memoria. El **vectorizador de zona completa** dispone actualmente de un límite de **12 millones de celdas**; si se supera, informa claramente de que esa vectorización queda pendiente en vez de afirmar que está terminada. El curvado GeoJSON es preliminar y requiere suavizado selectivo y revisión topológica.
