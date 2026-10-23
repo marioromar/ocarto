@@ -475,7 +475,7 @@ test('formato 8 PNOA LAS 1.4 calcula el suelo cercano, alturas y Feature Map a 0
  const feature=worker.messages.findLast(m=>m.jobId===1202&&(m.type==='feature-map'||m.type==='error'));
  assert.equal(feature.type,'feature-map',JSON.stringify(feature));
  assert.equal(feature.cells.height.length,3);
- assert.deepEqual([...feature.cells.height].sort((a,b)=>a-b),[1,2,8]);
+ assert([...feature.cells.height].sort((a,b)=>a-b).every((h,i)=>Math.abs(h-[1,2,8][i])<1e-6),'Alturas originales dentro de la precisión LiDAR');
  assert.equal(feature.measuredGroundCells,0);
  assert.equal(feature.estimatedGroundCells,3);
  assert.equal(feature.cells.i[0],Math.round(cell.x/.5-.5));
