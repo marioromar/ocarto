@@ -124,8 +124,11 @@ test('las transformaciones respetan el traslado de un objeto y sus agujeros',()=
 test('los objetos lineales no Bézier siguen exportándose igual',()=>{
  const f={type:'line',symbol:'path',points:[{x:0,y:0},{x:2,y:4}]};
  const exp=makeExports('local',[f]);
- assert.deepEqual(exp.candidateGeoFeature(f).geometry.coordinates,[[0,0],[-2,-4]]);
- assert.deepEqual(exp.exportMapData().features[0].geometry.coordinates,[[0,0],[-2,-4]]);
+ // -0 and +0 identify the same cartographic coordinate. Preserve the
+ // exact nonzero geometry while normalizing only the sign of zero.
+ const normalizeZero=coords=>coords.map(pair=>pair.map(n=>n===0?0:n));
+ assert.deepEqual(normalizeZero(exp.candidateGeoFeature(f).geometry.coordinates),[[0,0],[-2,-4]]);
+ assert.deepEqual(normalizeZero(exp.exportMapData().features[0].geometry.coordinates),[[0,0],[-2,-4]]);
 });
 
 test('la corrección conserva inventario, botón exportar, CART y KMZ',()=>{
