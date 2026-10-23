@@ -201,18 +201,24 @@ function vegetationBin(grid,x,y,z,cls,allowRoadClass11=true) {
   // In LAS 1.3 and older, class 11 was reserved; only interpret it as road
   // when an LAS 1.4 file supplies that standard classification.
   if(cls===11&&!allowRoadClass11)return;
-  if(![2,3,4,5,6,9,11,14,15].includes(cls))return;
+  if(![0,1,2,3,4,5,6,9,11,14,15].includes(cls))return;
   grid.insert(x,y,(ii,jj)=>({i:ii,j:jj,x:(ii+0.5)*grid.cell,y:(jj+0.5)*grid.cell,
     ground_points:0,vegetation_points:0,building_points:0,water_points:0,road_points:0,wire_points:0,tower_points:0,
-    ground_min_z:Infinity,canopy_max_z:-Infinity,canopy_sum_z:0}),
+    ground_min_z:Infinity,canopy_max_z:-Infinity,canopy_sum_z:0,
+    other_points:0,other_max_z:-Infinity}),
   p=>{
     if(cls===2){p.ground_points++;p.ground_min_z=Math.min(p.ground_min_z,z)}
     else if(cls>=3&&cls<=5){p.vegetation_points++;p.canopy_max_z=Math.max(p.canopy_max_z,z);p.canopy_sum_z+=z}
-    else if(cls===6)p.building_points++;
-    else if(cls===9)p.water_points++;
-    else if(cls===11)p.road_points++;
-    else if(cls===14)p.wire_points++;
-    else if(cls===15)p.tower_points++;
+    else {
+      // Preservar las clases oficiales y computar aparte retornos no suelo
+      // para Feature Map; no llamar vegetación a edificios o no clasificados.
+      p.other_points++;p.other_max_z=Math.max(p.other_max_z,z);
+      if(cls===6)p.building_points++;
+      else if(cls===9)p.water_points++;
+      else if(cls===11)p.road_points++;
+      else if(cls===14)p.wire_points++;
+      else if(cls===15)p.tower_points++;
+    }
   });
 }
 // v286: alturas de copa sobre suelo cercano cuando no hay retorno de suelo
@@ -247,13 +253,17 @@ function vegetationRows(grid,consumer=null) {
   const rows=consumer?null:[];
   for(const p of grid.cells.values()){
     const measured=Number.isFinite(p.ground_min_z)?p.ground_min_z:null;
-    const estimated=measured===null&&p.vegetation_points>0?nearbyGround(p):null;
+    const estimated=measured===null&&(p.vegetation_points>0||p.other_points>0)?nearbyGround(p):null;
     const ground=measured===null?(estimated?.z??null):measured;
     const h=ground!==null&&Number.isFinite(p.canopy_max_z)?
       Math.max(0,p.canopy_max_z-ground):null;
     const n=p.ground_points+p.vegetation_points;
+    const rawFeatureMax=Math.max(p.canopy_max_z,p.other_max_z);
+    const featureMax=ground!==null&&Number.isFinite(rawFeatureMax)?
+      Math.max(0,rawFeatureMax-ground):null;
     const row={x:p.x,y:p.y,ground_points:p.ground_points,vegetation_points:p.vegetation_points,
       building_points:p.building_points,water_points:p.water_points,road_points:p.road_points,
+      other_points:p.other_points,feature_max_above_ground_m:featureMax,
       wire_points:p.wire_points,tower_points:p.tower_points,
       ground_min_z:measured,
       estimated_ground_z_m:estimated?.z??null,
@@ -292,16 +302,16 @@ async function analysis(type,m) {
       // Usar la misma altura verificada que la imagen de vegetación, sin perder
       // copas con suelo vecino y sin convertir estimaciones en medidas reales.
       vegetationRows(grid,r=>{
-        const h=r.canopy_max_above_ground_m;
-        if(!Number.isFinite(h)||r.vegetation_points<=0)return;
+        const h=r.feature_max_above_ground_m;
+        if(!Number.isFinite(h)||r.vegetation_points+r.other_points<=0)return;
         if(h>=minHeight&&h<=maxHeight){
           data.i.push(Math.round(r.x/cell-.5));
           data.j.push(Math.round(r.y/cell-.5));
-          data.height.push(h);selected+=r.vegetation_points;
+          data.height.push(h);selected+=r.vegetation_points+r.other_points;
           if(r.ground_height_source==='nearby_estimate')estimatedCells++;else measuredCells++;
         }
       });
-      if(!data.i.length)throw Error('No hay alturas de vegetación con suelo medido o vecino fiable para Feature Map');
+      if(!data.i.length)throw Error('No hay retornos no suelo con altura máxima y suelo fiable para Feature Map');
       send({type:'feature-map',jobId:m.jobId,cellSize:cell,cells:data,selectedPoints:selected,minHeight,maxHeight,
         measuredGroundCells:measuredCells,estimatedGroundCells:estimatedCells});
     } else if(type==='detect') {
