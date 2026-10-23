@@ -42,15 +42,18 @@
   }
   // Imagen de alturas calculadas del propio LAZ, y su georreferencia:
   // se publican las tres piezas antes de marcar la tesela como completa.
+  // Exportar tres piezas de cada ráster calculado desde LAZ; abortar escrituras
+  // parciales para que el manifiesto solo registre los productos completos.
   async function writeRasterTriplet(directory,base,png,worldFile,wkt){
-    if(!/^[\\w-]+$/.test(base))throw Error('Nombre de ráster LiDAR inválido');
+    if(!/^[\w-]+$/.test(base))throw Error('Nombre de ráster LiDAR inválido');
+    const world=String(worldFile||'').trim().split(/\s+/).map(Number);
     if(!png||!Number.isSafeInteger(png.size)||png.size===0 ||
-       !/^[\\d.+\\-eE\\s]+$/.test(worldFile||'') ||
-       String(worldFile).trim().split(/\\s+/).length!==6 ||
+       world.length!==6||!world.every(Number.isFinite) ||
+       world[0]<=0||world[3]>=0 ||
        typeof wkt!=='string'||!wkt.includes('PROJCS['))
       throw Error('PNG, world file o PRJ del LiDAR incompletos');
     const entries=[{name:base+'.png',data:png},{name:base+'.pgw',data:worldFile},
-      {name:base+'.prj',data:wkt+'\\n'}],saved=[];
+      {name:base+'.prj',data:wkt+'\n'}],saved=[];
     try{
       for(const file of entries){
         const handle=await directory.getFileHandle(file.name,{create:true});
