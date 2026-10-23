@@ -1,10 +1,18 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const reader=require('../ocarto-runtime-v248-5.js');
-
-// The source includes several bundled IIFEs; the last exports the file reader.
-const api=reader.streamFileToWorker?reader:globalThis.OcartoLidarFileReader;
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+// Evaluate only the bundled file-reader module, without invoking other modules.
+const bundle=fs.readFileSync(path.join(__dirname,'../ocarto-runtime-v248-5.js'),'utf8');
+const start=bundle.indexOf('/* lidar-file-reader.js */');
+const end=bundle.indexOf('\n;\n\n/* ',start);
+assert(start>=0&&end>start,'File-reader module boundary not found');
+const sandbox={module:{exports:{}},Uint8Array,setTimeout,clearTimeout,AbortController};
+vm.runInNewContext(bundle.slice(start,end),sandbox);
+const api=sandbox.module.exports;
+assert.equal(typeof api.streamFileToWorker,'function');
 function workerFor(jobId,store){
  const listeners=new Set();
  const emit=data=>{for(const fn of listeners)fn({data:{...data,jobId}})};
