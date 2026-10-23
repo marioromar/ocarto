@@ -22,8 +22,8 @@
   let yellowCells=0,orthoCells=0;
   const labeler=r=>{
    if(!Number.isFinite(r?.x)||!Number.isFinite(r?.y))return null;
-   if(Number(r.building_points||0)>0||Number(r.road_points||0)>0)
-    return null; // Avoid giving "yellow cultivated" semantics to classed buildings/roads.
+   if(Number(r.building_points||0)>0||Number(r.road_points||0)>0||Number(r.water_points||0)>0)
+    return null; // Las clases LAS 6 (edificio), 11 (vía) y 9 (agua) no son amarillos.
    const v=predict(r);
    if(v!=='amarillo')return null;
    yellowCells++;
