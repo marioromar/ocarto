@@ -1091,6 +1091,14 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       const crs=normalizeCrsName($('mapCrs').value);
       if(!crs||!S.georef||!S.renderGeo)
         throw Error('Abre un mapa georreferenciado y comprueba su EPSG antes de generar candidatos');
+      // El campo de texto puede cambiarse sin reproyectar geometrías existentes.
+      const projectCrs=normalizeCrsName(S.projectCrs);
+      if(projectCrs&&projectCrs!==crs)
+        throw Error('El EPSG del campo es distinto al del proyecto: reproyecta el mapa antes de vectorizar');
+      const currentTemplate=S.template||activeTemplate();
+      const templateCrs=normalizeCrsName(currentTemplate?.crs);
+      if(templateCrs&&templateCrs!==crs)
+        throw Error('La plantilla activa tiene un EPSG distinto al mapa: revisa su georreferenciación');
       if(!$('cultivatedCandidatesConfirmCrs').checked)
         throw Error('Confirma que el LiDAR, el mapa y las plantillas comparten las coordenadas y EPSG');
       if(!vegetationRows.length)throw Error('Analiza primero la nube LiDAR de la zona');
