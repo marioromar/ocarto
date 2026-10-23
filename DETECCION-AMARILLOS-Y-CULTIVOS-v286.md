@@ -17,7 +17,7 @@ En **LiDAR e IA → Claros y arbolado alto** se añade **«Detectar y vectorizar
 ## Límites deliberados
 
 - Un área amarilla **no demuestra que sea un cultivo**: podría ser pastizal, parcela sin sembrar, suelo desnudo o claro. Todos los polígonos llevan `crop_confirmed: false`, `review_required: true` y `auto_accept: false`.
-- Las celdas LiDAR que tienen puntos clasificados como edificaciones (clase 6) o vías (clase 11) se excluyen de la propuesta amarilla.
+- Las celdas LiDAR que tienen puntos clasificados como edificaciones (clase 6), agua (clase 9) o vías (clase 11) se excluyen de la propuesta amarilla.
 - Sin ejemplos aprendidos de Amarillo **no se inventan polígonos agrícolas**.
 - LiDAR original, TIFF original, las capas existentes y la v285 no se modifican.
 - No se ha comprobado todavía la precisión con una zona real de cultivos de Bobadilla ni se ha confirmado el EPSG del TIFF de referencia.
