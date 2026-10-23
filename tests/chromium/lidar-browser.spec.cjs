@@ -27,8 +27,20 @@ for (const extension of ['las', 'laz']) {
     await page.goto('/index.html');
     // Select the actual cloud input, not the first arbitrary input on the page.
     await page.locator('#pointFile').setInputFiles(fixture(extension));
-    // This UI message is sent after worker.loaded, not when just selecting a file.
-    await expect(page.locator('#lidarStatus')).toHaveText('Carga completa', { timeout: 75_000 });
+    // Verify the same real file remains readable through slice() in Chromium.
+    // This identifies browser stream failures independently of the LAZ decoder.
+    const header=await page.locator('#pointFile').evaluate(async input=>{
+      const file=input.files?.[0];
+      if(!file)return null;
+      const bytes=new Uint8Array(await file.slice(0,4).arrayBuffer());
+      return Array.from(bytes);
+    });
+    // The onchange handler clears file input once the transfer completes;
+    // for fast fixtures it can finish before this read, so only assert if present.
+    if(header)expect(header).toEqual([76,65,83,70]); // LASF
+    await expect(page.locator('#lidarStatus')).toHaveText(
+      /^(Carga completa|Error LAS\/LAZ:|Carga cancelada)/,{timeout:75_000});
+    await expect(page.locator('#lidarStatus')).toHaveText('Carga completa');
     await expect(page.locator('#pointInfo')).toBeVisible();
     await expect(page.locator('#cloudName')).toHaveText('1815.' + extension);
     await expect(page.locator('#pointCount')).toContainText(/\d+/);
