@@ -407,3 +407,77 @@ test('CSV LiDAR conserva columna de suelo y distingue alturas estimadas',()=>{
   'La interfaz debe resumir suelo medido, estimado y desconocido');
  assert(html.includes('vegetationHeightQuality(vegetationRows)'));
 });
+
+function syntheticPnoa14Format8() {
+  // LAS 1.4 / formato 8 (38 bytes por punto), como las teselas PNOA.
+  // Los puntos son artificiales para validar la decodificación de clase y altura.
+  const originX=384000,originY=4114000,originZ=650,cell=.5;
+  const points=[
+    {i:0,j:0,z:650,cls:2},{i:0,j:1,z:650,cls:2},
+    {i:1,j:0,z:650,cls:2},{i:2,j:0,z:650,cls:2},
+    {i:1,j:1,z:658,cls:5},
+    {i:3,j:0,z:651,cls:6}, // Edificio, nunca copa.
+    {i:3,j:1,z:650,cls:9}, // Agua.
+    {i:3,j:2,z:652,cls:11} // Carretera, clase LAS 1.4.
+  ];
+  const buf=new Uint8Array(375+points.length*38),dv=new DataView(buf.buffer);
+  dv.setUint32(0,0x4653414c,true);
+  dv.setUint8(24,1);dv.setUint8(25,4);
+  dv.setUint16(94,375,true);dv.setUint32(96,375,true);
+  dv.setUint8(104,8);dv.setUint16(105,38,true);
+  dv.setBigUint64(247,BigInt(points.length),true);
+  for(const i of [131,139,147])dv.setFloat64(i,.001,true);
+  dv.setFloat64(155,originX,true);dv.setFloat64(163,originY,true);
+  dv.setFloat64(171,originZ,true);
+  for(const [k,p] of points.entries()) {
+    const at=375+k*38,x=originX+(p.i+.5)*cell,y=originY+(p.j+.5)*cell;
+    dv.setInt32(at,Math.round((x-originX)/.001),true);
+    dv.setInt32(at+4,Math.round((y-originY)/.001),true);
+    dv.setInt32(at+8,Math.round((p.z-originZ)/.001),true);
+    dv.setUint8(at+14,1);
+    dv.setUint8(at+16,p.cls);
+  }
+  dv.setFloat64(179,originX+2,true);
+  dv.setFloat64(187,originX,true);
+  dv.setFloat64(195,originY+2,true);
+  dv.setFloat64(203,originY,true);
+  dv.setFloat64(211,660,true);
+  dv.setFloat64(219,649,true);
+  return buf;
+}
+test('formato 8 PNOA LAS 1.4 calcula el suelo cercano, alturas y Feature Map a 0,5 m',async()=>{
+ const worker=makeWorker(),loaded=await worker.loadBytes(syntheticPnoa14Format8());
+ assert.equal(loaded.version,'1.4');
+ assert.equal(loaded.format,8);
+ assert.equal(loaded.count,8);
+ await worker.send({type:'terrain',jobId:1200,options:{cell:.5,minCount:1}});
+ const terrain=worker.messages.findLast(m=>m.jobId===1200&&(m.type==='terrain'||m.type==='error'));
+ assert.equal(terrain.type,'terrain',JSON.stringify(terrain));
+ assert.equal(terrain.matchingPoints,4);
+ assert.equal(terrain.candidates.length,4);
+ await worker.send({type:'vegetation',jobId:1201,options:{cell:.5}});
+ const veg=worker.messages.findLast(m=>m.jobId===1201&&(m.type==='vegetation'||m.type==='error'));
+ assert.equal(veg.type,'vegetation',JSON.stringify(veg));
+ assert.equal(veg.classifiedPoints,8);
+ assert.match(veg.quality,/estimado/);
+ const cell=veg.rows.find(r=>r.vegetation_points===1);
+ assert(cell,'La copa sin retorno de suelo debe formar una celda');
+ assert.equal(cell.ground_min_z,null,'Suelo original nunca alterado');
+ assert.equal(cell.estimated_ground_z_m,650);
+ assert.equal(cell.ground_height_source,'nearby_estimate');
+ assert.equal(cell.canopy_max_above_ground_m,8);
+ assert(cell.ground_estimation_support_cells>=3);
+ assert.equal(veg.rows.reduce((n,r)=>n+r.building_points,0),1);
+ assert.equal(veg.rows.reduce((n,r)=>n+r.water_points,0),1);
+ assert.equal(veg.rows.reduce((n,r)=>n+r.road_points,0),1);
+ await worker.send({type:'feature-map',jobId:1202,
+   options:{cell:.5,minHeight:1,maxHeight:20}});
+ const feature=worker.messages.findLast(m=>m.jobId===1202&&(m.type==='feature-map'||m.type==='error'));
+ assert.equal(feature.type,'feature-map',JSON.stringify(feature));
+ assert.equal(feature.cells.height.length,1);
+ assert.equal(feature.cells.height[0],8);
+ assert.equal(feature.measuredGroundCells,0);
+ assert.equal(feature.estimatedGroundCells,1);
+ assert.equal(feature.cells.i[0],Math.round(cell.x/.5-.5));
+ assert.equal(feature.cells.j[0],Math.round(cell.y/.5-.5));
+});
