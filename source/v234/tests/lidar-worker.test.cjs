@@ -355,6 +355,12 @@ test('copa sin suelo en su celda recibe altura desde suelo vecino consistente (0
  assert.equal(r.canopy_max_above_ground_m,10);
  assert.equal(r.canopy_mean_above_ground_m,10);
  assert(r.ground_estimation_support_cells>=3);
+ const streamed=[];
+ const result=h.vegetationRows(h.grid,row=>streamed.push(row));
+ assert.equal(result,null,'Feature Map no reserva otro vector de filas');
+ assert.equal(streamed.length,h.grid.cells.size);
+ assert.deepEqual(streamed.map(x=>x.x).sort((a,b)=>a-b),
+  h.vegetationRows(h.grid).map(x=>x.x).sort((a,b)=>a-b));
 });
 test('suelo medido prevalece y nunca se sustituye por interpolación',()=>{
  const h=vegetationHeightHarness();
@@ -380,9 +386,9 @@ test('no inventa alturas de vegetación sin suelo cercano o sobre terreno contra
   'No estimar altura en terreno escarpado sin base fiable');
 });
 test('Feature Map comparte alturas de vegetación locales sin modificar LiDAR original',()=>{
- assert(workerSource.includes('for(const r of vegetationRows(grid)){'),
+ assert(workerSource.includes('vegetationRows(grid,r=>{'),
   'Feature Map debe usar la altura de suelo cercano con control de calidad');
- assert(workerSource.includes('if(!Number.isFinite(h)||r.vegetation_points<=0)continue;'));
+ assert(workerSource.includes('if(!Number.isFinite(h)||r.vegetation_points<=0)return;'));
  assert(workerSource.includes("vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4),'feature-ground'"),
   'No tratar clase 11 de LAS anterior a 1.4 como carretera');
 });
