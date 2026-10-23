@@ -18,7 +18,7 @@
   const minArea=Number(options.minArea??100),minWidth=Number(options.minWidth??2);
   if(!Number.isFinite(minArea)||minArea<0||!Number.isFinite(minWidth)||minWidth<0)
    throw Error('Umbrales de cultivo inválidos');
-  const source=rows.map(r=>({...r}));
+  const source=rows; // Se analiza en lectura: no duplicar una rejilla grande en memoria.
   let yellowCells=0,orthoCells=0;
   const labeler=r=>{
    if(!Number.isFinite(r?.x)||!Number.isFinite(r?.y))return null;
