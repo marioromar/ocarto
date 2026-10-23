@@ -828,6 +828,52 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
         manifest.mosaic.outputs.vegetationRaster=await OcartoLidarMosaicExport.writeVrt(
           folder,'zona_completa_alturas_lidar.vrt',manifest,'canopy');
         await writeTiledManifest(folder,manifest);
+        // Las dos teselas PNOA (2 km² a 0,5 m = 8 Mpx) caben juntas
+        // en una plantilla PNG única. Para mosaicos enormes conservar VRT:
+        // no reservar 144+ MB de canvas para un área de muchos kilómetros.
+        const shape=OcartoLidarMosaicExport.geometry(manifest,cellVegetation);
+        if(shape.width*shape.height<=12000000){
+          try{
+            const canvas=document.createElement('canvas');
+            canvas.width=shape.width;canvas.height=shape.height;
+            const context=canvas.getContext('2d');
+            if(!context)throw Error('Lienzo de mosaico no disponible');
+            for(const t of manifest.completed){
+              if(tiledAreaStopped)throw Object.assign(
+                Error('Mosaico cancelado'),{name:'AbortError'});
+              if(!t.heightRaster)continue;
+              const raster=t.heightRaster;
+              const file=await (await folder.getFileHandle(raster.png)).getFile();
+              const bitmap=await createImageBitmap(file);
+              try{
+                if(bitmap.width!==raster.width||bitmap.height!==raster.height)
+                  throw Error('Imagen de alturas sin dimensiones válidas: '+raster.png);
+                const x=Math.round((raster.bounds.left-shape.left)/shape.cell),
+                  y=Math.round((shape.top-raster.bounds.top)/shape.cell);
+                if(x<0||y<0||x+bitmap.width>shape.width||y+bitmap.height>shape.height)
+                  throw Error('Desplazamiento del ráster LiDAR fuera del mosaico: '+raster.png);
+                context.drawImage(bitmap,x,y);
+              }finally{bitmap.close();}
+            }
+            const combined=await new Promise((resolve,reject)=>
+              canvas.toBlob(png=>png?resolve(png):reject(
+                Error('No se pudo guardar el PNG conjunto')),'image/png'));
+            const worldFile=[shape.cell,0,0,-shape.cell,
+              shape.left+shape.cell/2,shape.top-shape.cell/2].join('\n')+'\n';
+            manifest.mosaic.outputs.vegetationPng=
+              await OcartoLidarTileExport.writeRasterTriplet(folder,
+                'zona_completa_alturas_lidar',combined,worldFile,wkt);
+            manifest.mosaic.outputs.vegetationPng.width=shape.width;
+            manifest.mosaic.outputs.vegetationPng.height=shape.height;
+            await writeTiledManifest(folder,manifest);
+          }catch(error){
+            if(error.name==='AbortError')throw error;
+            // El mosaico VRT ya permite ver la misma zona sin un canvas gigante.
+            manifest.warnings.push('PNG unido no disponible: '+error.message+
+              '. El VRT conserva la zona completa con todas sus imágenes originales.');
+            await writeTiledManifest(folder,manifest);
+          }
+        }else manifest.warnings.push('Imagen conjunta demasiado grande para PNG en memoria: usar VRT georreferenciado.');
       }
       // Mosaico MDT continuo: el halo utiliza también puntos de las dos
       // teselas LiDAR originales si cruzan la misma ventana de trabajo.
