@@ -324,3 +324,65 @@ test('mosaico LAS omite la lectura preliminar aun con más de un archivo',async(
  const area=w.messages.findLast(m=>m.type==='area-finished');
  assert(area&&area.tiles===2);
 });
+
+function vegetationHeightHarness(){
+ const start=workerSource.indexOf('function vegetationBin(');
+ const end=workerSource.indexOf('async function analysis(',start);
+ assert(start>=0&&end>start,'No existe el motor de altura de vegetación');
+ const script=workerSource.slice(start,end)+'\n({vegetationBin,vegetationRows})';
+ const {vegetationBin,vegetationRows}=vm.runInNewContext(script);
+ const grid={cell:.5,cells:new Map(),insert(x,y,make,update){
+  const i=Math.floor(x/this.cell),j=Math.floor(y/this.cell),key=i+','+j;
+  let row=this.cells.get(key);
+  if(!row){row=make(i,j);this.cells.set(key,row)}
+  update(row);
+ }};
+ const point=(i,j,z,cls)=>vegetationBin(grid,(i+.5)*grid.cell,
+  (j+.5)*grid.cell,z,cls);
+ const find=(i,j)=>vegetationRows(grid).find(r=>
+  r.x===(i+.5)*grid.cell&&r.y===(j+.5)*grid.cell);
+ return {point,find,grid,vegetationRows};
+}
+test('copa sin suelo en su celda recibe altura desde suelo vecino consistente (0,5 m)',()=>{
+ const h=vegetationHeightHarness();
+ h.point(0,0,100,2);h.point(0,1,100,2);
+ h.point(1,0,100,2);h.point(2,0,100,2);
+ h.point(1,1,110,5);
+ const r=h.find(1,1);
+ assert.equal(r.ground_min_z,null,'El suelo observado original sigue ausente');
+ assert.equal(r.estimated_ground_z_m,100);
+ assert.equal(r.ground_height_source,'nearby_estimate');
+ assert.equal(r.canopy_max_above_ground_m,10);
+ assert.equal(r.canopy_mean_above_ground_m,10);
+ assert(r.ground_estimation_support_cells>=3);
+});
+test('suelo medido prevalece y nunca se sustituye por interpolación',()=>{
+ const h=vegetationHeightHarness();
+ h.point(0,0,99,2);h.point(0,0,109,5);
+ h.point(1,0,101,2);h.point(0,1,100,2);
+ const r=h.find(0,0);
+ assert.equal(r.ground_min_z,99);
+ assert.equal(r.ground_height_source,'observed');
+ assert.equal(r.estimated_ground_z_m,null);
+ assert.equal(r.canopy_max_above_ground_m,10);
+});
+test('no inventa alturas de vegetación sin suelo cercano o sobre terreno contradictorio',()=>{
+ const isolated=vegetationHeightHarness();
+ isolated.point(7,7,114,5);
+ assert.equal(isolated.find(7,7).canopy_max_above_ground_m,null);
+ assert.equal(isolated.find(7,7).ground_height_source,'unknown');
+ const steep=vegetationHeightHarness();
+ steep.point(0,0,100,2);
+ steep.point(0,1,106,2);
+ steep.point(1,0,111,2);
+ steep.point(1,1,115,5);
+ assert.equal(steep.find(1,1).canopy_max_above_ground_m,null,
+  'No estimar altura en terreno escarpado sin base fiable');
+});
+test('Feature Map comparte alturas de vegetación locales sin modificar LiDAR original',()=>{
+ assert(workerSource.includes('for(const r of vegetationRows(grid)){'),
+  'Feature Map debe usar la altura de suelo cercano con control de calidad');
+ assert(workerSource.includes('if(!Number.isFinite(h)||r.vegetation_points<=0)continue;'));
+ assert(workerSource.includes("vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4),'feature-ground'"),
+  'No tratar clase 11 de LAS anterior a 1.4 como carretera');
+});
