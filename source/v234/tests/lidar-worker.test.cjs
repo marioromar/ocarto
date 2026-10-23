@@ -391,4 +391,19 @@ test('Feature Map comparte alturas de vegetación locales sin modificar LiDAR or
  assert(workerSource.includes('if(!Number.isFinite(h)||r.vegetation_points<=0)return;'));
  assert(workerSource.includes("vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4),'feature-ground'"),
   'No tratar clase 11 de LAS anterior a 1.4 como carretera');
+ assert(workerSource.includes('measuredGroundCells:measuredCells,estimatedGroundCells:estimatedCells'),
+  'Feature Map debe informar alturas de suelo medido y estimado');
+});
+
+test('CSV LiDAR conserva columna de suelo y distingue alturas estimadas',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ assert(html.includes("k==='ground_z_min'?(r.ground_min_z??'')"),
+  'La columna ground_z_min no debe quedar vacía al exportar');
+ assert(html.includes("'vegetation_return_fraction','ground_height_source','estimated_ground_z_m','ground_estimation_support_cells'"),
+  'Las teselas deben exportar la procedencia de la altura de vegetación');
+ assert(html.includes('row.ground_height_source,row.estimated_ground_z_m,row.ground_estimation_support_cells'),
+  'Los valores de teselas deben coincidir con su cabecera');
+ assert(html.includes('function vegetationHeightQuality(rows)'),
+  'La interfaz debe resumir suelo medido, estimado y desconocido');
+ assert(html.includes('vegetationHeightQuality(vegetationRows)'));
 });
