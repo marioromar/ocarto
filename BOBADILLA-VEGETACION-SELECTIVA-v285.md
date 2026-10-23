@@ -8,7 +8,7 @@ Base: `ocarto-v284-bezier-geojson-fix`, sin revertir ni reemplazar herramientas 
 2. Identifica el EPSG de la cartografía de origen (y del TIFF). **No basta con conocer las coordenadas X/Y**: el TIFF de ejemplo indica LOCAL_CS, sin código EPSG confirmado.
 3. En el mapa, selecciona el EPSG correcto. Si no puedes confirmarlo, **no marques la casilla de coincidencia** ni incorpores polígonos como cartografía georreferenciada definitiva.
 4. Abre **LiDAR e IA → Vegetación revisable · importar solo clases seleccionadas**.
-5. Selecciona uno, dos o los tres GeoJSON: `verde_oscuro.geojson`, `rayado.geojson`, `amarillo.geojson` del ZIP Bobadilla v4.
+5. Puedes seleccionar directamente **`Ocarto_Bobadilla_v4_capas_seleccionables.zip`**: Ocarto extraerá solamente `verde_oscuro.geojson`, `rayado.geojson` y `amarillo.geojson`, **sin abrir ni alterar el TIFF ni los PNG**. También puedes seleccionar los GeoJSON individuales.
 6. Marca las clases que deseas traer. Las no seleccionadas se omiten incluso si están presentes en los archivos.
 7. Confirma el CRS solo cuando esté comprobado que imagen, GeoJSON y mapa pertenecen al mismo sistema. Pulsa **Incorporar solo las clases seleccionadas**.
 8. Opcionalmente marca **Importar como plantillas vectoriales protegidas** para colocar las tres clases como capas de solo lectura, visibles y con transparencia, sin alterar la capa editable activa.
@@ -27,7 +27,7 @@ Base: `ocarto-v284-bezier-geojson-fix`, sin revertir ni reemplazar herramientas 
 
 - Esta versión importa **los polígonos GeoJSON ya vectorizados**, no lee directamente GeoTIFF para generar nuevas capas por rango de altura. La función antigua PNG + PGW continúa disponible.
 - La asignación de símbolo y la precisión cartográfica requieren revisión manual; un color RGB por sí solo no determina la penetrabilidad.
-- Se limita a 5.000 polígonos por importación y a 10 MB por archivo en el panel.
+- Se limita a 5.000 polígonos por importación, 10 MB por GeoJSON y 60 MB por ZIP (solo se descomprimen los GeoJSON de las tres clases).
 - Si el EPSG original y el del mapa no están confirmados, puede mantenerse la revisión independiente en el visor externo, pero no debe declararse una superposición GIS exacta.
 - La aplicación Windows Flutter no se modifica con este trabajo; el panel v285 se integra en el editor avanzado web/Electron.
 
