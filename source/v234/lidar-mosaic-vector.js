@@ -97,6 +97,126 @@
    }finally{try{await rdr.cancel()}catch(_){}try{rdr.releaseLock()}catch(_){}}
    return {mask,rows:read,valid,count};
  }
+
+ // La densidad PNOA en 0,5 m puede ser <2 retornos por celda.
+ // Clasificar cada medio metro crea salpicaduras y elimina manchas enteras al
+ // aplicar el área mínima. Acumular observaciones reales en ventanas de 2 m,
+ // SIN interpolar ni tomar colores del TIFF: la altura sigue medida en LAZ.
+ function aggregationGeometry(manifest,{targetCell=2,maxPixels=12000000}={}){
+   const source=Number(manifest?.cellVegetation);
+   if(!Number.isFinite(source)||source<.1||source>100)
+     throw Error('Resolución de vegetación LiDAR inválida');
+   if(!Number.isFinite(targetCell)||targetCell<source||targetCell>100)
+     throw Error('Celda de clasificación LiDAR inválida');
+   let factor=Math.max(1,Math.ceil(targetCell/source-1e-8));
+   // Limitar la memoria para varios kilómetros cuadrados sin recortar el
+   // área seleccionada ni forzar al usuario a dividir sus archivos.
+   while(true){
+     const cell=Number((factor*source).toFixed(6));
+     try {
+       const output=geometry(manifest,cell,maxPixels);
+       return {...output,sourceCell:source,aggregationFactor:factor,
+         method:'suma de recuentos LAS/LAZ originales y altura de vegetación observada'};
+     }catch(err){
+       if(!String(err.message).includes('excede 12 millones'))throw err;
+       if(++factor>1000||factor*source>100)
+         throw Error('Área LiDAR demasiado extensa para una vectorización unificada');
+     }
+   }
+ }
+ async function loadAggregatedMask(file,shape,{signal,onProgress}={}){
+   check(signal);
+   if(!file?.stream||!Number.isFinite(shape?.sourceCell)||shape.sourceCell<=0)
+     throw Error('Faltan celdas originales LAS/LAZ para clasificar');
+   const n=shape.width*shape.height;
+   const ground=new Uint32Array(n),vegetation=new Uint32Array(n),
+     blocked=new Uint8Array(n),maxHeight=new Float32Array(n),
+     hasHeight=new Uint8Array(n);
+   const reader=file.stream().getReader(),decoder=new TextDecoder();
+   let pending='',first=true,rows=0,measured=0;
+   const consume=line=>{
+     if(first){
+       first=false;
+       if(line!==CSV_HEADER)throw Error('CSV LiDAR de zona completa sin clases verificables');
+       return;
+     }
+     if(!line)return;
+     const c=line.split(',');
+     if(c.length!==16)throw Error('CSV LiDAR incompleto para agregación');
+     const x=Number(c[0]),y=Number(c[1]);
+     if(!Number.isFinite(x)||!Number.isFinite(y))
+       throw Error('Coordenada LiDAR no finita');
+     const i=Math.floor((x-shape.x0)/shape.cell+1e-8),
+           j=Math.floor((y-shape.y0)/shape.cell+1e-8);
+     if(i<0||j<0||i>=shape.width||j>=shape.height)
+       throw Error('Celda de origen fuera de la zona seleccionada');
+     const at=j*shape.width+i;
+     const count=k=>{
+       if(c[k].trim()==='')return 0;
+       const value=Number(c[k]);
+       if(!Number.isSafeInteger(value)||value<0)
+         throw Error('Conteo LiDAR inválido en columna '+k);
+       return value;
+     };
+     const g=count(2),v=count(3);
+     const excluded=[4,5,6,14,15].some(k=>count(k)>0);
+     ground[at]+=g;vegetation[at]+=v;
+     if(!Number.isSafeInteger(ground[at])||!Number.isSafeInteger(vegetation[at]))
+       throw Error('Exceso de retornos en celda de vectorización');
+     if(excluded)blocked[at]=1;
+     if(v>0&&c[8].trim()){
+       const height=Number(c[8]);
+       if(!Number.isFinite(height)||height<0)
+         throw Error('Altura de vegetación LiDAR inválida');
+       if(!hasHeight[at]||height>maxHeight[at])maxHeight[at]=height;
+       hasHeight[at]=1;
+     }
+     if(g>0&&c[11]==='observed')measured++;
+     rows++;
+   };
+   try{
+     while(true){
+       check(signal);
+       const chunk=await reader.read();
+       if(chunk.done)break;
+       pending+=decoder.decode(chunk.value,{stream:true});
+       let p;
+       while((p=pending.indexOf('\n'))>=0){
+         consume(pending.slice(0,p).replace(/\r$/,''));
+         pending=pending.slice(p+1);
+       }
+       if(pending.length>65536)throw Error('Fila CSV LiDAR excesivamente larga');
+       if(rows&&rows%250000===0)onProgress?.({stage:'aggregation',rows});
+     }
+     pending+=decoder.decode();
+     if(pending)consume(pending.replace(/\r$/,''));
+     if(first)throw Error('CSV LiDAR vacío');
+   }finally{
+     try{await reader.cancel()}catch(_){}
+     try{reader.releaseLock()}catch(_){}
+   }
+   const mask=new Uint8Array(n),counts=[0,0,0,0];
+   for(let i=0;i<n;i++){
+     if((i&65535)===0)check(signal);
+     if(blocked[i])continue;
+     const g=ground[i],v=vegetation[i];
+     const height=hasHeight[i]?maxHeight[i]:null;
+     const density=v+g?v/(v+g):0;
+     let cls=0;
+     // Verde oscuro: altura y predominio de retornos de vegetación.
+     if(v>=5&&height!==null&&height>=3&&density>=.6)cls=1;
+     // Rayado: presencia vegetal dispersa de 0,3 m o más.
+     else if(v>=2&&height!==null&&height>=.3&&density>=.12)cls=2;
+     // Amarillo: suelo realmente medido y ausencia de vegetación en 2 m.
+     // No supone automáticamente un cultivo: la etiqueta sigue provisional.
+     else if(g>=3&&v===0)cls=3;
+     mask[i]=cls;counts[cls]++;
+   }
+   return {mask,rows,measured,count:counts,aggregatedCells:n,
+     classifiedCells:n-counts[0],sourceCell:shape.sourceCell,
+     classificationCell:shape.cell};
+ }
+
  const pointKey=(x,y)=>x+','+y;
  function signedArea(r){
    let a=0;for(let i=0;i<r.length-1;i++)
@@ -246,9 +366,9 @@
      manifest.mosaic?.state!=='complete')
      throw Error('Primero termina el procesamiento conjunto de todos los LAZ');
    if(!/^EPSG:\d+$/.test(manifest.crs))throw Error('EPSG LiDAR no confirmado');
-   const shape=geometry(manifest,manifest.cellVegetation,maxPixels);
+   const shape=aggregationGeometry(manifest,{maxPixels});
    const file=await (await directory.getFileHandle('zona_completa_vegetacion_lidar.csv')).getFile();
-   const loaded=await loadMask(file,shape,{signal,onProgress});
+   const loaded=await loadAggregatedMask(file,shape,{signal,onProgress});
    const {features,summary}=vectorizeMask(loaded.mask,shape,{signal,onProgress});
    const name='zona_completa_vegetacion_candidata_lidar.geojson';
    const fc={
@@ -257,7 +377,9 @@
      metadata:{
        crs:manifest.crs,sourceFiles:manifest.sourceFiles.map(f=>f.name),
        source:'celdas del LAS/LAZ clasificadas y combinadas; NO TIFF',
-       cell_m:shape.cell,dimensions:[shape.width,shape.height],
+       cell_m:shape.cell,source_lidar_cell_m:manifest.cellVegetation,
+       aggregation_factor:shape.aggregationFactor,
+       aggregation_method:shape.method,dimensions:[shape.width,shape.height],
        calculation:'verde oscuro, rayado, amarillo grande — reglas provisionales sin IA entrenada',
        limitations:'No clasifica transitabilidad, cultivos ni penetrabilidad con certeza; requiere revisión manual',
        noInventedClasses:['verde_claro','verde_intermedio'],
@@ -272,5 +394,5 @@
      classes:summary.candidates,method:'criterios conservadores desde puntos LiDAR; revisión obligatoria'};
  }
  return Object.freeze({CSV_HEADER,CLASSES,classifyColumns,geometry,loadMask,
-   vectorizeMask,exportGeojson,curveRing});
+   aggregationGeometry,loadAggregatedMask,vectorizeMask,exportGeojson,curveRing});
 });
