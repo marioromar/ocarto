@@ -198,7 +198,7 @@
    const mask=new Uint8Array(n),counts=[0,0,0,0];
    for(let i=0;i<n;i++){
      if((i&65535)===0)check(signal);
-     if(blocked[i])continue;
+     if(blocked[i]){counts[0]++;continue;}
      const g=ground[i],v=vegetation[i];
      const height=hasHeight[i]?maxHeight[i]:null;
      const density=v+g?v/(v+g):0;
