@@ -122,3 +122,21 @@ test('v286 reutiliza la ortofoto del lote sin buscarla para cada celda',()=>{
  assert(html.includes('const predictYellowRow=row=>predictVegetationRow(row,yellowTemplate)'),
   'La detección v286 debe usar la referencia elegida para el lote');
 });
+
+test('amarillos del inventario se presentan en amarillo sin símbolo IOF definitivo',()=>{
+ const html=fs.readFileSync(path.join(base,'index.html'),'utf8');
+ const start=html.indexOf('const describe=p=>',html.indexOf('function addCandidateFeatureCollection('));
+ const end=html.indexOf(';\n    const point=',start);
+ assert(start>=0&&end>start,'Agrupación de candidatos no encontrada');
+ const expr=html.slice(start,end).replace('const describe=','');
+ const palette=Array.from({length:8},(_,i)=>['clase-'+i,'#647b83']);
+ const describe=vm.runInNewContext('(function(palette,sourceLabel){return ('+expr+');})',{})(palette,'LiDAR');
+ const yellow=describe({kind:'zona-amarilla-candidata-abierto-o-cultivo'});
+ assert.equal(yellow[0],'Amarillo · terreno abierto (revisar)');
+ assert.equal(yellow[1],'#e9cf49');
+ assert.equal(yellow[2],'vegetation','La representación es una capa candidata, no un símbolo IOF aceptado');
+ const fc=run([xy(0,0)],{minArea:1});
+ assert.equal(fc.features[0].properties.map_symbol,null);
+ assert.equal(fc.features[0].properties.auto_accept,false);
+ assert.equal(fc.features[0].properties.crop_confirmed,false);
+});
