@@ -144,3 +144,37 @@ test('amarillos del inventario se presentan en amarillo sin símbolo IOF definit
  assert.equal(fc.features[0].properties.auto_accept,false);
  assert.equal(fc.features[0].properties.crop_confirmed,false);
 });
+
+test('no inicia vectorización sin confirmar coordenadas LiDAR, mapa y EPSG',()=>{
+ const html=fs.readFileSync(path.join(base,'index.html'),'utf8');
+ assert(html.includes('id="cultivatedCandidatesConfirmCrs"'),'Falta confirmación EPSG visible');
+ assert(html.includes("$('mapCrs').oninput=()=>{$('cultivatedCandidatesConfirmCrs').checked=false"),
+  'Cambiar EPSG debe revocar la confirmación');
+ assert(html.includes("const staged=await stageProject(projectData);\n    $('cultivatedCandidatesConfirmCrs').checked=false"),
+  'Abrir otro mapa debe revocar la confirmación');
+ const begin=html.indexOf("  $('detectCultivatedCandidates').onclick=()=>{");
+ const end=html.indexOf('\n  let heightRasterDraft=',begin);
+ assert(begin>=0&&end>begin,'No se encuentra handler de cultivos');
+ const elements={};
+ const $=id=>elements[id]||(elements[id]={value:'',textContent:'',checked:false});
+ $('mapCrs').value='EPSG:25830';
+ $('cultivatedCandidatesConfirmCrs').checked=false;
+ let prepared=0;
+ const sandbox={
+  $,S:{georef:{a:1},renderGeo:{cx:0}},
+  normalizeCrsName:v=>v,
+  vegetationRows:[{x:.5,y:.5}],
+  reusableVegetationModel:{predict:()=> 'amarillo'},
+  reusableVegetationImageModel:null,
+  vegetationRowsWithOrtho:()=>{prepared++;return[{x:.5,y:.5}]},
+  toast:()=>{}
+ };
+ vm.runInNewContext(html.slice(begin,end),sandbox);
+ assert.equal(typeof $('detectCultivatedCandidates').onclick,'function');
+ $('detectCultivatedCandidates').onclick();
+ assert.equal(prepared,0,'Sin confirmación nunca se calcula la rejilla');
+ assert.match($('cultivatedCandidatesStatus').textContent,/Confirma/);
+ $('cultivatedCandidatesConfirmCrs').checked=true;
+ $('detectCultivatedCandidates').onclick();
+ assert.equal(prepared,1,'Con confirmación puede iniciarse el análisis');
+});
