@@ -9,6 +9,7 @@ on:
       - 'package.json'
       - 'source/v234/**'
       - 'servidor-ocarto.ps1'
+      - '.github/workflows/desktop.yml'
 
 jobs:
   build:
