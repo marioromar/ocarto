@@ -1,6 +1,6 @@
 {
   "name": "ocarto-desktop",
-  "version": "0.276.0",
+  "version": "0.285.0",
   "description": "Editor cartográfico Ocarto para Windows",
   "private": true,
   "main": "desktop/main.cjs",
