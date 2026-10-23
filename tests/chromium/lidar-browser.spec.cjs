@@ -38,12 +38,16 @@ for (const extension of ['las', 'laz']) {
     // The onchange handler clears file input once the transfer completes;
     // for fast fixtures it can finish before this read, so only assert if present.
     if(header)expect(header).toEqual([76,65,83,70]); // LASF
-    await expect(page.locator('#lidarStatus')).toHaveText(
-      /^(Carga completa|Error LAS\/LAZ:|Carga cancelada)/,{timeout:75_000});
-    await expect(page.locator('#lidarStatus')).toHaveText('Carga completa');
+    // Real import must finish through worker.loaded; errors and cancellations fail.
+    await expect(page.locator('#lidarStatus')).toHaveText('Carga completa', { timeout:75_000 });
+    // The first active workspace is Symbols; LiDAR data may be loaded but its
+    // summary is hidden by the tab. Activate LiDAR like the user would.
+    await page.locator('#lidarNav').click();
+    await expect(page.locator('#lidarWorkspace')).toBeVisible();
     await expect(page.locator('#pointInfo')).toBeVisible();
     await expect(page.locator('#cloudName')).toHaveText('1815.' + extension);
-    await expect(page.locator('#pointCount')).toContainText(/\d+/);
+    const count=await page.locator('#pointCount').textContent();
+    expect(Number((count||'').split(' ')[0].replace(/[^\d]/g,''))).toBeGreaterThan(0);
     await expect(page.locator('#terrainBtn')).toBeEnabled();
   });
 }
