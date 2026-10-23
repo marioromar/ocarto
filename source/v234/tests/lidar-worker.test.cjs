@@ -388,7 +388,9 @@ test('no inventa alturas de vegetación sin suelo cercano o sobre terreno contra
 test('Feature Map comparte alturas de vegetación locales sin modificar LiDAR original',()=>{
  assert(workerSource.includes('vegetationRows(grid,r=>{'),
   'Feature Map debe usar la altura de suelo cercano con control de calidad');
- assert(workerSource.includes('if(!Number.isFinite(h)||r.vegetation_points+r.other_points<=0)return;'));
+ assert(workerSource.includes('if(r.vegetation_points+r.other_points<=0)return;'));
+ assert(workerSource.includes('feature_min_above_ground_m'),
+  'El Feature Map debe conservar retornos bajos aun cuando exista una copa alta');
  assert(workerSource.includes("vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4),'feature-ground'"),
   'No tratar clase 11 de LAS anterior a 1.4 como carretera');
  assert(workerSource.includes('measuredGroundCells:measuredCells,estimatedGroundCells:estimatedCells'),
