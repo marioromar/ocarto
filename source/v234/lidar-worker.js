@@ -218,17 +218,17 @@ function vegetationBin(grid,x,y,z,cls,allowRoadClass11=true) {
 // v286: alturas de copa sobre suelo cercano cuando no hay retorno de suelo
 // en la misma celda (frecuente a 0,5 m). La observación original nunca cambia.
 function vegetationRows(grid) {
-  const observed=new Map();
-  for(const p of grid.cells.values())if(Number.isFinite(p.ground_min_z))
-    observed.set(p.i+','+p.j,p.ground_min_z);
-  const radius=Math.max(1,Math.ceil(2/grid.cell)),r2=(2/grid.cell)**2+1e-8;
+  // Reutilizar la rejilla existente; duplicar hasta 1M claves de suelo agota RAM.
+  const observed=grid.cells;
+  // Como máximo 4 celdas: limita el coste cuando la resolución es inferior a 0,5 m.
+  const radius=Math.min(4,Math.max(1,Math.ceil(2/grid.cell))),r2=(2/grid.cell)**2+1e-8;
   function nearbyGround(p){
     const matches=[];
     for(let dj=-radius;dj<=radius;dj++)for(let di=-radius;di<=radius;di++){
       const d2=di*di+dj*dj;
       if(!d2||d2>r2)continue;
-      const z=observed.get((p.i+di)+','+(p.j+dj));
-      if(z!==undefined)matches.push({z,d2});
+      const z=observed.get((p.i+di)+','+(p.j+dj))?.ground_min_z;
+      if(Number.isFinite(z))matches.push({z,d2});
     }
     // No extrapolar con una o dos medidas aisladas.
     if(matches.length<3)return null;
