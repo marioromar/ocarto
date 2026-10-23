@@ -53,15 +53,16 @@
  };
  function vrtXml(manifest,product) {
    verifiedManifest(manifest);
-   if(!['canopy','mdt'].includes(product))throw Error('Modelo de mosaico no reconocido');
-   const cell=Number(product==='canopy'?manifest.cellVegetation:manifest.cellTerrain);
+   if(!['canopy','feature','mdt'].includes(product))throw Error('Modelo de mosaico no reconocido');
+   const cell=Number(product==='mdt'?manifest.cellTerrain:manifest.cellVegetation);
    const g=geometry(manifest,cell);
    const sources=[];
    for(const t of manifest.completed) {
      let name,x,y,width,height;
-     if(product==='canopy') {
-       if(!t.heightRaster)continue; // Retornos vegetales inexistentes: transparente.
-       const raster=t.heightRaster,b=raster.bounds;
+     if(product==='canopy'||product==='feature') {
+       const raster=product==='canopy'?t.heightRaster:t.featureRaster;
+       if(!raster)continue; // Sin retornos válidos, transparentar en vez de inventar.
+       const b=raster.bounds;
        if(!b||Math.abs(raster.cellSize-cell)>1e-8)
          throw Error('Ráster de altura sin georreferencia en '+t.name);
        name=safeName(raster.png,'png');width=raster.width;height=raster.height;
@@ -86,13 +87,13 @@
      sources.push({name,width,height,x,y});
    }
    if(!sources.length)throw Error('No hay alturas LiDAR válidas para el mosaico');
-   const colors=product==='canopy'?['Red','Green','Blue','Alpha']:['Gray'];
-   const bandType=product==='canopy'?'Byte':'Float32';
+   const colors=product==='mdt'?['Gray']:['Red','Green','Blue','Alpha'];
+   const bandType=product==='mdt'?'Float32':'Byte';
    const bands=colors.map((color,k)=>{
      const blocks=sources.map(src=>
        '    <SimpleSource>\n'+
        '      <SourceFilename relativeToVRT="1">'+escapeXml(src.name)+'</SourceFilename>\n'+
-       '      <SourceBand>'+(product==='canopy'?k+1:1)+'</SourceBand>\n'+
+       '      <SourceBand>'+(product==='mdt'?1:k+1)+'</SourceBand>\n'+
        '      <SourceProperties RasterXSize="'+src.width+'" RasterYSize="'+src.height+
           '" DataType="'+bandType+'" BlockXSize="256" BlockYSize="256"/>\n'+
        '      <SrcRect xOff="0" yOff="0" xSize="'+src.width+'" ySize="'+src.height+'"/>\n'+
