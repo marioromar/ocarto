@@ -11,7 +11,8 @@ Base: `ocarto-v284-bezier-geojson-fix`, sin revertir ni reemplazar herramientas 
 5. Selecciona uno, dos o los tres GeoJSON: `verde_oscuro.geojson`, `rayado.geojson`, `amarillo.geojson` del ZIP Bobadilla v4.
 6. Marca las clases que deseas traer. Las no seleccionadas se omiten incluso si están presentes en los archivos.
 7. Confirma el CRS solo cuando esté comprobado que imagen, GeoJSON y mapa pertenecen al mismo sistema. Pulsa **Incorporar solo las clases seleccionadas**.
-8. Se crean **capas vectoriales independientes y editables**, con geometrías y huecos originales, símbolos genéricos pendientes de asignación. Usa **Deshacer** si detectas un problema y guarda el proyecto CART después de revisarlo.
+8. Opcionalmente marca **Importar como plantillas vectoriales protegidas** para colocar las tres clases como capas de solo lectura, visibles y con transparencia, sin alterar la capa editable activa.
+9. Si no marcas esa opción, se crean **capas vectoriales independientes y editables**. Ambas modalidades conservan geometrías y huecos originales, con símbolos pendientes de revisión. Usa **Deshacer** si detectas un problema y guarda el proyecto CART después de revisarlo.
 
 ## Garantías
 
