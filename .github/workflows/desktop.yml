@@ -3,12 +3,13 @@ name: Ocarto Desktop
 on:
   workflow_dispatch:
   push:
-    branches: [fix/symbols-v275]
+    branches: [fix/symbols-v275, ocarto-v285-vegetacion-capas-seleccionadas]
     paths:
       - 'desktop/**'
       - 'package.json'
       - 'source/v234/**'
       - 'servidor-ocarto.ps1'
+      - '.github/workflows/desktop.yml'
 
 jobs:
   build:
@@ -16,9 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
+        with: { node-version: 20 }
       - run: npm install
-      - run: npm run dist
+      - run: npm run dist -- --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: Ocarto-Desktop-Windows

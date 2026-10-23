@@ -8,6 +8,7 @@ on:
       - 'ocarto-v282-natural-bezier'
       - 'ocarto-v283-scalable-natural-curves'
       - 'ocarto-v284-bezier-geojson-fix'
+      - 'ocarto-v285-vegetacion-capas-seleccionadas'
   workflow_dispatch:
 
 permissions:

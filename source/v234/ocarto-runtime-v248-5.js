@@ -525,10 +525,38 @@ async function streamFileToWorker(file,worker,{jobId,sessionId,signal,onProgress
  try{
   worker.postMessage({type:'load-start',jobId,fileSize:file.size,sessionId});await waitFor('ready');
   reader=file.stream().getReader();
-  while(true){if(signal?.aborted)throw abortError();const part=await reader.read();if(signal?.aborted)throw abortError();if(part.done)break;
-   if(!(part.value instanceof Uint8Array))throw Error('La lectura del archivo devolvió un bloque inválido');
-   for(let offset=0;offset<part.value.byteLength;offset+=chunkSize){if(signal?.aborted)throw abortError();const chunk=part.value.slice(offset,Math.min(part.value.byteLength,offset+chunkSize));sequence++;worker.postMessage({type:'load-chunk',jobId,sequence,offset:done,chunk},[chunk.buffer]);done+=chunk.byteLength;onProgress(done,file.size);await waitFor('chunk');if(skipped)break}
+  const sendBytes=async bytes=>{
+   if(!(bytes instanceof Uint8Array)||bytes.byteLength===0)throw Error('La lectura LAS/LAZ devolvió un bloque vacío o inválido');
+   for(let offset=0;offset<bytes.byteLength;offset+=chunkSize){
+    if(signal?.aborted)throw abortError();
+    const chunk=bytes.slice(offset,Math.min(bytes.byteLength,offset+chunkSize));
+    const length=chunk.byteLength; // Transfer detaches the buffer immediately in Chromium.
+    sequence++;worker.postMessage({type:'load-chunk',jobId,sequence,offset:done,chunk},[chunk.buffer]);
+    done+=length;onProgress(done,file.size);await waitFor('chunk');
+    if(skipped)break;
+   }
+  };
+  while(true){
+   if(signal?.aborted)throw abortError();
+   const part=await reader.read();
+   if(signal?.aborted)throw abortError();
+   if(part.done)break;
+   await sendBytes(part.value);
    if(skipped){try{await reader.cancel()}catch(_){}break}
+  }
+  // Recover the unread suffix if Chromium File.stream() ends before file.size.
+  // Slices stay bounded to chunkSize; the original File is never rewritten.
+  if(done!==file.size&&!skipped){
+   if(typeof file.slice!=='function')throw Error('Lectura incompleta: el navegador no permite leer LAS/LAZ por bloques');
+   for(let offset=done;offset<file.size;offset+=chunkSize){
+    if(signal?.aborted)throw abortError();
+    const size=Math.min(chunkSize,file.size-offset);
+    const bytes=new Uint8Array(await file.slice(offset,offset+size).arrayBuffer());
+    if(bytes.byteLength!==size)
+     throw Error('Lectura incompleta: archivo truncado al recuperar bloques LAS/LAZ');
+    await sendBytes(bytes);
+    if(skipped)break;
+   }
   }
   if(done!==file.size&&!skipped)throw Error(`Lectura incompleta: ${done} de ${file.size} bytes`);
   worker.postMessage({type:'load-end',jobId});const loaded=await waitFor('finish');return loaded;
