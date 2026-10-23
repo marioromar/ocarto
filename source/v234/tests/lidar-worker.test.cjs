@@ -481,3 +481,33 @@ test('formato 8 PNOA LAS 1.4 calcula el suelo cercano, alturas y Feature Map a 0
  assert.equal(feature.cells.i[0],Math.round(cell.x/.5-.5));
  assert.equal(feature.cells.j[0],Math.round(cell.y/.5-.5));
 });
+
+
+test('halo LiDAR de 2m recupera suelo vecino sin exportar celdas ni puntos duplicados',async()=>{
+ const window={minX:384000.5,maxX:384001,minY:4114000.5,maxY:4114001};
+ const aoi={rings:[[[384000,4114000],[384002,4114000],
+   [384002,4114002],[384000,4114002]]]};
+ async function run(halo,sessionId){
+  const worker=makeWorker();
+  await worker.send({type:'area-start',sessionId,terrainCell:.5,
+    vegetationCell:.5,aoi,window,haloMetres:halo});
+  assert.equal(worker.messages.at(-1).type,'area-ready');
+  const loaded=await worker.loadBytes(syntheticPnoa14Format8(),sessionId);
+  assert.equal(loaded.headerOnly,true);
+  await worker.send({type:'area-add',sessionId,jobId:sessionId+1});
+  const tile=worker.messages.findLast(m=>m.type==='area-tile-done');
+  assert.equal(tile.points,1,'Solo la copa del área principal suma puntos');
+  if(halo)assert(tile.haloPoints>=3,'El vecino ha sido leído sin contarlo como propio');
+  await worker.send({type:'area-finish',sessionId,jobId:sessionId+2});
+  return worker.messages.findLast(m=>m.type==='area-finished');
+ }
+ const isolated=await run(0,1500),withHalo=await run(2,1510);
+ assert.equal(isolated.vegetationCells,1);
+ assert.equal(isolated.vegetationRows[0].canopy_max_above_ground_m,null);
+ assert.equal(withHalo.points,1,'No duplicar retornos de ventanas vecinas');
+ assert.equal(withHalo.vegetationCells,1);
+ assert.equal(withHalo.terrainCells,0,'Suelo vecino no es suelo observado dentro de la ventana');
+ assert.equal(withHalo.vegetationRows[0].canopy_max_above_ground_m,8);
+ assert.equal(withHalo.vegetationRows[0].ground_height_source,'nearby_estimate');
+ assert.equal(withHalo.vegetationRows[0].feature_max_above_ground_m,8);
+});
