@@ -144,8 +144,8 @@ test('MDT y vegetación se calculan con clases LAS y suelo por celda',async()=>{
  await w.send({type:'feature-map',jobId:102,options:{cell:1,minHeight:1,maxHeight:10}});
  const feature=w.messages.findLast(m=>m.jobId===102&&(m.type==='feature-map'||m.type==='error'));
  assert.equal(feature.type,'feature-map',JSON.stringify(feature));
- assert.equal(feature.cells.height.length,1);
- assert.equal(feature.cells.height[0],8);
+ assert.equal(feature.cells.height.length,3,'Vegetación, edificio y carretera proceden de LAS');
+ assert.deepEqual([...feature.cells.height].sort((a,b)=>a-b),[1,2,8]);
 });
 test('mosaico de dos teselas LAS combina las celdas sin descargar más librerías',async()=>{
  const w=makeWorker();
@@ -388,7 +388,7 @@ test('no inventa alturas de vegetación sin suelo cercano o sobre terreno contra
 test('Feature Map comparte alturas de vegetación locales sin modificar LiDAR original',()=>{
  assert(workerSource.includes('vegetationRows(grid,r=>{'),
   'Feature Map debe usar la altura de suelo cercano con control de calidad');
- assert(workerSource.includes('if(!Number.isFinite(h)||r.vegetation_points<=0)return;'));
+ assert(workerSource.includes('if(!Number.isFinite(h)||r.vegetation_points+r.other_points<=0)return;'));
  assert(workerSource.includes("vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4),'feature-ground'"),
   'No tratar clase 11 de LAS anterior a 1.4 como carretera');
  assert(workerSource.includes('measuredGroundCells:measuredCells,estimatedGroundCells:estimatedCells'),
@@ -477,7 +477,7 @@ test('formato 8 PNOA LAS 1.4 calcula el suelo cercano, alturas y Feature Map a 0
  assert.equal(feature.cells.height.length,1);
  assert.equal(feature.cells.height[0],8);
  assert.equal(feature.measuredGroundCells,0);
- assert.equal(feature.estimatedGroundCells,1);
+ assert.equal(feature.estimatedGroundCells,3);
  assert.equal(feature.cells.i[0],Math.round(cell.x/.5-.5));
  assert.equal(feature.cells.j[0],Math.round(cell.y/.5-.5));
 });
