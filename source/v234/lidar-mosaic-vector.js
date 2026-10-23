@@ -388,10 +388,41 @@
      },features
    };
    check(signal);
-   const stream=await(await directory.getFileHandle(name,{create:true})).createWritable();
-   try{await stream.write(JSON.stringify(fc));await stream.close();}
-   catch(e){try{await stream.abort()}catch(_){}throw e;}
-   return {name,features:features.length,crs:manifest.crs,
+   const written=[],layers=[];
+   async function saveJson(fileName,document){
+     const stream=await(await directory.getFileHandle(fileName,{create:true})).createWritable();
+     try{
+       await stream.write(JSON.stringify(document));await stream.close();
+       written.push(fileName);
+     }catch(error){try{await stream.abort()}catch(_){}throw error;}
+   }
+   try{
+     await saveJson(name,fc);
+     // Cada símbolo candidato se guarda además como capa independiente.
+     // El GeoJSON vacío indica correctamente que la clase no fue detectada.
+     for(const def of CLASSES){
+       check(signal);
+       const layerName='zona_completa_'+def.key+'_lidar.geojson';
+       const selected=features.filter(p=>p.properties.clase===def.key);
+       const layer={
+         type:'FeatureCollection',name:def.name,crs:fc.crs,
+         metadata:{...fc.metadata,
+           classKey:def.key,classLabel:def.name,
+           detectedFeatures:selected.length,
+           status:selected.length?'candidate-review-required':'no-supported-candidates',
+           independentTemplate:true,
+           autoIofSymbol:false,review_required:true},
+         features:selected
+       };
+       await saveJson(layerName,layer);
+       layers.push({name:layerName,clase:def.key,features:selected.length,
+         georeferenced:true,reviewRequired:true,iofSymbol:null});
+     }
+   }catch(error){
+     for(const entry of written)try{await directory.removeEntry?.(entry)}catch(_){}
+     throw error;
+   }
+   return {name,features:features.length,crs:manifest.crs,layers,
      analysisCellM:shape.cell,sourceCellM:shape.sourceCell,
      classes:summary.candidates,method:'criterios conservadores desde puntos LiDAR; revisión obligatoria'};
  }
