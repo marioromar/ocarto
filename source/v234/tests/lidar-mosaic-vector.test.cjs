@@ -184,3 +184,20 @@ test('el agregado excluye celdas con carreteras/edificios y rechaza datos de ori
  await assert.rejects(vector.loadAggregatedMask(
    new Blob([hdr+'\n'+csv(400000.25,4114000.25,{ground:1})+'\n']),shape),/fuera/);
 });
+
+test('la resolución de clasificación se puede ajustar por mapa sin cambiar el MDT ni el LiDAR original',()=>{
+ const m={cellVegetation:.5,selectedArea:{bounds:{
+  minX:384000,maxX:384020,minY:4114000,maxY:4114010
+ }}};
+ const a=vector.aggregationGeometry(m,{targetCell:1});
+ const b=vector.aggregationGeometry(m,{targetCell:2});
+ assert.equal(a.cell,1);
+ assert.equal(b.cell,2);
+ assert.equal(a.width,20);
+ assert.equal(b.width,10);
+ assert.equal(m.cellVegetation,.5);
+ assert.throws(()=>vector.aggregationGeometry(m,{targetCell:.2}),/inválida/);
+ const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ assert(html.includes('id="vectorAggregationCell"'));
+ assert(html.includes("targetCell:Number($('vectorAggregationCell').value)"));
+});
