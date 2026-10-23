@@ -359,8 +359,8 @@ test('copa sin suelo en su celda recibe altura desde suelo vecino consistente (0
  const result=h.vegetationRows(h.grid,row=>streamed.push(row));
  assert.equal(result,null,'Feature Map no reserva otro vector de filas');
  assert.equal(streamed.length,h.grid.cells.size);
- assert.deepEqual(streamed.map(x=>x.x).sort((a,b)=>a-b),
-  h.vegetationRows(h.grid).map(x=>x.x).sort((a,b)=>a-b));
+ assert.equal(JSON.stringify(streamed.map(x=>x.x).sort((a,b)=>a-b)),
+  JSON.stringify(h.vegetationRows(h.grid).map(x=>x.x).sort((a,b)=>a-b)));
 });
 test('suelo medido prevalece y nunca se sustituye por interpolación',()=>{
  const h=vegetationHeightHarness();
