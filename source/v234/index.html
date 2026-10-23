@@ -721,11 +721,13 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       throw Error('Confirma el EPSG del mapa y que coincide con las coordenadas métricas de los LAZ antes de procesar.');
     const aoi=selectedAoi||OcartoLidarSourceIndex.envelopeAoi(inferredBounds);
     const plan=OcartoLidarTilePlan.plan(aoi.bounds,cellTerrain,cellVegetation);
+    const crs=normalizeCrsName($('mapCrs').value),wkt=OcartoLidarExports.prjWkt(crs);
+    const heightStops=validateVegetationPalette();
     const folder=await baseDirectory.getDirectoryHandle('ocarto_teselas_'+new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14),{create:true});
     const manifest={
       format:'Ocarto LiDAR tiled CSV v1',created:new Date().toISOString(),
       sourceFiles:files.map(f=>({name:f.name,bytes:f.size})),
-      cellTerrain,cellVegetation,selectedArea:aoi,plan,
+      cellTerrain,cellVegetation,crs,selectedArea:aoi,plan,
       sourceIndex:{files:files.length,verified:files.length-unknownHeaders,
         unknown:unknownHeaders,bytesInspectedPerFile:227},
       state:'incomplete',completed:[],warnings:[
@@ -735,7 +737,9 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
         'La clase 2 se usa como suelo y las clases 3–5 para vegetación',
         'Las cabeceras se indexan una vez y se omiten archivos fuera de cada ventana',
         'Los archivos LAS/LAZ que intersectan varias ventanas se leen una vez por cada una',
-        'Los archivos cuya cabecera no se pueda interpretar NO se descartan por el índice'
+        'Los archivos cuya cabecera no se pueda interpretar NO se descartan por el índice',
+        'Las imágenes de alturas PNG/PGW/PRJ proceden de puntos LAS/LAZ calculados, sin reutilizar TIFF originales',
+        'Las celdas sin cota fiable quedan transparentes; colores de alturas NO indican por sí solos transitabilidad'
       ]
     };
     tiledAreaBusy=true;tiledAreaStopped=false;
@@ -771,19 +775,38 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
         if(writtenTerrain!==result.terrainCells ||
            writtenVegetation!==result.vegetationCells)
           throw Error('Exportación de '+label+' incompleta: las celdas no coinciden con los CSV');
+        // Crear una imagen de alturas NUEVA desde las celdas LiDAR de la tesela.
+        // Sin valores inventados en las celdas sin suelo medido o estimado fiable.
+        let heightRaster=null;
+        if(result.vegetationRows.some(row=>Number.isFinite(row.canopy_max_above_ground_m))){
+          const grid=OcartoLidarExports.rasterGrid(result.vegetationRows,
+            cellVegetation,'canopy',{heightStops});
+          const canvas=document.createElement('canvas');
+          canvas.width=grid.width;canvas.height=grid.height;
+          canvas.getContext('2d').putImageData(new ImageData(grid.rgba,grid.width,grid.height),0,0);
+          const png=await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):
+            reject(Error('No se pudo dibujar la imagen de alturas LiDAR')),'image/png'));
+          const saved=await OcartoLidarTileExport.writeRasterTriplet(folder,
+            label+'_alturas_lidar',png,grid.worldFile,wkt);
+          heightRaster={...saved,width:grid.width,height:grid.height,
+            cellSize:grid.cell,source:'LAS/LAZ procesado',transparentNoData:true,
+            measuredGroundCells:result.vegetationRows.filter(row=>Number.isFinite(row.canopy_max_above_ground_m)&&row.ground_height_source==='observed').length,
+            estimatedGroundCells:result.vegetationRows.filter(row=>Number.isFinite(row.canopy_max_above_ground_m)&&row.ground_height_source==='nearby_estimate').length};
+        }
         manifest.completed.push({name:label,window:tile.window,
           sources:matching.selected.map(f=>f.name),omittedSources:matching.skipped.length,
           points:result.points,terrainCells:result.terrainCells,
-          vegetationCells:result.vegetationCells,terrainFile:terrainName,vegetationFile:vegetationName});
+          vegetationCells:result.vegetationCells,terrainFile:terrainName,
+          vegetationFile:vegetationName,heightRaster});
         await writeTiledManifest(folder,manifest);
         terrainGrid=[];vegetationRows=[];lasTotal=0;areaReady=false;
         $('tiledAreaStatus').textContent='Bloques escritos: '+manifest.completed.length+'/'+plan.total+
-          ' · archivos CSV de terreno y vegetación en la carpeta seleccionada';
+          ' · CSV y PNG/PGW/PRJ de alturas LiDAR guardados en la carpeta seleccionada';
         await new Promise(resolve=>setTimeout(resolve,0));
       }
       manifest.state='complete';await writeTiledManifest(folder,manifest);
       $('tiledAreaStatus').textContent='Área procesada: '+plan.total+
-        ' bloques exportados a la subcarpeta Ocarto. Comprueba manifest.json y los CSV.';
+        ' bloques exportados. Revisa manifest.json, CSV y PNG/PGW/PRJ de alturas derivados del LiDAR.';
       toast('Área extensa procesada por '+plan.total+' teselas. Falta unión de modelos/curvas entre bloques.');
       return manifest;
     }catch(err){
