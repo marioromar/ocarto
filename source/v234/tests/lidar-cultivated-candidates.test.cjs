@@ -82,3 +82,21 @@ test('interfaz incluye botón amarillo independiente y salida revisable, sin inc
   'ocarto-v286-amarillos-posibles-cultivos-revisar.geojson'])
   assert(html.includes(marker),'Falta integración '+marker);
 });
+
+test('calcula límites de mosaicos LiDAR de 220.000 celdas sin desbordar argumentos',()=>{
+ const html=fs.readFileSync(path.join(base,'index.html'),'utf8');
+ const marker='function vegetationRowsBounds(rows)';
+ const start=html.indexOf(marker);
+ assert(start>=0,'No existe el cálculo acotado de límites');
+ const source=html.slice(start,html.indexOf('\n',start));
+ const boundsOf=vm.runInNewContext('('+source+')');
+ const rows=Array.from({length:220000},(_,i)=>({x:i*.5,y:900-i*.25}));
+ const bounds=boundsOf(rows);
+ assert.equal(bounds.minX,0);
+ assert.equal(bounds.maxX,109999.5);
+ assert.equal(bounds.maxY,900);
+ assert.equal(bounds.minY,900-219999*.25);
+ assert.equal((html.match(/bounds=vegetationRowsBounds\(rows\)/g)||[]).length,2,
+  'El cálculo acotado debe utilizarse tanto en selección de ortofoto como en muestreo');
+ assert(!html.includes('Math.min(...rows.map(r=>r.x))'));
+});
