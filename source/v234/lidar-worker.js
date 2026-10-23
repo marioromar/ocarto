@@ -282,7 +282,7 @@ async function analysis(type,m) {
       const grid=makeGrid(cell);let classifiedPoints=0;
       await forPoints(cloud,job,(x,y,z,cls)=>{if([2,3,4,5,6,9,11,14,15].includes(cls)&&(cls!==11||cloud.meta.minor>=4)){classifiedPoints++;vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4)}},'vegetation');
       send({type:'vegetation',jobId:m.jobId,cellSize:cell,cells:grid.cells.size,classifiedPoints,
-        rows:vegetationRows(grid),quality:'preliminar; solo celdas observadas'});
+        rows:vegetationRows(grid),quality:'preliminar; suelo medido o estimado con vecinos identificados por celda; confirmar con MDT y campo'});
     } else if(type==='feature-map') {
       const grid=makeGrid(cell);
       await forPoints(cloud,job,(x,y,z,cls)=>vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4),'feature-ground');
