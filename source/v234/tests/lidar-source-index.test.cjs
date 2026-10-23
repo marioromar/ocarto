@@ -195,8 +195,8 @@ test('un solo PNOA de 1 km² a 0,5 m también activa mosaico automático',async(
  const blocks=plan(bounds,.5,.5);
  assert(blocks.total>1&&blocks.total<=512);
  const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
- assert(html.includes("if(files.length>1||/\\.(las|laz)$/i.test(files[0].name))"),
-  'La carga individual debe comprobar el tamaño de la zona antes de reservar la rejilla');
+ assert(html.includes("files[0].size>=1048576"),
+  'Un archivo pequeño conserva importación directa en lugar de abrir mosaico');
  assert(html.includes("if(b&&OcartoLidarSourceIndex.needsTiling(b,terrainCell,vegCell))"));
  assert(html.includes("if(files.length>1){void processAreaFiles(files);return;}"),
   'La lectura individual ordinaria sigue funcionando cuando cabe en memoria');
