@@ -40,9 +40,11 @@ for (const extension of ['las', 'laz']) {
     if(header)expect(header).toEqual([76,65,83,70]); // LASF
     // Real import must finish through worker.loaded; errors and cancellations fail.
     await expect(page.locator('#lidarStatus')).toHaveText('Carga completa', { timeout:75_000 });
-    // The first active workspace is Symbols; LiDAR data may be loaded but its
-    // summary is hidden by the tab. Activate LiDAR like the user would.
-    await page.locator('#lidarNav').click();
+    // The old #lidarNav remains in the DOM for compatibility, but is hidden
+    // by the redesigned layout. The visible workspace tab is the real control.
+    const lidarTab=page.locator('#workspaceTabs .workspace-tab[aria-controls="lidarWorkspace"]');
+    await expect(lidarTab).toBeVisible();
+    await lidarTab.click();
     await expect(page.locator('#lidarWorkspace')).toBeVisible();
     await expect(page.locator('#pointInfo')).toBeVisible();
     await expect(page.locator('#cloudName')).toHaveText('1815.' + extension);
