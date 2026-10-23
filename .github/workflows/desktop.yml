@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm install
-      - run: npm run dist
+      - run: npm run dist -- --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: Ocarto-Desktop-Windows
