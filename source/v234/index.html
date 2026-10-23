@@ -653,7 +653,8 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     let areaWorkerSessionStarted=false;try{
       const terrainCell=Math.max(.1,Number($('cellSize').value)||.5),vegetationCell=Math.max(.1,Number($('vegetationCell').value)||.5);terrainCellSize=terrainCell;
       const aoi=options.aoi??currentLidarPolygon();
-      const areaStart=await requestAreaWorker({type:'area-start',sessionId:areaSessionId,terrainCell,vegetationCell,aoi,window:options.window??null},'area-ready');areaWorkerSessionStarted=true;const capacityText=areaStart.capacity?` · encuadre hasta ${areaStart.capacity.terrainCells.toLocaleString('es-ES')} celdas terreno / ${areaStart.capacity.vegetationCells.toLocaleString('es-ES')} vegetación; límite ${areaStart.capacity.maxCells.toLocaleString('es-ES')} por modelo`:
+      const areaStart=await requestAreaWorker({type:'area-start',sessionId:areaSessionId,terrainCell,vegetationCell,aoi,window:options.window??null,
+        haloMetres:options.haloMetres??0},'area-ready');areaWorkerSessionStarted=true;const capacityText=areaStart.capacity?` · encuadre hasta ${areaStart.capacity.terrainCells.toLocaleString('es-ES')} celdas terreno / ${areaStart.capacity.vegetationCells.toLocaleString('es-ES')} vegetación; límite ${areaStart.capacity.maxCells.toLocaleString('es-ES')} por modelo`:
         '';
       const sourceBounds=[];for(let i=0;i<files.length;i++){
         if(areaCancelRequested)throw Object.assign(Error('Mosaico cancelado'),{name:'AbortError'});
@@ -762,14 +763,19 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       for(let i=0;i<plan.tiles.length;i++){
         if(tiledAreaStopped)throw Object.assign(Error('Procesamiento detenido por el usuario'),{name:'AbortError'});
         const tile=plan.tiles[i],label=tile.name;
-        const matching=OcartoLidarSourceIndex.forWindow(sourceIndex,tile.window);
+        // Leer las nubes vecinas dentro de 2 m: el halo sirve para estimar suelo
+        // en fronteras de los dos LAZ, sin duplicar celdas en el resultado.
+        const halo=2;
+        const haloWindow={minX:tile.window.minX-halo,maxX:tile.window.maxX+halo,
+          minY:tile.window.minY-halo,maxY:tile.window.maxY+halo};
+        const matching=OcartoLidarSourceIndex.forWindow(sourceIndex,haloWindow);
         $('tiledAreaStatus').textContent='Bloque '+(i+1)+'/'+plan.total+' · '+label+
           ' · LAS/LAZ necesarios '+matching.selected.length+'/'+files.length;
         // Windows without intersecting point-cloud files still get explicit
         // CSV files, so the output mosaic layout has no missing windows.
         const result=matching.selected.length
           ? await processAreaFiles(matching.selected,{
-              window:tile.window,aoi,throwOnError:true
+              window:tile.window,aoi,throwOnError:true,haloMetres:2
             })
           : {points:0,terrain:[],vegetationRows:[],terrainCells:0,vegetationCells:0,tiles:0};
         if(!result)throw Error('No se obtuvo el resultado de '+label);
