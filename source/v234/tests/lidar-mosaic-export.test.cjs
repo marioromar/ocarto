@@ -25,7 +25,7 @@ function directory(seed={}) {
  };
 }
 const terrainHeader='x_utm,y_utm,min_ground_z_m';
-const vegHeader='x_utm,y_utm,ground_points,vegetation_points,building_points,wire_points,tower_points,ground_min_z_m,canopy_max_above_ground_m,canopy_mean_above_ground_m,vegetation_return_fraction,ground_height_source,estimated_ground_z_m,ground_estimation_support_cells';
+const vegHeader='x_utm,y_utm,ground_points,vegetation_points,building_points,wire_points,tower_points,ground_min_z_m,canopy_max_above_ground_m,canopy_mean_above_ground_m,vegetation_return_fraction,ground_height_source,estimated_ground_z_m,ground_estimation_support_cells,water_points,road_points';
 function manifest() {
  const a={name:'tesela_001_001',window:{minX:0,maxX:2,minY:0,maxY:2},
   terrainFile:'tesela_001_001_mdt.csv',vegetationFile:'tesela_001_001_vegetacion.csv',
@@ -49,7 +49,7 @@ function manifest() {
   ]}};
 }
 function vegetationLine(x,y,h){
- return [x,y,1,1,0,0,0,100,h,h,.5,'observed','',0].join(',');
+ return [x,y,1,1,0,0,0,100,h,h,.5,'observed','',0,0,0].join(',');
 }
 function seeded(m=manifest()){
  const data={};
