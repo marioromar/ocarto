@@ -1,5 +1,18 @@
 # Ocarto — editor cartográfico de orientación
 
+## v286 · Zonas amarillas y posibles cultivos (rama experimental)
+
+- **[Abrir rama v286](https://github.com/marioromar/ocarto/tree/ocarto-v286-cultivos-candidatos-revisables)** · [Descargar código ZIP v286](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v286-cultivos-candidatos-revisables.zip).
+- La **versión Windows de prueba sigue siendo 0.285.0**: el ZIP v286 es código en desarrollo, **no un instalador v286 validado**.
+- En **LiDAR e IA → Claros y arbolado alto** se pueden generar **polígonos amarillos candidatos** a partir de ejemplos etiquetados y datos LiDAR; se contrastan con ortofoto georreferenciada si existe. No se confirman automáticamente cultivos ni se asigna un símbolo IOF definitivo.
+- El inventario muestra estos candidatos en **amarillo**, pendientes de revisión; edificios LAS 6, aguas LAS 9 y vías LAS 11 (cuando esta clase es válida) quedan excluidos.
+- Correcciones de rendimiento al calcular límites de mosaicos y reutilizar la selección de ortofoto por lote, sin repetir el cálculo por celda.
+- [Guía, límites y pruebas de v286](DETECCION-AMARILLOS-Y-CULTIVOS-v286.md).
+
+**Validación:** casos sintéticos de vectorización comprobados directamente, incluidos huecos interiores, filtros, conservación de datos originales y metadatos de revisión. La prueba del LAZ real PNOA/Bobadilla, la interfaz completa y la compilación de Windows **siguen pendientes**. La v285 permanece intacta.
+
+---
+
 ## Nuevo en v284 · GeoJSON y KMZ de curvas Bézier sin pérdida de coordenadas
 
 - **[Descargar Ocarto v284 completo](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v284-bezier-geojson-fix.zip)**.
