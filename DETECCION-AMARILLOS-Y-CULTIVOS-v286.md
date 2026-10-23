@@ -10,8 +10,8 @@ En **LiDAR e IA → Claros y arbolado alto** se añade **«Detectar y vectorizar
 1. Analizar una nube LAS/LAZ y preparar los indicadores de vegetación.
 2. Cargar mapa guía u ortofoto georreferenciada cuando exista (opcional para aprender solo por LiDAR).
 3. Marcar varios **ejemplos de Amarillo** y usar **Aprender ejemplos**.
-4. Tener abierto un mapa georreferenciado y **EPSG confirmado**, coincidente con LiDAR y referencias.
-5. Ejecutar la nueva detección. Ocarto propone polígonos de las áreas que el modelo aprendió como `amarillo`, respetando huecos y los parámetros de área/anchura.
+4. Tener abierto un mapa georreferenciado, comprobar manualmente que el **EPSG y las coordenadas de LiDAR, mapa y plantillas coinciden**, y marcar la casilla **«He comprobado que el LiDAR, el mapa y las plantillas están en el mismo EPSG»**. El valor predeterminado del campo EPSG no equivale a una verificación automática.
+5. Ejecutar la nueva detección. Si se cambia de proyecto o de EPSG, la casilla vuelve a desmarcarse. Ocarto propone polígonos de las áreas que el modelo aprendió como `amarillo`, respetando huecos y los parámetros de área/anchura.
 6. Los exporta como **GeoJSON** y los incorpora al **inventario de candidatos**, donde deben revisarse antes de convertirse en objetos editables CART. El botón no modifica por sí mismo el mapa definitivo ni las imágenes fuente.
 
 ## Límites deliberados
