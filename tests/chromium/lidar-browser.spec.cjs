@@ -202,11 +202,21 @@ test('v286: dos LAS contiguos hasta cuatro GeoJSON y plantillas UTM',async({page
     window.showDirectoryPicker=async()=>root;
   });
   await page.goto('/index.html');
-  await page.locator('#mapCrs').fill('EPSG:25830');
-  await page.locator('#tiledAreaConfirmCrs').check();
-  await page.locator('#cellSize').fill('0.5');
-  await page.locator('#vegetationCell').fill('0.5');
-  await page.locator('#vectorAggregationCell').fill('2');
+  // El CRS está en otra pestaña. Fijarlo sin forzar su visibilidad ni
+  // modificar la configuración real de la interfaz.
+  await page.evaluate(()=>{
+    for(const [id,value] of [['mapCrs','EPSG:25830'],['cellSize','0.5'],
+      ['vegetationCell','0.5'],['vectorAggregationCell','2']]){
+      const input=document.getElementById(id);
+      input.value=value;
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    document.getElementById('tiledAreaConfirmCrs').checked=true;
+  });
+  const lidarTab=page.locator('#workspaceTabs .workspace-tab[aria-controls="lidarWorkspace"]');
+  await lidarTab.click();
+  await expect(page.locator('#tiledAreaBtn')).toBeVisible();
   await page.locator('#tiledPointFile').setInputFiles([
     {name:'BOBADILLA_PRUEBA_384.las',mimeType:'application/octet-stream',
       buffer:makeAdjacentLas(500000,true)},
