@@ -40,7 +40,8 @@ for (const extension of ['las', 'laz']) {
 test('v285: selección de tres capas visible y no destructiva sin mapa georreferenciado', async ({ page }) => {
   await page.goto('/index.html');
   for(const id of ['vegReviewedPanel','vegReviewedFiles','vegReviewedDark',
-    'vegReviewedHatch','vegReviewedYellow','vegReviewedImport','vegReviewedStatus'])
+    'vegReviewedHatch','vegReviewedYellow','vegReviewedImport','vegReviewedStatus',
+    'vegReviewedAsTemplate'])
     await expect(page.locator('#'+id)).toHaveCount(1);
   const before=await page.locator('#featureCount').textContent();
   await page.evaluate(()=>{
