@@ -910,6 +910,28 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
         manifest.mosaic.outputs.featureRaster=await OcartoLidarMosaicExport.writeVrt(
           folder,'zona_completa_feature_map_lidar.vrt',manifest,'feature');
         await writeTiledManifest(folder,manifest);
+        // Para los dos LAZ de Bobadilla, generar también un único PNG + PGW
+        // + PRJ a 0,5 m. Para áreas mayores conservar el VRT sin agotar RAM.
+        try{
+          const saved=await OcartoLidarMosaicFeature.saveWholePng(folder,manifest,{
+            planGeometry:OcartoLidarMosaicExport.geometry,
+            decodeImage:file=>createImageBitmap(file),
+            createCanvas:(width,height)=>{
+              const canvas=document.createElement('canvas');
+              canvas.width=width;canvas.height=height;return canvas;
+            },
+            writeTriplet:OcartoLidarTileExport.writeRasterTriplet,
+            wkt,shouldStop:()=>tiledAreaStopped
+          });
+          if(saved)manifest.mosaic.outputs.featurePng=saved;
+          else manifest.warnings.push('Feature Map unificado demasiado grande para un PNG en memoria; usar zona_completa_feature_map_lidar.vrt.');
+          await writeTiledManifest(folder,manifest);
+        }catch(error){
+          if(tiledAreaStopped||error.name==='AbortError')throw error;
+          manifest.warnings.push('PNG conjunto de Feature Map no disponible: '+error.message+
+            '. El VRT georreferenciado conserva todos los bloques.');
+          await writeTiledManifest(folder,manifest);
+        }
       }else manifest.warnings.push('Feature Map sin retornos no suelo con altura fiable en el intervalo seleccionado; no se creó una imagen falsa.');
       // Mosaico MDT continuo: el halo utiliza también puntos de las dos
       // teselas LiDAR originales si cruzan la misma ventana de trabajo.
