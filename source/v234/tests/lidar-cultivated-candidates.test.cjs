@@ -213,3 +213,47 @@ test('rechaza EPSG escrito pero no reproyectado y plantilla activa en CRS distin
  $('detectCultivatedCandidates').onclick();
  assert.equal(analyses,1);
 });
+
+test('integración real: GeoJSON amarillo a inventario georreferenciado con huecos y curva editable',()=>{
+ const html=fs.readFileSync(path.join(base,'index.html'),'utf8');
+ const begin=html.indexOf('  function addCandidateFeatureCollection(');
+ const end=html.indexOf('\n  function download(',begin);
+ assert(begin>=0&&end>begin,'No se encuentra incorporación de candidatos al inventario');
+ const curvesSandbox={module:{exports:{}}};
+ vm.runInNewContext(fs.readFileSync(path.join(base,'lidar-auto-natural-bezier.js'),'utf8'),curvesSandbox);
+ const curve=curvesSandbox.module.exports.apply;
+ const S={georef:{a:1},renderGeo:{cx:500000,cy:4100000,scale:2},
+  candidates:[],features:[],vectorLayers:[],selection:null,multiSelection:[],selectedVertices:[]};
+ const elements={candidateCount:{textContent:''},autoVectorCurveLevel:{value:'medium'}};
+ const $=id=>elements[id]||(elements[id]={});
+ const worldToLocal=(x,y)=>({x:(x-S.renderGeo.cx)*S.renderGeo.scale,y:-(y-S.renderGeo.cy)*S.renderGeo.scale});
+ const geoXY=c=>Array.isArray(c)&&c.length>=2&&Number.isFinite(c[0])&&Number.isFinite(c[1])
+  ?{x:c[0],y:c[1]}:null;
+ const staged=vm.runInNewContext(
+  '(function(S,$,geoXY,worldToLocal,autoCurveForDetected,snapshotMap,recordMapEdit,updateLidarButtons,draw){'+
+  html.slice(begin,end)+'\nreturn addCandidateFeatureCollection;})')(
+  S,$,geoXY,worldToLocal,f=>curve(f,{level:'medium',gridSizeLocal:2}),
+  ()=>JSON.stringify(S.candidates),()=>{},()=>{},()=>{});
+ const square=(x,y,width)=>[[x,y],[x+width,y],[x+width,y+width],[x,y+width],[x,y]];
+ const fc={type:'FeatureCollection',crs:{type:'name',properties:{name:'EPSG:25830'}},
+  features:[{type:'Feature',properties:{
+   kind:'zona-amarilla-candidata-abierto-o-cultivo',crop_confirmed:false,
+   auto_accept:false,review_required:true},
+   geometry:{type:'Polygon',coordinates:[
+    square(500100,4100100,12),square(500104,4100104,2).reverse()]}}]};
+ const snapshot=JSON.stringify(fc);
+ assert.equal(staged(fc,'LiDAR · Amarillos',true),1);
+ assert.equal(S.candidates.length,1);
+ assert.equal(S.features.length,0,'Sin aceptación expresa, el mapa permanece intacto');
+ const c=S.candidates[0];
+ assert.equal(c.candidateLayerName,'Amarillo · terreno abierto (revisar)');
+ assert.equal(c.candidateLayerColor,'#e9cf49');
+ assert.equal(c.type,'area');
+ assert.equal(c.holes.length,1,'Preservar los huecos interiores');
+ assert.equal(c.curve,'bezier','Conservar formas naturales con curvas editables');
+ assert.equal(c.points[0].rawX,500100);
+ assert.equal(c.points[0].rawY,4100100);
+ assert.equal(c.candidateProperties.review_required,true);
+ assert.equal(c.candidateProperties.crop_confirmed,false);
+ assert.equal(JSON.stringify(fc),snapshot,'La entrada GeoJSON debe permanecer intacta');
+});
