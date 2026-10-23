@@ -88,3 +88,47 @@ test('Ocarto enlaza el Feature Map nuevo en el mismo procesamiento de ambos LAZ'
  assert(html.includes('OcartoLidarMosaicExport.writeVrt('));
  assert(html.includes("'zona_completa_feature_map_lidar.vrt',manifest,'feature'"));
 });
+
+test('une ambas teselas Feature Map en UNA imagen PNG sin perder el encaje PGW',async()=>{
+ const manifest={state:'complete',cellVegetation:.5,
+  selectedArea:{bounds:{minX:384000,maxX:384002,minY:4114000,maxY:4114000.5}},
+  completed:[0,1].map(i=>({
+   name:'tesela_001_00'+(i+1),
+   featureRaster:{
+    png:'tesela_001_00'+(i+1)+'_feature_lidar.png',
+    width:2,height:1,cellSize:.5,
+    bounds:{left:384000+i,right:384001+i,top:4114000.5,bottom:4114000}
+   }
+  }))
+ };
+ const calls=[],folder={async getFileHandle(){return{
+  async getFile(){return new Blob([new Uint8Array(8)])}
+ }}};
+ let saved;
+ const output=await feature.saveWholePng(folder,manifest,{
+  planGeometry:mosaic.geometry,
+  decodeImage:async()=>({width:2,height:1,close(){calls.push('close')}}),
+  createCanvas:(w,h)=>({
+   getContext:()=>({drawImage:(_img,x,y)=>calls.push([x,y])}),
+   toBlob:cb=>cb(new Blob([new Uint8Array(8)],{type:'image/png'}))
+  }),
+  writeTriplet:async(_dir,name,png,pgw,wkt)=>{
+   saved={name,pgw,wkt,size:png.size};
+   return {png:name+'.png',pgw:name+'.pgw',prj:name+'.prj'};
+  },
+  wkt:'PROJCS[ETRS89 UTM 30N]'
+ });
+ assert.equal(output.width,4);
+ assert.equal(output.height,1);
+ assert.equal(output.sources,2);
+ assert.deepEqual(calls.filter(x=>Array.isArray(x)),[[0,0],[2,0]]);
+ assert.equal(saved.name,'zona_completa_feature_map_lidar');
+ assert.equal(saved.pgw,'0.5\n0\n0\n-0.5\n384000.25\n4114000.25\n');
+ assert.equal(saved.wkt,'PROJCS[ETRS89 UTM 30N]');
+ const skip=await feature.saveWholePng(folder,manifest,{
+  planGeometry:mosaic.geometry,decodeImage:async()=>{throw Error('No debe decodificar')},
+  createCanvas:()=>{throw Error('No debe crear lienzo')},
+  writeTriplet:async()=>{},wkt:'WKT',maxPixels:2
+ });
+ assert.equal(skip,null,'Las áreas demasiado grandes se quedan con el VRT');
+});
