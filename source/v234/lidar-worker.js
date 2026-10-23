@@ -293,7 +293,7 @@ async function analysis(type,m) {
       // copas con suelo vecino y sin convertir estimaciones en medidas reales.
       vegetationRows(grid,r=>{
         const h=r.canopy_max_above_ground_m;
-        if(!Number.isFinite(h)||r.vegetation_points<=0)continue;
+        if(!Number.isFinite(h)||r.vegetation_points<=0)return;
         if(h>=minHeight&&h<=maxHeight){
           data.i.push(Math.round(r.x/cell-.5));
           data.j.push(Math.round(r.y/cell-.5));
