@@ -183,9 +183,12 @@ test('LAZ real pasa de lector a MDT y vegetación sin inventar alturas ausentes'
   'La tesela de prueba 1815.laz carece de clases vegetales 3-5');
  const feature=await runAnalysisViaBridge(bridge,'feature-map',4003,
    {cell:25,minHeight:0,maxHeight:30});
- assert.equal(feature.type,'error',
-  'Sin copas de vegetación, no debe inventar un Feature Map de alturas');
- assert.match(feature.message,/No hay alturas de vegetación/);
+ assert.equal(feature.type,'feature-map',
+  'Los retornos no suelo de la nube real contribuyen al Feature Map');
+ assert(feature.cells.height.length>0);
+ assert(feature.selectedPoints>0);
+ assert(vegetation.rows.every(row=>row.vegetation_points===0),
+   'No se inventan alturas de vegetación en un LAZ sin clases 3 a 5');
 });
 
 
