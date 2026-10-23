@@ -11,7 +11,7 @@
 - **Alturas de vegetación más completas**: para copas sin retorno de suelo en la misma celda, se usa una estimación conservadora con al menos tres celdas de suelo próximas (máximo 2 m y cotas coherentes). Se conserva la medida original, se indica el origen de la altura y Feature Map comparte el resultado. El CSV muestra las alturas estimadas para revisión.
 - [Guía, límites y pruebas de v286](DETECCION-AMARILLOS-Y-CULTIVOS-v286.md).
 
-**Validación:** casos sintéticos de vectorización comprobados directamente, incluidos huecos interiores, filtros, conservación de datos originales y metadatos de revisión. La prueba del LAZ real PNOA/Bobadilla, la interfaz completa y la compilación de Windows **siguen pendientes**. La v285 permanece intacta.
+**Validación:** pruebas LiDAR y de Chromium automatizadas superadas en GitHub Actions. El procesador también ha superado una prueba de extremo a extremo con LAS 1.4 **formato 8 PNOA simulado** (suelo, vegetación, edificios, agua, caminos y Feature Map a 0,5 m) y otra prueba con **LAZ comprimido real de tamaño pequeño**, que verifica MDT y el rechazo de alturas inexistentes. **Todavía no se han descomprimido las tres teselas grandes del usuario ni contrastado el curvado/Feature Map reales con su mapa de referencia.** La compilación y prueba funcional completa en Windows siguen pendientes; la v285 permanece intacta.
 
 ---
 
