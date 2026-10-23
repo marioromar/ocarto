@@ -9,6 +9,7 @@ on:
       - 'ocarto-v283-scalable-natural-curves'
       - 'ocarto-v284-bezier-geojson-fix'
       - 'ocarto-v285-vegetacion-capas-seleccionadas'
+      - 'ocarto-v286-cultivos-candidatos-revisables'
   workflow_dispatch:
 
 permissions:
