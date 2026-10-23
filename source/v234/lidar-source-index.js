@@ -45,7 +45,8 @@
       pointOffset=d.getUint32(96,true);
     if(headerBytes<227||headerBytes>buffer.byteLength||numVlr>1000||
        pointOffset<headerBytes||pointOffset>buffer.byteLength)return null;
-    let at=headerBytes,epsg=null;
+    let at=headerBytes;
+    const declared={projected:new Set(),geographic:new Set()};
     for(let n=0;n<numVlr;n++){
       if(at+54>pointOffset)return null;
       const uid=Array.from(new Uint8Array(buffer,at+2,16))
@@ -61,15 +62,16 @@
             value=d.getUint16(i+6,true);
           if([3072,2048].includes(key)&&tag===0&&copies===1&&
              value>=1024&&value<=32766){
-            const crs='EPSG:'+value;
-            if(epsg&&epsg!==crs)return null;
-            epsg=crs;
+            // En GeoTIFF pueden aparecer simultáneamente 3072 (UTM) y
+            // 2048 (el datum geográfico de base). Siempre preferir 3072.
+            (key===3072?declared.projected:declared.geographic).add('EPSG:'+value);
           }
         }
       }
       at+=54+length;
     }
-    return epsg;
+    if(declared.projected.size>1||declared.geographic.size>1)return null;
+    return [...declared.projected][0]||[...declared.geographic][0]||null;
   }
   async function readCrs(file) {
     const start=await file.slice(0,375).arrayBuffer();
