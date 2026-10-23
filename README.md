@@ -6,6 +6,7 @@
 - La **versión Windows de prueba sigue siendo 0.285.0**: el ZIP v286 es código en desarrollo, **no un instalador v286 validado**.
 - En **LiDAR e IA → Claros y arbolado alto** se pueden generar **polígonos amarillos candidatos** a partir de ejemplos etiquetados y datos LiDAR; se contrastan con ortofoto georreferenciada si existe. No se confirman automáticamente cultivos ni se asigna un símbolo IOF definitivo.
 - El inventario muestra estos candidatos en **amarillo**, pendientes de revisión; edificios LAS 6, aguas LAS 9 y vías LAS 11 (cuando esta clase es válida) quedan excluidos.
+- Para exportar el amarillo se exige **confirmar manualmente el EPSG y la coincidencia espacial de LiDAR/mapa/plantillas**; el permiso se reinicia cuando cambia el sistema de coordenadas o se abre otro mapa.
 - Correcciones de rendimiento al calcular límites de mosaicos y reutilizar la selección de ortofoto por lote, sin repetir el cálculo por celda.
 - [Guía, límites y pruebas de v286](DETECCION-AMARILLOS-Y-CULTIVOS-v286.md).
 
