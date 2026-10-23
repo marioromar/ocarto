@@ -18,16 +18,18 @@
      estimatedGroundCells:0,discardedUncertainGround:0,excludedByHeight:0,
      cellSize:cell,minHeight,maxHeight,
      source:'retornos LiDAR no suelo, alturas máximas sobre suelo medido o vecino fiable',
-     limits:'Solo máximos por celda, no todos los retornos entre umbrales'};
+     limits:'Usa máximos y mínimos realmente observados por celda; puede omitir retornos intermedios entre ambos extremos'};
    for(const r of rows){
      const count=Number(r.vegetation_points||0)+Number(r.other_points||0);
      if(!count)continue;
-     const h=r.feature_max_above_ground_m;
-     if(!Number.isFinite(h)){
+     const peak=r.feature_max_above_ground_m,low=r.feature_min_above_ground_m;
+     const h=Number.isFinite(peak)&&peak>=minHeight&&peak<=maxHeight?
+       peak:Number.isFinite(low)&&low>=minHeight&&low<=maxHeight?low:null;
+     if(!Number.isFinite(peak)&&!Number.isFinite(low)){
        summary.discardedUncertainGround++;
        continue;
      }
-     if(h<minHeight||h>maxHeight){summary.excludedByHeight++;continue;}
+     if(h===null){summary.excludedByHeight++;continue;}
      if(!['observed','nearby_estimate'].includes(r.ground_height_source))
        throw Error('Altura Feature Map sin suelo validado');
      const i=Math.round(r.x/cell-.5),j=Math.round(r.y/cell-.5);
