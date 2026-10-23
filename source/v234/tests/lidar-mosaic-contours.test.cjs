@@ -95,7 +95,7 @@ test('rechaza falta de MDT, incoherencia de cotas, nombres y equidistancias invÃ
  await assert.rejects(contour.exportGeojson(dir,m,'../../curvas.geojson',1),/Nombre/);
  await assert.rejects(contour.tileSegments(dir,m,m.completed[0],0),/Equidistancia/);
  const f=new Blob([grid(0).replace('ncols 2','ncols 7')]);
- await assert.rejects(contour.readAsc(f,{width:2,height:2,x:0,y:0},1),/incompatible/);
+ await assert.rejects(contour.readAsc(f,{width:2,height:2,x:0,y:0},1),/incompatible|no coincide/);
 });
 test('las curvas son un posprocesado Ãºnico a partir del mismo mosaico LAZ, no del TIFF',()=>{
  const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
