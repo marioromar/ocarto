@@ -16,6 +16,7 @@ on:
       - 'ocarto-v283-scalable-natural-curves'
       - 'ocarto-v284-bezier-geojson-fix'
       - 'ocarto-v285-vegetacion-capas-seleccionadas'
+      - 'ocarto-v286-cultivos-candidatos-revisables'
   workflow_dispatch:
 
 jobs:
@@ -37,6 +38,7 @@ jobs:
           node --check source/v234/lidar-mdt-audit.js
           node --check source/v234/lidar-height-image-vector.js
           node --check source/v234/lidar-vegetation-reviewed-layers.js
+          node --check source/v234/lidar-cultivated-candidates.js
           node --check source/v234/lidar-transport-water.js
           node --check source/v234/lidar-ortho-fusion.js
           node --check source/v234/lidar-auto-natural-bezier.js
@@ -48,6 +50,8 @@ jobs:
         run: node --test source/v234/tests/lidar-height-image-vector.test.cjs
       - name: Validate selective vegetation GeoJSON layers
         run: node --test source/v234/tests/lidar-vegetation-reviewed-layers.test.cjs
+      - name: Yellow and cultivated candidate polygons from learned map examples
+        run: node --test source/v234/tests/lidar-cultivated-candidates.test.cjs
       - name: Vector roads and water + LiDAR/orthophoto regression tests
         run: node --test source/v234/tests/lidar-transport-water.test.cjs
       - name: Validate editable natural curves and protected topology
