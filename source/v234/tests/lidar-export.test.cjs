@@ -148,3 +148,41 @@ test('canopy LiDAR conserva sin color las celdas sin altura fiable',()=>{
  assert.equal(grid.rgba[3],255);
  assert.equal(grid.rgba[7],0,'Sin suelo fiable, el pixel debe ser transparente');
 });
+
+
+test('escribe imagen LiDAR PNG con georreferencia PGW y PRJ, sin TIFF reciclado',async()=>{
+ const dir=folder();
+ const png=new Blob([Uint8Array.from([137,80,78,71,13,10,26,10])],
+  {type:'image/png'});
+ const pgw='0.5\n0\n0\n-0.5\n384000.25\n4114999.75\n';
+ const result=await exportModule.writeRasterTriplet(dir,
+  'tesela_001_002_alturas_lidar',png,pgw,'PROJCS[EPSG:25830]');
+ assert.equal(result.png,'tesela_001_002_alturas_lidar.png');
+ assert.equal(result.pgw,'tesela_001_002_alturas_lidar.pgw');
+ assert.equal(result.prj,'tesela_001_002_alturas_lidar.prj');
+ assert.equal(result.bytes,png.size);
+ assert(dir.files.has(result.png));
+ assert.equal(dir.files.get(result.pgw),pgw);
+ assert(dir.files.get(result.prj).includes('PROJCS[EPSG:25830]'));
+});
+test('impide PGW inválido, nombre inseguro y rechaza un PNG vacío',async()=>{
+ const dir=folder(),png=new Blob([new Uint8Array(10)]);
+ await assert.rejects(exportModule.writeRasterTriplet(dir,'../../falso',
+  png,'0.5\n0\n0\n-0.5\n0\n0\n','PROJCS[EPSG:25830]'),/nombre/i);
+ await assert.rejects(exportModule.writeRasterTriplet(dir,'tesela_1',
+  png,'0.5\n0\n0\n0.5\n0\n0\n','PROJCS[EPSG:25830]'),/incompletos/);
+ await assert.rejects(exportModule.writeRasterTriplet(dir,'tesela_1',
+  new Blob([]),'0.5\n0\n0\n-0.5\n0\n0\n','PROJCS[EPSG:25830]'),/incompletos/);
+ assert.equal(dir.files.size,0);
+});
+test('el mosaico importa alturas desde LAZ y las guarda sin tocar el TIFF anterior',()=>{
+ const html=require('node:fs').readFileSync(require('node:path')
+  .join(__dirname,'../index.html'),'utf8');
+ assert(html.includes('OcartoLidarExports.rasterGrid(result.vegetationRows,'));
+ assert(html.includes("cellVegetation,'canopy',{heightStops}"));
+ assert(html.includes('OcartoLidarTileExport.writeRasterTriplet(folder,'));
+ assert(html.includes("label+'_alturas_lidar',png,grid.worldFile,wkt"));
+ assert(html.includes('heightRaster={...saved,width:grid.width'));
+ assert(html.includes('transparentNoData:true'));
+ assert(html.includes('heightRaster});'));
+});
