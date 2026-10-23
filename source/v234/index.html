@@ -170,7 +170,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <details id="vegReviewedPanel" style="margin:8px 0;border:1px solid #536f6e;border-radius:7px;padding:8px">
 <summary style="cursor:pointer;font-weight:800">Vegetación revisable · importar solo clases seleccionadas</summary>
 <p class="small">Importa GeoJSON clasificados en capas separadas. La altura o el color del TIFF no prueban por sí solos la transitabilidad. Ningún símbolo IOF se asigna automáticamente.</p>
-<label class="field">Archivos GeoJSON de vegetación (uno o varios)<input type="file" id="vegReviewedFiles" accept=".geojson,.json" multiple></label>
+<label class="field">GeoJSON de vegetación o ZIP Ocarto Bobadilla (solo extrae los vectores, no el TIFF)<input type="file" id="vegReviewedFiles" accept=".geojson,.json,.zip" multiple></label>
 <div style="display:grid;grid-template-columns:1fr;gap:8px;margin:8px 0">
 <label style="font-weight:750"><input type="checkbox" id="vegReviewedDark" checked> 🟩 Verde oscuro impasable</label>
 <label style="font-weight:750"><input type="checkbox" id="vegReviewedHatch" checked> ▨ Vegetación rayada</label>
@@ -1213,9 +1213,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
         ['amarillo','vegReviewedYellow']
       ].filter(([,id])=>$(id).checked).map(([name])=>name);
       const rawFiles=Array.from($('vegReviewedFiles').files||[]);
-      if(rawFiles.some(f=>f.size>10*1024*1024))
-        throw Error('Cada archivo GeoJSON debe ser inferior a 10 MB');
-      const files=await Promise.all(rawFiles.map(async f=>({name:f.name,content:await f.text()})));
+      const files=await OcartoVegetationReviewedLayers.readSources(rawFiles,JSZip);
       const prepared=OcartoVegetationReviewedLayers.prepare(files,classes,{
         confirmedCrs:$('vegReviewedConfirmCrs').checked,mapCrs:crs
       });
