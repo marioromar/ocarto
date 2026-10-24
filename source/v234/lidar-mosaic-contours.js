@@ -176,7 +176,7 @@
    if(!/^zona_completa_curvas_[\w-]+\.geojson$/.test(name))
      throw Error('Nombre del curvado del mosaico inválido');
    const stream=await(await directory.getFileHandle(name,{create:true})).createWritable();
-   const union=options.connect;
+   const union=options.connect, smoothing=options.smooth;
    let segments=0,lines=0,squares=0,missing=0,first=true;
    try{
      await stream.write(JSON.stringify({type:'FeatureCollection',
@@ -184,7 +184,8 @@
          type:'name',properties:{name:manifest.crs}},
        metadata:{interval_m:interval,source:'MDT preliminar LiDAR de todos los LAZ',
          classification:'clase 2 suelo; estimaciones conservadoras con halo',
-         georeferencing:manifest.crs,unsmoothed:true,review_required:true,
+         georeferencing:manifest.crs,unsmoothed:!smoothing,review_required:true,
+         smoothing:smoothing?{method:'conservador; protección de giros y límite de desplazamiento',...smoothing}:null,
          tile_parts_connected:'geometrically continuous across shared nodes; editable curves may remain separate features'}})
        .replace(/}$/,',"features":['));
      for(let i=0;i<manifest.completed.length;i++){
@@ -198,10 +199,14 @@
          const joined=union(features,{tolerance:Math.max(1e-8,manifest.cellTerrain*1e-6)});
          features=joined.features;
        }
+       if(smoothing&&features.length){
+         if(typeof options.smoothFn!=='function')throw Error('Falta el suavizador conservador de curvas');
+         features=options.smoothFn(features,smoothing).features;
+       }
        const output=[];
        for(const feature of features){
          feature.properties={...feature.properties,source:'MDT LiDAR preliminar',
-           unsmoothed:true,review_required:true,
+           unsmoothed:!smoothing,review_required:true,
            tile:tile.name,interval_m:interval};
          output.push(JSON.stringify(feature));
          if(output.length===256){
@@ -220,8 +225,9 @@
      await stream.close();
    }catch(error){try{await stream.abort()}catch(_){}throw error;}
    return {name,interval_m:interval,features:lines,segments,squares,missing,
+     smoothed:!!smoothing,smoothingIntensity:smoothing?.intensity??0,
      source:'MDT LiDAR de zona completa (provisional)',
-     format:'GeoJSON georreferenciado de curvas no suavizadas; revisar y unir topológicamente para edición'};
+     format:'GeoJSON georreferenciado de curvas independientes revisables; unir topológicamente entre bloques para edición'};
  }
  return Object.freeze({readAsc,at,edgesAt,neighbors,tileSegments,exportGeojson,validManifest});
 });
