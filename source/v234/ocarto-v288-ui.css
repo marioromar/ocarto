@@ -1,0 +1,71 @@
+/* Ocarto v288 - presentación únicamente. Nunca modifica coordenadas ni datos. */
+body.ocarto-v288 .app{grid-template-rows:54px minmax(0,1fr)}
+body.ocarto-v288 .layout{height:calc(100vh - 54px);grid-template-columns:62px minmax(0,1fr) 260px;min-width:0}
+body.ocarto-v288 .topbar{padding:0 10px;gap:9px;min-width:0;background:#142636}
+body.ocarto-v288 .topbar .brand{font-size:15px;white-space:nowrap}
+body.ocarto-v288 .topbar .project-name{display:none}
+body.ocarto-v288 .topbar .top-status{display:none}
+body.ocarto-v288 .oc-menu{gap:0;margin:0;flex:1;min-width:0;overflow:visible}
+body.ocarto-v288 .oc-menu summary{font-size:12px;font-weight:800;padding:9px 8px}
+body.ocarto-v288 .oc-dropdown{min-width:245px;box-shadow:0 14px 36px #07152188}
+body.ocarto-v288 .left{display:flex!important;align-items:center;flex-direction:column;padding:6px 4px!important;overflow:auto;background:#152c3f!important;border-right:2px solid #395065}
+body.ocarto-v288 .left>:not(.tool-grid){display:none!important}
+body.ocarto-v288 .left .tool-grid{display:grid!important;grid-template-columns:1fr!important;gap:5px!important;margin:0!important;width:100%}
+body.ocarto-v288 .left .tool{width:49px;min-width:49px;min-height:46px;height:46px;padding:2px;display:flex;align-items:center;justify-content:center;background:#203c54;border:2px solid #496a85;border-radius:7px;color:#eef5ff;cursor:pointer}
+body.ocarto-v288 .left .tool b{font-size:28px;font-weight:950;line-height:1;margin:0;color:#e88d41;filter:drop-shadow(0 0 .4px currentColor)}
+body.ocarto-v288 .left .tool:nth-child(4n + 1) b{color:#7ab7fd}
+body.ocarto-v288 .left .tool:nth-child(4n + 2) b{color:#ecb86c}
+body.ocarto-v288 .left .tool:nth-child(4n + 3) b{color:#83e38b}
+body.ocarto-v288 .left .tool span{display:none!important}
+body.ocarto-v288 .left .tool.selected{border:2px solid #d8f2ff;background:#2d5989;box-shadow:0 0 0 1px #9ed2ff}
+body.ocarto-v288 .right{display:flex!important;flex-direction:column;overflow:hidden;padding:6px 7px!important;background:#162c40!important;border-left:2px solid #40576a;min-width:0}
+body.ocarto-v288 .v288-symbols{display:flex;flex-direction:column;min-height:0;height:100%;color:#e8f1fa}
+body.ocarto-v288 .v288-symbols h2{font-size:13px;margin:2px 0 8px;color:#eaf1f9}
+body.ocarto-v288 .v288-symbols .symbol-controls{display:flex;flex-direction:column;gap:6px}
+body.ocarto-v288 .v288-symbols #symbolSearch{width:100%;background:#f9fcff;color:#14283a;font-size:12px;padding:8px;border-radius:6px}
+body.ocarto-v288 .v288-symbols #symbolTypeFilter{display:none!important}
+body.ocarto-v288 .v288-symbols .symbol-list{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:55px;gap:3px;margin-top:7px;max-height:none;height:auto;min-height:0;flex:1;overflow:auto;align-content:start;padding:1px}
+body.ocarto-v288 .v288-symbols .symbol-option{display:flex;justify-content:center;align-items:center;position:relative;min-width:0;width:100%;height:53px;padding:1px;border:2px solid #a1abb3;border-radius:3px;background:#fcfcfb;color:#172733}
+body.ocarto-v288 .v288-symbols .symbol-option.active{background:#ffe5aa;border:3px solid #f08324}
+body.ocarto-v288 .v288-symbols .symbol-option:disabled{opacity:.48}
+body.ocarto-v288 .v288-symbols .symbol-option .symbol-glyph{padding:0;display:grid;place-items:center;width:100%;height:100%;font-size:25px;font-weight:900}
+body.ocarto-v288 .v288-symbols .symbol-option .oc-symbol-preview{max-width:100%;width:100%;height:42px;object-fit:contain}
+body.ocarto-v288 .v288-symbols .symbol-option .symbol-name,
+body.ocarto-v288 .v288-symbols .symbol-option .symbol-code,
+body.ocarto-v288 .v288-symbols .symbol-option .symbol-state{display:none!important}
+body.ocarto-v288 .v288-symbols .symbol-option:focus-visible{outline:3px solid #79bffd;outline-offset:0}
+body.ocarto-v288 .v288-symbols .v288-active-symbol{font-size:10px;color:#e6f1fc;padding:5px 2px;line-height:1.3}
+body.ocarto-v288 .canvas-area{min-width:0;min-height:0}
+body.ocarto-v288 .canvas-area>.advanced-join-tools,
+body.ocarto-v288 .canvas-area>.advanced-line-tools{display:none!important}
+body.ocarto-v288 .canvas-area>.toolbar{min-height:43px;max-height:43px;overflow:hidden;gap:3px;padding:3px 7px;flex-wrap:nowrap}
+body.ocarto-v288 .canvas-area>.toolbar>.action{flex-shrink:0}
+body.ocarto-v288 .canvas-area .coords{min-width:0;font-size:10px}
+body.ocarto-v288 .ocarto-v288-drawer{position:fixed;top:54px;bottom:0;left:62px;width:min(470px,calc(100vw - 75px));z-index:110;background:#f4f8f4;border:2px solid #456d7a;box-shadow:10px 0 33px #091a2b9e;display:flex;flex-direction:column}
+body.ocarto-v288 .ocarto-v288-drawer[hidden]{display:none!important}
+body.ocarto-v288 .v288-drawer-head{background:#193e52;display:flex;align-items:center;justify-content:space-between;color:white;padding:9px 13px;flex:0 0 auto;font-size:14px;font-weight:800}
+body.ocarto-v288 .v288-drawer-close{background:#294c61;color:white;font-size:20px;font-weight:900;border:2px solid #90b4c7;border-radius:5px;width:33px;height:32px;cursor:pointer}
+body.ocarto-v288 .v288-drawer-inner{overflow:auto;padding:12px;flex:1;min-height:0}
+body.ocarto-v288 .v288-drawer-inner .section-label{display:block!important}
+body.ocarto-v288 .v288-drawer-inner>section,
+body.ocarto-v288 .v288-drawer-inner>div{display:block}
+body.ocarto-v288 .v288-drawer-inner [hidden]{display:none!important}
+body.ocarto-v288 .oc-menu>details{z-index:5}
+body.ocarto-v288 .oc-menu>details[open]{z-index:220}
+@media(max-width:1040px){
+ body.ocarto-v288 .layout{grid-template-columns:58px minmax(0,1fr) 205px!important}
+ body.ocarto-v288 .oc-menu summary{font-size:11px;padding:9px 5px}
+ body.ocarto-v288 .v288-symbols .symbol-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+ body.ocarto-v288 .right{display:flex!important}
+ body.ocarto-v288 .ocarto-v288-drawer{left:58px}
+}
+@media(max-width:730px){
+ body.ocarto-v288 .topbar .save-state{display:none}
+ body.ocarto-v288 .topbar{gap:4px}
+ body.ocarto-v288 .oc-menu{max-width:calc(100vw - 108px);overflow-x:auto;overflow-y:visible;scrollbar-width:thin}
+ body.ocarto-v288 .layout{grid-template-columns:54px minmax(0,1fr) 136px!important}
+ body.ocarto-v288 .v288-symbols .symbol-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body.ocarto-v288 .right{padding:4px!important}
+ body.ocarto-v288 .left .tool{width:43px;min-width:43px}
+ body.ocarto-v288 .ocarto-v288-drawer{left:54px;width:calc(100vw - 54px)}
+}
