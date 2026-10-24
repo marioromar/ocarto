@@ -96,9 +96,9 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 </div></details>
 <details><summary>LIDAR</summary><div class="oc-dropdown">
 <div class="menu-note">Datos y terreno</div>
-<button type="button" data-menu-target="lidarNav">Abrir panel LiDAR e IA</button>
-<button type="button" data-menu-target="lidarImportBtn">Importar LAS/LAZ</button>
-<button type="button" data-menu-target="lidarProcessBtn">Procesar LAS/LAZ</button>
+<button type="button" data-menu-target="lidarNav">Flujo de trabajo LiDAR</button>
+<button type="button" data-menu-target="lidarImportBtn">1 · Importar archivos LAS/LAZ</button>
+<button type="button" data-menu-target="lidarProcessBtn">3 · Procesar archivos seleccionados</button>
 <button type="button" data-menu-target="terrainBtn">Preparar MDT</button>
 <button type="button" data-menu-target="rebuildMdtBtn">Unir bordes del MDT preliminar</button>
 <hr>
@@ -179,8 +179,13 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <div class="lidar-quick-workflow" id="lidarQuickWorkflow">
   <div class="lidar-quick-heading">Procesamiento LAS/LAZ</div>
   <div class="lidar-quick-steps">
-    <button class="lidar-quick-button" id="lidarImportBtn" type="button">1 · Importar LAS/LAZ</button>
-    <button class="lidar-quick-button primary" id="lidarProcessBtn" type="button" disabled>2 · Procesar</button>
+    <button class="lidar-quick-button" id="lidarImportBtn" type="button">1 · Importar archivos LAS/LAZ</button>
+    <button class="lidar-quick-button primary" id="lidarProcessBtn" type="button" disabled>3 · Procesar</button>
+  </div>
+  <div id="lidarSelectedFilesPanel" hidden style="margin-top:12px;padding:10px;border:1px solid #b9cbbf;border-radius:9px;background:#fff">
+    <b>Archivos que se van a procesar</b><ul id="lidarSelectedFilesList" class="small" style="max-height:120px;overflow:auto;margin:6px 0;padding-left:20px"></ul>
+    <label class="field" style="display:block">2 · Nombre de la carpeta de resultados<input id="lidarOutputName" type="text" value="" maxlength="64" autocomplete="off" placeholder="Ej.: Bobadilla zona norte" style="width:100%;margin-top:4px;padding:9px;border:1px solid #b7c7bd;border-radius:7px"></label>
+    <p class="small" style="margin:5px 0 0">Ocarto creará esta carpeta dentro de la carpeta que elijas al procesar. Dentro guardará las capas con nombres descriptivos.</p>
   </div>
   <label class="field lidar-quick-resolution">Tamaño de celda
     <select id="lidarQuickCellSize"><option value="0.5" selected>0,5 m · más detalle</option><option value="1">1 m</option><option value="2">2 m</option></select>
@@ -839,7 +844,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
   async function writeTiledManifest(folder,data){
     return OcartoLidarTileExport.writeManifest(folder,data);
   }
-  async function processLargeAreaTiles(files,baseDirectory){
+  async function processLargeAreaTiles(files,baseDirectory,requestedOutputName){
     if(tiledAreaBusy)throw Error('Ya hay un procesamiento por teselas en marcha');
     if(!files.length || files.some(f=>!/\.(las|laz)$/i.test(f.name)))
       throw Error('Elige únicamente archivos LAS/LAZ convencionales');
@@ -885,9 +890,13 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     if(!Number.isFinite(featureMinHeight)||featureMinHeight<0||
        !Number.isFinite(featureMaxHeight)||featureMaxHeight<featureMinHeight)
       throw Error('Revisa las alturas del Feature Map');
-    const folder=await baseDirectory.getDirectoryHandle('ocarto_teselas_'+new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14),{create:true});
+    const outputName=String(requestedOutputName??$('lidarOutputName')?.value??'').trim();
+    if(!outputName)throw Error('Escribe primero el nombre de la carpeta de resultados.');
+    const safeOutputName=outputName.replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').replace(/[. ]+$/g,'').slice(0,64)||'Resultados_LiDAR';
+    const outputFolderName=safeOutputName+'_'+new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14);
+    const folder=await baseDirectory.getDirectoryHandle(outputFolderName,{create:true});
     const manifest={
-      format:'Ocarto LiDAR tiled CSV v1',created:new Date().toISOString(),
+      format:'Ocarto LiDAR tiled CSV v1',created:new Date().toISOString(),projectName:outputName,outputFolder:outputFolderName,
       sourceFiles:files.map((f,i)=>({name:f.name,bytes:f.size,crsDeclared:sourceCrs[i]})),
       cellTerrain,cellVegetation,crs,selectedArea:aoi,plan,
       featureMap:{minHeight:featureMinHeight,maxHeight:featureMaxHeight,
@@ -1345,8 +1354,9 @@ function refreshLidarQuickWorkflow(message){
   const count=tiledSelectedFiles?.length||0;
   const confirmed=$('lidarQuickConfirmCrs')?.checked;
   $('lidarImportBtn').disabled=tiledAreaBusy||lidarOperation!=='idle';
-  $('lidarProcessBtn').disabled=!count||!confirmed||tiledAreaBusy||lidarOperation!=='idle';
-  $('lidarProcessBtn').textContent=count?'2 · Procesar '+count+' archivo'+(count===1?'':'s'):'2 · Procesar';
+  $('lidarProcessBtn').disabled=!count||!$('lidarOutputName')?.value.trim()||!confirmed||tiledAreaBusy||lidarOperation!=='idle';
+  $('lidarProcessBtn').textContent=count?'3 · Procesar '+count+' archivo'+(count===1?'':'s'):'3 · Procesar';
+  const selectedPanel=$('lidarSelectedFilesPanel');if(selectedPanel)selectedPanel.hidden=!count;
   const status=$('lidarWorkflowStatus');
   if(message)status.textContent=message;
   else if(tiledAreaBusy&&$('tiledAreaStatus').textContent)status.textContent=$('tiledAreaStatus').textContent;
@@ -1367,7 +1377,8 @@ $('lidarQuickConfirmCrs').addEventListener('change',()=>refreshLidarQuickWorkflo
 const lidarQuickStatusObserver=new MutationObserver(()=>{if(tiledAreaBusy)refreshLidarQuickWorkflow($('tiledAreaStatus').textContent)});
 lidarQuickStatusObserver.observe($('tiledAreaStatus'),{childList:true,subtree:true,characterData:true});
 $('lidarProcessBtn').onclick=async()=>{
-  if(!tiledSelectedFiles?.length){refreshLidarQuickWorkflow('Primero pulsa «Importar LAS/LAZ» y selecciona los archivos.');return}
+  if(!tiledSelectedFiles?.length){refreshLidarQuickWorkflow('Primero pulsa «Importar archivos LAS/LAZ» y selecciona los archivos.');return}
+  const outputName=$('lidarOutputName').value.trim();if(!outputName){refreshLidarQuickWorkflow('Escribe el nombre de la carpeta de resultados.');$('lidarOutputName').focus();return}
   if(!$('lidarQuickConfirmCrs').checked){refreshLidarQuickWorkflow('Confirma antes que el EPSG del mapa coincide con el de los archivos.');return}
   if(typeof window.showDirectoryPicker!=='function'){refreshLidarQuickWorkflow('Este proceso necesita Ocarto en Chrome o Edge y acceso a carpetas locales.');return}
   const files=tiledSelectedFiles.slice();
@@ -1377,8 +1388,8 @@ $('lidarProcessBtn').onclick=async()=>{
     refreshLidarQuickWorkflow('Elige ahora la carpeta donde guardar los resultados…');
     const folder=await window.showDirectoryPicker({mode:'readwrite'});
     refreshLidarQuickWorkflow('Procesando '+files.length+' archivo(s) LAS/LAZ…');
-    const result=await processLargeAreaTiles(files,folder);
-    refreshLidarQuickWorkflow(result?.state==='complete'?'Proceso terminado. Los resultados están en la carpeta elegida.':$('tiledAreaStatus').textContent||'Proceso incompleto. Revisa las opciones avanzadas.');
+    const result=await processLargeAreaTiles(files,folder,outputName);
+    refreshLidarQuickWorkflow(result?.state==='complete'?'Proceso terminado. Los resultados se guardaron en la carpeta «'+outputName+'».':$('tiledAreaStatus').textContent||'Proceso incompleto. Revisa las opciones avanzadas.');
   }catch(err){
     if(err.name==='AbortError'){refreshLidarQuickWorkflow('Selección cancelada. Los archivos siguen cargados; pulsa Procesar cuando quieras.');return}
     refreshLidarQuickWorkflow(err.message||'No se pudo iniciar el procesamiento.');
@@ -1393,6 +1404,8 @@ $('tiledPointFile').onchange=event=>{
       tiledSelectedFiles=null;refreshLidarQuickWorkflow('Selecciona únicamente archivos LAS/LAZ.');return;
     }
     tiledSelectedFiles=files;
+    $('lidarSelectedFilesList').replaceChildren(...files.map(file=>{const li=document.createElement('li');li.textContent=file.name+' · '+(file.size/1048576).toLocaleString('es-ES',{maximumFractionDigits:1})+' MB';return li}));
+    const outputInput=$('lidarOutputName');if(!outputInput.value.trim())outputInput.value=files.length===1?files[0].name.replace(/\.(las|laz)$/i,''):'Proyecto_LiDAR';
     $('tiledAreaBtn').textContent='▦ Elegir carpeta y procesar '+files.length+' archivo(s)';
     $('tiledAreaStatus').textContent='Seleccionados '+files.length+' LAS/LAZ. Pulsa «Elegir carpeta»: se procesarán conjuntamente y se exportará un mosaico de la zona completa.';
     refreshLidarQuickWorkflow();
