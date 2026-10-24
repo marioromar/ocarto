@@ -16,12 +16,17 @@
   const basename=String(name||'').split(/[\\/]/).pop().replace(/\.[^.]+$/,'').toLowerCase();
   return bands.find(b=>basename===b.stem)||null;
  }
+ function detectVegetation(name){
+  const stem=String(name||'').split(/[\\/]/).pop().replace(/\.[^.]+$/,'').toLowerCase();
+  const m=stem.match(/^altura_vegetacion_banda_([1-4])$/);
+  return m?Number(m[1]):null;
+ }
  function isHeightTemplate(layer){
   return !!layer&&!layer.featureMapBand&&/alturas?[_ -]?vegetaci[oó]n|vegetaci[oó]n[_ -]?alturas?|altura[_ -]?copa|alturas?_lidar/i.test(String(layer.name||''));
  }
  function displayOrder(layers){
   if(!layers.some(l=>l.featureMapBand))return layers;
-  const priority=l=>isHeightTemplate(l)?2:l.featureMapBand?1:0;
+  const priority=l=>isHeightTemplate(l)||l.vegetationHeightBand?2:l.featureMapBand?1:0;
   return layers.map((layer,i)=>({layer,i})).sort((a,b)=>priority(a.layer)-priority(b.layer)||a.i-b.i).map(x=>x.layer);
  }
  function blackTint(img,canvasFactory=()=>document.createElement('canvas')){
@@ -35,5 +40,5 @@
   ctx.globalCompositeOperation='source-over';
   return canvas;
  }
- return Object.freeze({bands,detect,isHeightTemplate,displayOrder,blackTint});
+ return Object.freeze({bands,detect,detectVegetation,isHeightTemplate,displayOrder,blackTint});
 });
