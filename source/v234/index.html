@@ -235,6 +235,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <script src="lidar-mosaic-feature.js"></script>
 <script src="lidar-mosaic-height-bands.js"></script>
 <script src="lidar-feature-height-ranges.js"></script>
+<script src="lidar-feature-vegetation-fusion.js"></script>
 <script src="lidar-feature-bands.js"></script>
 <script src="lidar-contour-profiles-v287.js"></script>
 <script src="lidar-mosaic-vector.js"></script>
@@ -1171,7 +1172,17 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
                 ' celdas LiDAR de la zona completa';
             },
             signal:null,
-            targetCell:Number($('vectorAggregationCell').value)
+            targetCell:Number($('vectorAggregationCell').value),
+            fusion:async({directory,manifest,shape,features,signal})=>{
+              const evidence=await OcartoLidarFeatureVegetationFusion.load(
+                directory,manifest,shape,{
+                  decodeImage:file=>createImageBitmap(file),
+                  createCanvas:(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c},
+                  signal
+                });
+              return evidence?
+                OcartoLidarFeatureVegetationFusion.annotate(features,evidence,shape):null;
+            }
           });
         manifest.mosaic.vectorization={state:'complete',reviewRequired:true,
           analysisCellM:manifest.mosaic.outputs.vector.analysisCellM,
