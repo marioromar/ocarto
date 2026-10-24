@@ -895,7 +895,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
           throw Error('Exportación de '+label+' incompleta: las celdas no coinciden con los CSV');
         // Crear una imagen de alturas NUEVA desde las celdas LiDAR de la tesela.
         // Sin valores inventados en las celdas sin suelo medido o estimado fiable.
-        let heightRaster=null;
+        let heightRaster=null,vegetationHeightBands=Array(4).fill(null);
         if(result.vegetationRows.some(row=>Number.isFinite(row.canopy_max_above_ground_m))){
           const grid=OcartoLidarExports.rasterGrid(result.vegetationRows,
             cellVegetation,'canopy',{heightStops});
@@ -910,11 +910,27 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
             cellSize:grid.cell,source:'LAS/LAZ procesado',transparentNoData:true,
             measuredGroundCells:result.vegetationRows.filter(row=>Number.isFinite(row.canopy_max_above_ground_m)&&row.ground_height_source==='observed').length,
             estimatedGroundCells:result.vegetationRows.filter(row=>Number.isFinite(row.canopy_max_above_ground_m)&&row.ground_height_source==='nearby_estimate').length};
+          // Copias independientes sin alterar el ráster de altura original.
+          for(const range of OcartoLidarMosaicHeightBands.ranges(heightStops)){
+            if(tiledAreaStopped)throw Object.assign(Error('Capas de vegetación canceladas'),{name:'AbortError'});
+            const band=OcartoLidarMosaicHeightBands.mask(grid,result.vegetationRows,range);
+            if(!band.selected)continue;
+            const bc=document.createElement('canvas');bc.width=grid.width;bc.height=grid.height;
+            bc.getContext('2d').putImageData(new ImageData(band.rgba,grid.width,grid.height),0,0);
+            const blob=await new Promise((resolve,reject)=>bc.toBlob(file=>
+              file?resolve(file):reject(Error('No se pudo dibujar la banda de vegetación')),'image/png'));
+            const savedBand=await OcartoLidarTileExport.writeRasterTriplet(folder,
+              label+'_altura_vegetacion_banda_'+range.id,blob,grid.worldFile,wkt);
+            vegetationHeightBands[range.id-1]={...savedBand,bounds:grid.bounds,
+              width:grid.width,height:grid.height,cellSize:grid.cell,
+              selectedCells:band.selected,estimatedGroundCells:band.estimated,
+              min_m:range.min,max_m:Number.isFinite(range.max)?range.max:null};
+          }
         }
         // Feature Map del mismo procesamiento de puntos, no del TIFF.
         // Usa también retornos no suelo no clasificados y construcciones;
         // descarta alturas sin suelo fiable y registra límites del método.
-        let featureRaster=null;
+        let featureRaster=null,featureBandRasters=Array(4).fill(null);
         const feature=OcartoLidarMosaicFeature.render(result.vegetationRows,
           cellVegetation,featureMinHeight,featureMaxHeight,OcartoFeatureMap);
         if(feature.grid){
@@ -931,11 +947,32 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
             cellSize:grid.cell,source:'retornos no suelo LiDAR de todos los archivos del bloque',
             ...feature.summary};
         }
+        // Feature Map en cuatro franjas SIN sombreado, negro con alfa; sólo
+        // extremos de retornos medidos respecto al suelo local fiable.
+        for(const range of OcartoFeatureHeightRanges.ranges()){
+          if(tiledAreaStopped)throw Object.assign(Error('Feature Map cancelado'),{name:'AbortError'});
+          const band=OcartoFeatureHeightRanges.render(result.vegetationRows,
+            cellVegetation,range,OcartoLidarMosaicFeature);
+          if(!band.grid)continue;
+          const mask=band.grid,bc=document.createElement('canvas');
+          bc.width=mask.width;bc.height=mask.height;
+          bc.getContext('2d').putImageData(new ImageData(mask.rgba,mask.width,mask.height),0,0);
+          const blob=await new Promise((resolve,reject)=>bc.toBlob(file=>
+            file?resolve(file):reject(Error('No se pudo exportar Feature Map sin sombreado')),'image/png'));
+          const savedBand=await OcartoLidarTileExport.writeRasterTriplet(folder,
+            label+'_feature_map_banda_'+range.id+'_sin_sombreado',blob,mask.worldFile,wkt);
+          featureBandRasters[range.id-1]={...savedBand,bounds:mask.bounds,
+            width:mask.width,height:mask.height,cellSize:mask.cell,
+            selectedCells:band.summary.selectedCells,
+            estimatedGroundCells:band.summary.estimatedGroundCells,
+            min_m:range.min,max_m:range.max,
+            limitations:band.summary.limitations};
+        }
         manifest.completed.push({name:label,window:tile.window,
           sources:matching.selected.map(f=>f.name),omittedSources:matching.skipped.length,
           points:result.points,terrainCells:result.terrainCells,
           vegetationCells:result.vegetationCells,terrainFile:terrainName,
-          vegetationFile:vegetationName,heightRaster,featureRaster});
+          vegetationFile:vegetationName,heightRaster,vegetationHeightBands,featureRaster,featureBandRasters});
         await writeTiledManifest(folder,manifest);
         terrainGrid=[];vegetationRows=[];lasTotal=0;areaReady=false;
         $('tiledAreaStatus').textContent='Bloques escritos: '+manifest.completed.length+'/'+plan.total+
@@ -1011,6 +1048,44 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
             await writeTiledManifest(folder,manifest);
           }
         }else manifest.warnings.push('Imagen conjunta demasiado grande para PNG en memoria: usar VRT georreferenciado.');
+      }
+      // Unificar las bandas como plantillas individuales para todos los LAZ.
+      // El mosaico por bloques queda disponible incluso si la imagen conjunta
+      // excede la memoria segura del navegador.
+      for(const kind of ['vegetationHeightBands','featureBandRasters']){
+        const outputKey=kind==='vegetationHeightBands'?'vegetationHeightBands':'featureBandMasks';
+        manifest.mosaic.outputs[outputKey]=[];
+        for(let i=0;i<4;i++){
+          const tiles=manifest.completed.filter(t=>t[kind]?.[i]);
+          if(!tiles.length)continue;
+          const proxy={...manifest,completed:manifest.completed.map(t=>({
+            ...t,featureRaster:t[kind]?.[i]||null
+          }))};
+          const prefix=kind==='vegetationHeightBands'?
+            'altura_vegetacion_banda_':'feature_map_banda_';
+          const stem=prefix+(i+1)+(kind==='featureBandRasters'?'_sin_sombreado':'');
+          try{
+            const image=await OcartoLidarMosaicFeature.saveWholePng(folder,proxy,{
+              planGeometry:OcartoLidarMosaicExport.geometry,
+              decodeImage:file=>createImageBitmap(file),
+              createCanvas:(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c},
+              writeTriplet:OcartoLidarTileExport.writeRasterTriplet,
+              stem,wkt,shouldStop:()=>tiledAreaStopped
+            });
+            manifest.mosaic.outputs[outputKey].push({band:i+1,
+              ...OcartoFeatureHeightRanges.ranges()[i],
+              image:image||null,tiles:tiles.map(t=>t.name),
+              status:image?'complete':'tile-only',
+              review_required:true});
+          }catch(err){
+            if(tiledAreaStopped||err.name==='AbortError')throw err;
+            manifest.warnings.push(stem+': no se pudo generar PNG de zona completa ('+err.message+
+              '); se conservaron los PNG y PGW por tesela.');
+            manifest.mosaic.outputs[outputKey].push({band:i+1,
+              image:null,tiles:tiles.map(t=>t.name),status:'tile-only',warning:err.message});
+          }
+          await writeTiledManifest(folder,manifest);
+        }
       }
       if(manifest.completed.some(t=>t.featureRaster)){
         manifest.mosaic.outputs.featureRaster=await OcartoLidarMosaicExport.writeVrt(
