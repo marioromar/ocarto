@@ -1,4 +1,8 @@
+Warning: truncated output (original token count: 20481)
+Total output lines: 1954
+
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -6,6 +10,8 @@ import 'dart:ui' as ui;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'core/map_project.dart';
 import 'core/project_storage.dart';
@@ -184,6 +190,7 @@ class _OcartoHomeState extends State<OcartoHome> {
   String symbol = 'Árbol';
   final Set<String> _favoriteSymbols = <String>{};
   double opacity = 1;
+  int _mobileSection = 0;
 
   List<String> _ports = [];
   String? _selectedPort;
@@ -378,6 +385,36 @@ class _OcartoHomeState extends State<OcartoHome> {
 
   Future<void> _saveProject() async {
     try {
+      if (Platform.isAndroid || Platform.isIOS) {
+        await _autosave();
+        final temporary = await getTemporaryDirectory();
+        final safeName = projectName.replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_');
+        final export = File('${temporary.path}/$safeName.ocarto');
+        final projectData = jsonDecode(_makeProject().encode()) as Map<String, dynamic>;
+        final exportFiles = <XFile>[];
+        final raster = _geoRaster;
+        if (raster != null) {
+          final sidecarName = '$safeName-plantilla.png';
+          final sidecar = File('${temporary.path}/$sidecarName');
+          await sidecar.writeAsBytes(await File(raster.imagePath).readAsBytes(), flush: true);
+          projectData['geoRaster'] = <String, Object>{
+            'imagePath': sidecarName,
+            'epsg': raster.epsg,
+            'world': raster.world.toList(),
+          };
+          exportFiles.add(XFile(sidecar.path));
+        }
+        await export.writeAsString(jsonEncode(projectData), flush: true);
+        exportFiles.insert(0, XFile(export.path));
+        await Share.shareXFiles(
+          exportFiles,
+          subject: 'Proyecto Ocarto: $projectName',
+          text: raster == null
+              ? 'Copia del proyecto Ocarto. Puedes guardarla en OneDrive.'
+              : 'Guarda juntos el proyecto Ocarto y su PNG de plantilla. Puedes subir ambos a OneDrive.',
+        );
+        return;
+      }
       final location = await getSaveLocation(
         suggestedName: '${projectName.replaceAll(' ', '_')}.ocarto',
         acceptedTypeGroups: [
@@ -396,8 +433,35 @@ class _OcartoHomeState extends State<OcartoHome> {
   Future<void> _loadProject({bool recovery = false}) async {
     try {
       MapProject? project;
+      List<XFile> selectedFiles = const [];
       if (recovery) {
         project = await storage.load();
+      } else if (Platform.isAndroid || Platform.isIOS) {
+        selectedFiles = await openFiles();
+        if (selectedFiles.isEmpty) return;
+        final projectFile = selectedFiles.where((file) {
+          final name = file.name.toLowerCase();
+          return name.endsWith('.ocarto') || name.endsWith('.json');
+        }).firstOrNull;
+        if (projectFile == null) {
+          throw const FormatException('Selecciona un proyecto .ocarto o .json.');
+        }
+        project = MapProject.decode(await projectFile.readAsString());
+        final raster = project.geoRaster;
+        if (raster != null && !await File(raster.imagePath).exists()) {
+          final expectedName = raster.imagePath.split(RegExp(r'[/\\]')).last;
+          final pngs = selectedFiles.where((file) =>
+              file.name.toLowerCase().endsWith('.png')).toList();
+          final image = pngs.where((file) =>
+              file.name.toLowerCase() == expectedName.toLowerCase()).firstOrNull ??
+              (pngs.length == 1 ? pngs.single : null);
+          if (image == null) {
+            throw const FormatException('Selecciona también el PNG de plantilla que acompaña al proyecto.');
+          }
+          final storedPath = await _storeMobileRaster(image.name, await image.readAsBytes());
+          project = _withRaster(project, GeoRasterReference(
+            imagePath: storedPath, epsg: raster.epsg, world: raster.world));
+        }
       } else {
         final file = await openFile(acceptedTypeGroups: [
           const XTypeGroup(label: 'Proyecto Ocarto', extensions: ['ocarto', 'json']),
@@ -473,6 +537,31 @@ class _OcartoHomeState extends State<OcartoHome> {
     }
   }
 
+  Future<String> _storeMobileRaster(String name, Uint8List bytes) async {
+    final documents = await getApplicationDocumentsDirectory();
+    final directory = Directory('${documents.path}${Platform.pathSeparator}plantillas');
+    await directory.create(recursive: true);
+    final safeName = name.replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_');
+    final stored = File('${directory.path}${Platform.pathSeparator}${DateTime.now().microsecondsSinceEpoch}_$safeName');
+    await stored.writeAsBytes(bytes, flush: true);
+    return stored.path;
+  }
+
+  MapProject _withRaster(MapProject project, GeoRasterReference? raster) => MapProject(
+    name: project.name,
+    layers: project.layers,
+    elements: project.elements,
+    version: project.version,
+    gpsCenterLatitude: project.gpsCenterLatitude,
+    gpsCenterLongitude: project.gpsCenterLongitude,
+    gpsMetersPerPixel: project.gpsMetersPerPixel,
+    gpsTrackSymbol: project.gpsTrackSymbol,
+    geoRaster: raster,
+    favoriteSymbols: project.favoriteSymbols,
+    selectedCatalogSymbol: project.selectedCatalogSymbol,
+    activeTool: project.activeTool,
+  );
+
   String _xml(String value) => value
       .replaceAll('&', '&amp;').replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;').replaceAll('"', '&quot;');
@@ -481,11 +570,6 @@ class _OcartoHomeState extends State<OcartoHome> {
     final tracks = elements.where((e) => e.isGpsTrack && e.gpsPoints.isNotEmpty).toList();
     if (tracks.isEmpty) { _snack('Todavía no hay tracks GPS para exportar.'); return; }
     try {
-      final location = await getSaveLocation(
-        suggestedName: '${projectName.replaceAll(' ', '_')}-GPS.gpx',
-        acceptedTypeGroups: [const XTypeGroup(label: 'GPX 1.1', extensions: ['gpx'])],
-      );
-      if (location == null) return;
       final xml = StringBuffer('<?xml version="1.0" encoding="UTF-8"?>\n'
           '<gpx version="1.1" creator="Ocarto" xmlns="http://www.topografix.com/GPX/1/1">\n');
       for (final track in tracks) {
@@ -498,6 +582,19 @@ class _OcartoHomeState extends State<OcartoHome> {
         xml.writeln('</trkseg></trk>');
       }
       xml.write('</gpx>');
+      if (Platform.isAndroid || Platform.isIOS) {
+        final temporary = await getTemporaryDirectory();
+        final safeName = projectName.replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_');
+        final export = File('${temporary.path}/$safeName-GPS.gpx');
+        await export.writeAsString(xml.toString(), flush: true);
+        await Share.shareXFiles([XFile(export.path)], subject: 'Tracks GPS de Ocarto');
+        return;
+      }
+      final location = await getSaveLocation(
+        suggestedName: '${projectName.replaceAll(' ', '_')}-GPS.gpx',
+        acceptedTypeGroups: [const XTypeGroup(label: 'GPX 1.1', extensions: ['gpx'])],
+      );
+      if (location == null) return;
       await File(location.path).writeAsString(xml.toString(), flush: true);
       _snack('Tracks GPS exportados: ${location.path}');
     } catch (error) {
@@ -819,11 +916,23 @@ class _OcartoHomeState extends State<OcartoHome> {
   Future<void> _importRaster() async {
     if (_rasterLoading) return;
     try {
-      final image = await openFile(acceptedTypeGroups: [
-        const XTypeGroup(label: 'Plantilla PNG', extensions: ['png']),
+      final selected = await openFiles(acceptedTypeGroups: [
+        const XTypeGroup(
+          label: 'Plantilla PNG y archivo PGW',
+          extensions: ['png', 'pgw'],
+          mimeTypes: ['image/png', 'text/plain'],
+          uniformTypeIdentifiers: ['public.png', 'public.plain-text'],
+        ),
       ]);
-      if (image == null) return;
-      final path = image.path;
+      if (selected.isEmpty) return;
+      final image = selected.where((file) => file.name.toLowerCase().endsWith('.png'))
+          .firstOrNull;
+      if (image == null) {
+        throw const FormatException('Selecciona el PNG de la plantilla.');
+      }
+      final suppliedWorld = selected.where((file) => file.name.toLowerCase().endsWith('.pgw'))
+          .firstOrNull;
+      var path = image.path;
       final dot = path.lastIndexOf('.');
       final stem = dot < 0 ? path : path.substring(0, dot);
       File? worldFile;
@@ -831,11 +940,17 @@ class _OcartoHomeState extends State<OcartoHome> {
         final file = File(candidate);
         if (await file.exists()) { worldFile = file; break; }
       }
-      if (worldFile == null) {
+      if (suppliedWorld == null && worldFile == null) {
         throw const FormatException('No se encuentra el PGW junto al PNG con el mismo nombre.');
       }
       if (mounted) setState(() => _rasterLoading = true);
-      final world = RasterWorldFile.parse(await worldFile.readAsString());
+      final worldText = suppliedWorld != null
+          ? await suppliedWorld.readAsString()
+          : await worldFile!.readAsString();
+      final world = RasterWorldFile.parse(worldText);
+      if (Platform.isAndroid || Platform.isIOS) {
+        path = await _storeMobileRaster(image.name, await image.readAsBytes());
+      }
       final ref = GeoRasterReference(imagePath: path, epsg: _rasterEpsg, world: world);
       await _showRaster(ref);
       await _autosave();
@@ -849,7 +964,7 @@ class _OcartoHomeState extends State<OcartoHome> {
 
   Widget _rasterMenu() {
     return _section('Plantilla georreferenciada', Icons.map_rounded, [
-      const Text('PNG con archivo PGW en la misma carpeta. El PGW no define EPSG.'),
+      const Text('Selecciona el PNG y el PGW juntos. El PGW no define el EPSG.'),
       const SizedBox(height: 8),
       DropdownButtonFormField<int>(
         key: ValueKey('raster-epsg-$_rasterEpsg'),
@@ -913,52 +1028,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         _gpsLineSymbol = entry.id;
       }
     });
-    unawaited(_autosave().catchError((Object error) {
-      if (mounted) _snack('Error guardando selección: $error');
-    }));
-  }
-
-  void _toggleFavorite(String id) {
-    setState(() {
-      if (!_favoriteSymbols.add(id)) _favoriteSymbols.remove(id);
-    });
-    unawaited(_autosave().catchError((Object error) {
-      if (mounted) _snack('Error guardando favoritos: $error');
-    }));
-  }
-
-  Widget _catalogTile(OcartoCatalogSymbol entry, double width) {
-    final isFavorite = _favoriteSymbols.contains(entry.id);
-    final isSelected = symbol == entry.id && tool != MapTool.select;
-    return Tooltip(
-      message: '${entry.name} · clic para dibujar; clic derecho o pulsación larga para favoritos',
-      child: SizedBox(
-        width: width,
-        height: 79,
-        child: Material(
-          color: isSelected ? const Color(0xff38544f) : const Color(0xff2a383c),
-          borderRadius: BorderRadius.circular(9),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(9),
-            onTap: () => _chooseCatalogSymbol(entry),
-            onSecondaryTap: () => _toggleFavorite(entry.id),
-            onLongPress: () => _toggleFavorite(entry.id),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(entry.icon, size: 32, color: entry.color),
-                      const SizedBox(height: 4),
-                      Text(entry.name, textAlign: TextAlign.center,
-                        maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
-                    ]),
-                  ),
-                ),
-                Positioned(
-                  top: 0, right: 0,
+    unawa…481 tokens truncated…ght: 0,
                   child: SizedBox(
                     width: 24, height: 24,
                     child: IconButton(
@@ -1087,7 +1157,7 @@ class _OcartoHomeState extends State<OcartoHome> {
           style: Theme.of(context).textTheme.bodySmall),
       const SizedBox(height: 10),
       if (!Platform.isWindows)
-        const Text('La conexión a un GPS Bluetooth por COM está disponible en Windows.'),
+        const Text('En móvil, la conexión al GPS del teléfono y a receptores Bluetooth BLE está pendiente.'),
       if (Platform.isWindows) ...[
         Row(children: [
           Expanded(child: DropdownButtonFormField<String>(
@@ -1171,7 +1241,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         style: FilledButton.styleFrom(
           backgroundColor: _recording ? const Color(0xffb8554b) : null,
         ),
-        onPressed: _recording ? _stopRecording : _startRecording,
+        onPressed: _recording ? _stopRecording : (gps.connected ? _startRecording : null),
         icon: Icon(_recording ? Icons.stop_rounded : Icons.fiber_manual_record),
         label: Text(_recording ? 'Detener grabación' : 'Iniciar grabación'),
       ),
@@ -1190,15 +1260,140 @@ class _OcartoHomeState extends State<OcartoHome> {
     ], expanded: Platform.isWindows);
   }
 
+  Widget _mapCanvas() => LayoutBuilder(builder: (context, constraints) {
+    final size = Size(constraints.maxWidth, constraints.maxHeight);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: (d) => _onMapTap(d.localPosition, size),
+      onDoubleTap: _finishDrawing,
+      onPanStart: (d) => _onMapDragStart(d.localPosition, size),
+      onPanUpdate: (d) => _onMapDrag(d.localPosition, size),
+      onPanEnd: (_) {
+        if (_movingVertex) {
+          _movingVertex = false;
+          _dragHandleSide = 0;
+          unawaited(_autosave().catchError((Object error) => _snack('Error guardando cambios: $error')));
+        }
+      },
+      child: CustomPaint(
+        key: ValueKey('drawing-${_draft?.vertices.length ?? 0}'),
+        painter: MapPainter(
+          layers: layers,
+          opacity: opacity,
+          elements: elements,
+          draft: _draft,
+          tool: tool,
+          gpsCenter: _gpsCenter,
+          currentFix: _currentFix,
+          metersPerPixel: _metersPerPixel,
+          selectedElement: _selectedElement,
+          selectedVertex: _selectedVertex,
+          selectedHandleSide: _dragHandleSide,
+          rasterImage: _rasterImage,
+          raster: _geoRaster,
+          rasterWidth: _rasterWidth,
+          rasterHeight: _rasterHeight,
+        ),
+        child: const SizedBox.expand(),
+      ),
+    );
+  });
+
+  Widget _mobileToolsPanel() => Material(
+    color: const Color(0xff202b2f),
+    child: ListView(padding: const EdgeInsets.fromLTRB(14, 10, 14, 20), children: [
+      Text(projectName, maxLines: 1, overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 8),
+      _toolButton(MapTool.select, Icons.touch_app, 'Seleccionar y editar'),
+      _toolButton(MapTool.point, Icons.place, 'Punto'),
+      _toolButton(MapTool.line, Icons.polyline, 'Línea'),
+      _toolButton(MapTool.area, Icons.pentagon_outlined, 'Área'),
+      if (_draft != null) ...[
+        Text('Trazado: ${_draft!.vertices.length} vértices',
+          style: const TextStyle(color: Color(0xffe6c879))),
+        Row(children: [
+          Expanded(child: FilledButton.icon(onPressed: _finishDrawing,
+            icon: const Icon(Icons.done), label: const Text('Terminar'))),
+          const SizedBox(width: 8),
+          IconButton(tooltip: 'Cancelar trazado', onPressed: _cancelDrawing,
+            icon: const Icon(Icons.close)),
+        ]),
+      ],
+      if (_selectedEditable != null && _selectedVertex != null)
+        _section('Editar vértice Bézier', Icons.tune, [
+          FilledButton.tonalIcon(key: const ValueKey('enable-bezier-handles'),
+            onPressed: _enableBezierHandles, icon: const Icon(Icons.tune),
+            label: const Text('Editar tiradores')),
+          OutlinedButton.icon(key: const ValueKey('bezier-corner'),
+            onPressed: () => _changeBezierMode(corner: true),
+            icon: const Icon(Icons.change_history), label: const Text('Vértice de esquina')),
+          TextButton.icon(key: const ValueKey('bezier-auto'),
+            onPressed: () => _changeBezierMode(corner: false),
+            icon: const Icon(Icons.auto_fix_high), label: const Text('Suavizado automático')),
+          Wrap(spacing: 6, children: [
+            for (final mode in BezierHandleMode.values)
+              ChoiceChip(key: ValueKey('bezier-mode-${mode.name}'),
+                label: Text(switch (mode) {
+                  BezierHandleMode.mirrored => 'Simétricos',
+                  BezierHandleMode.aligned => 'Alineados',
+                  BezierHandleMode.free => 'Libres',
+                }),
+                selected: (_selectedEditable!.bezier[_selectedVertex!]?.mode ??
+                    BezierHandleMode.mirrored) == mode,
+                onSelected: (_) => _setHandleMode(mode)),
+          ]),
+        ]),
+      const SizedBox(height: 10),
+      const Text('Elige un símbolo en la pestaña Símbolos. Toca el mapa para dibujar; mantén pulsado y arrastra para mover un vértice.',
+        style: TextStyle(color: Color(0xffb6c8c4))),
+    ]),
+  );
+
+  Widget _mobileLayersPanel() => Material(
+    color: const Color(0xff202b2f),
+    child: ListView(padding: const EdgeInsets.only(bottom: 20), children: [
+      _rasterMenu(),
+      _section('Capas', Icons.layers_outlined, [
+        ...layers.keys.map((name) => CheckboxListTile(
+          dense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+          value: layers[name], title: Text(name),
+          onChanged: (v) => setState(() => layers[name] = v ?? false),
+        )),
+        const Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: Text('Opacidad de plantilla')),
+        Slider(value: opacity, onChanged: (v) => setState(() => opacity = v)),
+      ]),
+      _gpsMenu(),
+      _section('Proyecto y sincronización', Icons.folder_open_rounded, [
+        const Padding(padding: EdgeInsets.symmetric(horizontal: 14),
+          child: Text('El autoguardado queda en el teléfono. Guarda juntos el proyecto y su PNG de plantilla en OneDrive. Para abrirlos, selecciónalos a la vez.')),
+        Padding(padding: const EdgeInsets.all(12), child: Wrap(spacing: 8, runSpacing: 8, children: [
+          FilledButton.icon(onPressed: _saveProject, icon: const Icon(Icons.save), label: const Text('Guardar copia')),
+          OutlinedButton.icon(onPressed: () => _loadProject(), icon: const Icon(Icons.folder_open), label: const Text('Abrir proyecto')),
+          OutlinedButton.icon(onPressed: () => _loadProject(recovery: true), icon: const Icon(Icons.history), label: const Text('Recuperar')),
+        ])),
+      ]),
+    ]),
+  );
+
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 700;
+    final mobilePages = <Widget>[
+      _mapCanvas(),
+      _mobileToolsPanel(),
+      _symbolDock(),
+      _mobileLayersPanel(),
+    ];
+    return Scaffold(
     appBar: AppBar(
-      title: const Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.terrain, color: Color(0xff87d8b2)),
-        SizedBox(width: 10),
-        Text('Ocarto'),
-        SizedBox(width: 10),
-        Text('v257', style: TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
+      title: Row(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.terrain, color: Color(0xff87d8b2)),
+        const SizedBox(width: 10),
+        const Text('Ocarto'),
+        const SizedBox(width: 10),
+        Text(isMobile ? 'Móvil v289' : 'v257',
+          style: const TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
       ]),
       actions: [
         if (_recording)
@@ -1206,10 +1401,29 @@ class _OcartoHomeState extends State<OcartoHome> {
             child: Chip(avatar: Icon(Icons.fiber_manual_record, color: Color(0xffef7164), size: 18),
               label: Text('REC GPS'))),
         IconButton(tooltip: 'Guardar proyecto', icon: const Icon(Icons.save_outlined), onPressed: _saveProject),
+        if (isMobile)
+          PopupMenuButton<String>(
+            tooltip: 'Opciones del proyecto',
+            onSelected: (value) {
+              if (value == 'open') unawaited(_loadProject());
+              if (value == 'recover') unawaited(_loadProject(recovery: true));
+              if (value == 'clear' && !_recording) {
+                setState(() { elements.clear(); _draft = null; _selectedElement = null; _selectedVertex = null; });
+                _scheduleAutosave();
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'open', child: Text('Abrir proyecto')),
+              PopupMenuItem(value: 'recover', child: Text('Recuperar autoguardado')),
+              PopupMenuItem(value: 'clear', child: Text('Limpiar elementos')),
+            ],
+          ),
         const SizedBox(width: 12),
       ],
     ),
-    body: Row(children: [
+    body: isMobile
+      ? IndexedStack(index: _mobileSection, children: mobilePages)
+      : Row(children: [
       SizedBox(
         width: MediaQuery.sizeOf(context).width < 1100 ? 235 : 280,
         child: Material(
@@ -1326,51 +1540,25 @@ class _OcartoHomeState extends State<OcartoHome> {
         ),
       ),
       const VerticalDivider(width: 1),
-      Expanded(child: LayoutBuilder(builder: (context, constraints) {
-        final size = Size(constraints.maxWidth, constraints.maxHeight);
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapUp: (d) => _onMapTap(d.localPosition, size),
-          onDoubleTap: _finishDrawing,
-          onPanStart: (d) => _onMapDragStart(d.localPosition, size),
-          onPanUpdate: (d) => _onMapDrag(d.localPosition, size),
-          onPanEnd: (_) {
-            if (_movingVertex) {
-              _movingVertex = false;
-              _dragHandleSide = 0;
-              unawaited(_autosave().catchError((Object error) => _snack('Error guardando cambios: $error')));
-            }
-          },
-          child: CustomPaint(
-            key: ValueKey('drawing-${_draft?.vertices.length ?? 0}'),
-            painter: MapPainter(
-              layers: layers,
-              opacity: opacity,
-              elements: elements,
-              draft: _draft,
-              tool: tool,
-              gpsCenter: _gpsCenter,
-              currentFix: _currentFix,
-              metersPerPixel: _metersPerPixel,
-              selectedElement: _selectedElement,
-              selectedVertex: _selectedVertex,
-              selectedHandleSide: _dragHandleSide,
-              rasterImage: _rasterImage,
-              raster: _geoRaster,
-              rasterWidth: _rasterWidth,
-              rasterHeight: _rasterHeight,
-            ),
-            child: const SizedBox.expand(),
-          ),
-        );
-      })),
+      Expanded(child: _mapCanvas()),
       const VerticalDivider(width: 1),
       SizedBox(
         width: MediaQuery.sizeOf(context).width < 1100 ? 245 : 324,
         child: _symbolDock(),
       ),
     ]),
-  );
+    bottomNavigationBar: isMobile ? NavigationBar(
+      selectedIndex: _mobileSection,
+      onDestinationSelected: (index) => setState(() => _mobileSection = index),
+      destinations: const [
+        NavigationDestination(icon: Icon(Icons.map), label: 'Mapa'),
+        NavigationDestination(icon: Icon(Icons.draw_rounded), label: 'Dibujo'),
+        NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'Símbolos'),
+        NavigationDestination(icon: Icon(Icons.layers), label: 'Capas'),
+      ],
+    ) : null,
+    );
+  }
 }
 
 class MapPainter extends CustomPainter {
