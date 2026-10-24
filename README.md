@@ -1,5 +1,13 @@
 # Ocarto — editor cartográfico de orientación
 
+**Versión de código actual: v293. El instalador Windows v293 está pendiente de compilación.**
+
+## v293 PC · Curvas continuas y vaguadas
+
+- Curvas de nivel cada 1 m con interpolación local apoyada en celdas LiDAR observadas; la prueba evita extrapolar sin soporte en cuatro cuadrantes.
+- La herramienta prolonga el eje por ambos extremos hasta la siguiente curva de 1 m cuando hay datos y acentúa la vaguada siguiendo el relieve. El MDT original queda intacto.
+- Prueba en un recorte de Bobadilla: 89.723 celdas medidas, 63.968 interpoladas, prolongación total de 9,239 m y 744 celdas acentuadas (máximo 0,79 m). La vista previa no sustituye la validación del instalador de Windows.
+
 ## v290 PC · Edición de selección
 
 - Añade **Girar selección 180°** al menú Dibujo. Gira puntos, líneas y áreas alrededor del centro común de la selección, conservando huecos y tiradores Bézier; actualiza coordenadas geográficas cuando el mapa está georreferenciado.
