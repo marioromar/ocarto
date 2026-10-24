@@ -62,6 +62,16 @@ test('la fusión marca evidencia y conflictos sin cambiar clase candidata',()=>{
  assert.equal(result.features[0].properties.feature_map_evidence.near_ground_0_05m_fraction,0);
  assert.equal(result.features[0].properties.feature_map_evidence.sparse_near_ground_supports_open_candidate,false);
  assert.equal(result.features[1].properties.clase,'verde_oscuro');
+ const sampleRayado={type:'Feature',properties:{clase:'rayado'},
+   geometry:{type:'Polygon',coordinates:[[[0,0],[2,0],[2,2],[0,2],[0,0]]]}};
+ const evidenceRayado={...evidence,coverage:[
+   evidence.coverage[0],Uint32Array.from([8,0]),evidence.coverage[2],evidence.coverage[3]
+ ]};
+ const rayado=fusion.annotate([sampleRayado],evidenceRayado,shape);
+ assert.equal(rayado.features[0].properties.clase,'rayado');
+ assert.equal(rayado.features[0].properties.feature_map_evidence.striped_0_3_1m_fraction,.5);
+ assert.equal(rayado.features[0].properties.feature_map_evidence.rayado_support_30cm_1m,true);
+ assert.equal(rayado.features[0].properties.feature_map_evidence.suggests_consistency,true);
  assert.equal(result.features[1].properties.feature_map_evidence.possible_conflict,false);
  assert.equal(result.summary.conflicts,1);
  assert.equal(features[0].properties.feature_map_evidence,undefined);
