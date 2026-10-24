@@ -5,7 +5,7 @@ const { spawn } = require('node:child_process');
 let server;
 function startLocalServer() {
   const script = path.join(process.resourcesPath, 'servidor-ocarto.ps1');
-  server = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script], { windowsHide: true });
+  server = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script], { windowsHide: true, env: {...process.env, OCARTO_HEADLESS:'1'} });
 }
 function createWindow() {
   const win = new BrowserWindow({
