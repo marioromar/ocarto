@@ -106,10 +106,11 @@ function fileOutsideAoi(probe, aoi) {
   const selection=bounds();
   for (const p of aoi.rings[0]) addBounds(selection,p[0],p[1]);
   if (area?.window) {
-    selection.minX=Math.max(selection.minX,area.window.minX);
-    selection.maxX=Math.min(selection.maxX,area.window.maxX);
-    selection.minY=Math.max(selection.minY,area.window.minY);
-    selection.maxY=Math.min(selection.maxY,area.window.maxY);
+    const halo=area.haloMetres||0;
+    selection.minX=Math.max(selection.minX,area.window.minX-halo);
+    selection.maxX=Math.min(selection.maxX,area.window.maxX+halo);
+    selection.minY=Math.max(selection.minY,area.window.minY-halo);
+    selection.maxY=Math.min(selection.maxY,area.window.maxY+halo);
   }
   return tile.maxX<selection.minX || tile.minX>selection.maxX ||
       tile.maxY<selection.minY || tile.minY>selection.maxY;
@@ -178,8 +179,11 @@ async function loadEnd(message) {
   } finally {if(busy===job) busy=null;}
 }
 function inside(x,y,aoi) {
-  if(area?.window && (x<area.window.minX || y<area.window.minY ||
-      x>=area.window.maxX || y>=area.window.maxY))return false;
+  if(area?.window){
+    const halo=area.haloMetres||0;
+    if(x<area.window.minX-halo||y<area.window.minY-halo||
+       x>=area.window.maxX+halo||y>=area.window.maxY+halo)return false;
+  }
   if(!aoi?.rings?.length) return true;
   function inRing(ring) {
     let yes=false;
@@ -201,32 +205,84 @@ function vegetationBin(grid,x,y,z,cls,allowRoadClass11=true) {
   // In LAS 1.3 and older, class 11 was reserved; only interpret it as road
   // when an LAS 1.4 file supplies that standard classification.
   if(cls===11&&!allowRoadClass11)return;
-  if(![2,3,4,5,6,9,11,14,15].includes(cls))return;
+  if(![0,1,2,3,4,5,6,9,11,14,15].includes(cls))return;
   grid.insert(x,y,(ii,jj)=>({i:ii,j:jj,x:(ii+0.5)*grid.cell,y:(jj+0.5)*grid.cell,
     ground_points:0,vegetation_points:0,building_points:0,water_points:0,road_points:0,wire_points:0,tower_points:0,
-    ground_min_z:Infinity,canopy_max_z:-Infinity,canopy_sum_z:0}),
+    ground_min_z:Infinity,canopy_max_z:-Infinity,canopy_sum_z:0,
+    other_points:0,other_max_z:-Infinity,feature_min_z:Infinity}),
   p=>{
     if(cls===2){p.ground_points++;p.ground_min_z=Math.min(p.ground_min_z,z)}
-    else if(cls>=3&&cls<=5){p.vegetation_points++;p.canopy_max_z=Math.max(p.canopy_max_z,z);p.canopy_sum_z+=z}
-    else if(cls===6)p.building_points++;
-    else if(cls===9)p.water_points++;
-    else if(cls===11)p.road_points++;
-    else if(cls===14)p.wire_points++;
-    else if(cls===15)p.tower_points++;
+    else if(cls>=3&&cls<=5){p.vegetation_points++;p.canopy_max_z=Math.max(p.canopy_max_z,z);p.canopy_sum_z+=z;p.feature_min_z=Math.min(p.feature_min_z,z)}
+    else {
+      // Preservar las clases oficiales y computar aparte retornos no suelo
+      // para Feature Map; no llamar vegetación a edificios o no clasificados.
+      p.other_points++;p.other_max_z=Math.max(p.other_max_z,z);p.feature_min_z=Math.min(p.feature_min_z,z);
+      if(cls===6)p.building_points++;
+      else if(cls===9)p.water_points++;
+      else if(cls===11)p.road_points++;
+      else if(cls===14)p.wire_points++;
+      else if(cls===15)p.tower_points++;
+    }
   });
 }
-function vegetationRows(grid) {
-  return [...grid.cells.values()].map(p=>{
-    const g=Number.isFinite(p.ground_min_z)?p.ground_min_z:null;
-    const h=g!==null && Number.isFinite(p.canopy_max_z) ? Math.max(0,p.canopy_max_z-g):null;
+// v286: alturas de copa sobre suelo cercano cuando no hay retorno de suelo
+// en la misma celda (frecuente a 0,5 m). La observación original nunca cambia.
+function vegetationRows(grid,consumer=null) {
+  // Reutilizar la rejilla existente; duplicar hasta 1M claves de suelo agota RAM.
+  const observed=grid.cells;
+  // Como máximo 4 celdas: limita el coste cuando la resolución es inferior a 0,5 m.
+  const radius=Math.min(4,Math.max(1,Math.ceil(2/grid.cell))),r2=(2/grid.cell)**2+1e-8;
+  function nearbyGround(p){
+    const matches=[];
+    for(let dj=-radius;dj<=radius;dj++)for(let di=-radius;di<=radius;di++){
+      const d2=di*di+dj*dj;
+      if(!d2||d2>r2)continue;
+      const z=observed.get((p.i+di)+','+(p.j+dj))?.ground_min_z;
+      if(Number.isFinite(z))matches.push({z,d2});
+    }
+    // No extrapolar con una o dos medidas aisladas.
+    if(matches.length<3)return null;
+    matches.sort((a,b)=>a.d2-b.d2);
+    const chosen=matches.slice(0,8);
+    let minZ=Infinity,maxZ=-Infinity,sum=0,weight=0;
+    for(const m of chosen){
+      minZ=Math.min(minZ,m.z);maxZ=Math.max(maxZ,m.z);
+      const w=1/m.d2;sum+=m.z*w;weight+=w;
+    }
+    // Terreno escarpado o cotas contradictorias: mejor altura desconocida.
+    if(maxZ-minZ>2)return null;
+    return {z:sum/weight,support:chosen.length};
+  }
+  // Feature Map consume filas una a una; evita otro millón de objetos en RAM.
+  const rows=consumer?null:[];
+  for(const p of grid.cells.values()){
+    const measured=Number.isFinite(p.ground_min_z)?p.ground_min_z:null;
+    const estimated=measured===null&&(p.vegetation_points>0||p.other_points>0)?nearbyGround(p):null;
+    const ground=measured===null?(estimated?.z??null):measured;
+    const h=ground!==null&&Number.isFinite(p.canopy_max_z)?
+      Math.max(0,p.canopy_max_z-ground):null;
     const n=p.ground_points+p.vegetation_points;
-    return {x:p.x,y:p.y,ground_points:p.ground_points,vegetation_points:p.vegetation_points,
+    const rawFeatureMax=Math.max(p.canopy_max_z,p.other_max_z);
+    const featureMax=ground!==null&&Number.isFinite(rawFeatureMax)?
+      Math.max(0,rawFeatureMax-ground):null;
+    const featureMin=ground!==null&&Number.isFinite(p.feature_min_z)?
+      Math.max(0,p.feature_min_z-ground):null;
+    const row={x:p.x,y:p.y,ground_points:p.ground_points,vegetation_points:p.vegetation_points,
       building_points:p.building_points,water_points:p.water_points,road_points:p.road_points,
+      other_points:p.other_points,feature_min_above_ground_m:featureMin,
+      feature_max_above_ground_m:featureMax,
       wire_points:p.wire_points,tower_points:p.tower_points,
-      ground_min_z:g,canopy_max_above_ground_m:h,
-      canopy_mean_above_ground_m:g!==null&&p.vegetation_points?Math.max(0,p.canopy_sum_z/p.vegetation_points-g):null,
+      ground_min_z:measured,
+      estimated_ground_z_m:estimated?.z??null,
+      ground_height_source:measured!==null?'observed':estimated?'nearby_estimate':'unknown',
+      ground_estimation_support_cells:estimated?.support??0,
+      canopy_max_above_ground_m:h,
+      canopy_mean_above_ground_m:ground!==null&&p.vegetation_points?
+        Math.max(0,p.canopy_sum_z/p.vegetation_points-ground):null,
       vegetation_return_fraction:n?p.vegetation_points/n:0};
-  });
+    if(consumer)consumer(row);else rows.push(row);
+  }
+  return rows;
 }
 async function analysis(type,m) {
   if(!cloud) throw Error('Primero importa LAS o LAZ');
@@ -243,20 +299,32 @@ async function analysis(type,m) {
       const grid=makeGrid(cell);let classifiedPoints=0;
       await forPoints(cloud,job,(x,y,z,cls)=>{if([2,3,4,5,6,9,11,14,15].includes(cls)&&(cls!==11||cloud.meta.minor>=4)){classifiedPoints++;vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4)}},'vegetation');
       send({type:'vegetation',jobId:m.jobId,cellSize:cell,cells:grid.cells.size,classifiedPoints,
-        rows:vegetationRows(grid),quality:'preliminar; solo celdas observadas'});
+        rows:vegetationRows(grid),quality:'preliminar; suelo medido o estimado con vecinos identificados por celda; confirmar con MDT y campo'});
     } else if(type==='feature-map') {
       const grid=makeGrid(cell);
-      await forPoints(cloud,job,(x,y,z,cls)=>vegetationBin(grid,x,y,z,cls),'feature-ground');
+      await forPoints(cloud,job,(x,y,z,cls)=>vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4),'feature-ground');
       const minHeight=Math.max(0,Number(options.minHeight)||0);
       const maxHeight=Number.isFinite(Number(options.maxHeight))?Number(options.maxHeight):Infinity;
-      const data={i:[],j:[],height:[]};let selected=0;
-      for(const p of grid.cells.values()){
-        if(!Number.isFinite(p.ground_min_z)||!Number.isFinite(p.canopy_max_z))continue;
-        const h=Math.max(0,p.canopy_max_z-p.ground_min_z);
-        if(h>=minHeight&&h<=maxHeight){data.i.push(p.i);data.j.push(p.j);data.height.push(h);selected+=p.vegetation_points}
-      }
-      if(!data.i.length)throw Error('No hay celdas con suelo y vegetación para Feature Map');
-      send({type:'feature-map',jobId:m.jobId,cellSize:cell,cells:data,selectedPoints:selected,minHeight,maxHeight});
+      const data={i:[],j:[],height:[]};let selected=0,measuredCells=0,estimatedCells=0;
+      // Usar la misma altura verificada que la imagen de vegetación, sin perder
+      // copas con suelo vecino y sin convertir estimaciones en medidas reales.
+      vegetationRows(grid,r=>{
+        const highest=r.feature_max_above_ground_m,lowest=r.feature_min_above_ground_m;
+        if(r.vegetation_points+r.other_points<=0)return;
+        // Si la copa es alta pero existe otro retorno bajo, conservar el bajo:
+        // solo extremos realmente medidos, sin inferir alturas intermedias.
+        const h=Number.isFinite(highest)&&highest>=minHeight&&highest<=maxHeight?
+          highest:Number.isFinite(lowest)&&lowest>=minHeight&&lowest<=maxHeight?lowest:null;
+        if(h!==null){
+          data.i.push(Math.round(r.x/cell-.5));
+          data.j.push(Math.round(r.y/cell-.5));
+          data.height.push(h);selected+=r.vegetation_points+r.other_points;
+          if(r.ground_height_source==='nearby_estimate')estimatedCells++;else measuredCells++;
+        }
+      });
+      if(!data.i.length)throw Error('No hay retornos no suelo con extremos observados y suelo fiable para Feature Map');
+      send({type:'feature-map',jobId:m.jobId,cellSize:cell,cells:data,selectedPoints:selected,minHeight,maxHeight,
+        measuredGroundCells:measuredCells,estimatedGroundCells:estimatedCells});
     } else if(type==='detect') {
       const grid=makeGrid(cell),minZ=Number(options.minZ),maxZ=Number(options.maxZ),filter=options.classFilter||'all';
       let matchingPoints=0;const matches=cls=>(filter==='all'||filter==='ground'&&cls===2||
@@ -290,24 +358,33 @@ async function addAreaTile(m) {
   if(!area || area.id!==m.sessionId) throw Error('Sesión de mosaico LiDAR no iniciada');
   if(!cloud)throw Error('No se ha cargado la tesela');
   const job={id:m.jobId,cancelled:false};if(busy)throw Error('Proceso LiDAR ocupado');busy=job;
-  const b=bounds();let used=0;
+  const b=bounds();let used=0,haloPoints=0;
   try {
     await forPoints(cloud,job,(x,y,z,cls,i)=>{
       if(!inside(x,y,area.aoi))return;
-      used++;addBounds(b,x,y);
+      const w=area.window;
+      if(!w||(x>=w.minX&&x<w.maxX&&y>=w.minY&&y<w.maxY)){
+        used++;addBounds(b,x,y);
+      }else haloPoints++;
+      // El suelo vecino se usa para estimar alturas, pero nunca se exporta
+      // ni se contabiliza dos veces como celda de la zona principal.
       terrainBin(area.terrain,x,y,z,cls,i);
       vegetationBin(area.vegetation,x,y,z,cls,cloud.meta.minor>=4);
     },'area');
     if(used){area.tiles++;area.points+=used;}
     send({type:'area-tile-done',sessionId:m.sessionId,jobId:m.jobId,skipped:used===0,
-      points:used,bounds:used?b:null,nodes:0,visitedPoints:cloud.meta.count});
+      points:used,haloPoints,bounds:used?b:null,nodes:0,visitedPoints:cloud.meta.count});
     cloud=null; // Release the decoded tile's original compressed bytes.
   }finally{if(busy===job)busy=null;}
 }
 function finishArea(m) {
   if(!area || area.id!==m.sessionId)throw Error('Sesión de mosaico inexistente');
-  const terrain=[...area.terrain.cells.values()].map(p=>[p.x,p.y,p.z]);
-  const rows=vegetationRows(area.vegetation);
+  const w=area.window;
+  const belongs=p=>!w||(p.x>=w.minX&&p.x<w.maxX&&
+    p.y>=w.minY&&p.y<w.maxY);
+  const terrain=[...area.terrain.cells.values()].filter(belongs).map(p=>[p.x,p.y,p.z]);
+  // Calcular con las celdas halo en memoria; exportar solo la ventana propia.
+  const rows=vegetationRows(area.vegetation).filter(belongs);
   send({type:'area-finished',sessionId:m.sessionId,jobId:m.jobId,points:area.points,window:area.window,
     tiles:area.tiles,terrain,vegetationRows:rows,terrainCells:terrain.length,vegetationCells:rows.length});
   area=null;
@@ -376,18 +453,24 @@ onmessage=async event=>{
       const terrain=makeGrid(m.terrainCell),vegetation=makeGrid(m.vegetationCell);
       let capacity;
       const window=m.window??null;
+      const haloMetres=m.haloMetres===undefined?0:Number(m.haloMetres);
+      if(!Number.isFinite(haloMetres)||haloMetres<0||haloMetres>2)
+        throw Error('Halo LiDAR no válido: máximo 2 metros');
       if(window && (![window.minX,window.maxX,window.minY,window.maxY].every(Number.isFinite) ||
           window.maxX<=window.minX||window.maxY<=window.minY))
         throw Error('Ventana de tesela LiDAR no válida');
       if(aoi?.rings?.length||window){
-        const extent=window?{...window}:{minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};
+        const extent=window?{
+          minX:window.minX-haloMetres,maxX:window.maxX+haloMetres,
+          minY:window.minY-haloMetres,maxY:window.maxY+haloMetres
+        }:{minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};
         if(!window)for(const ring of aoi.rings)for(const p of ring)addBounds(extent,p[0],p[1]);
         const estimate=cell=>Math.ceil((extent.maxX-extent.minX)/cell+1)*Math.ceil((extent.maxY-extent.minY)/cell+1);
         capacity={terrainCells:estimate(terrain.cell),vegetationCells:estimate(vegetation.cell),maxCells:MAX_CELLS};
         if(capacity.terrainCells>MAX_CELLS || capacity.vegetationCells>MAX_CELLS)
           throw Error('El área seleccionada excede el máximo de un millón de celdas por modelo. Aumenta la celda o recorta el área.');
       }
-      area={id:m.sessionId,aoi,window,terrain,vegetation,tiles:0,points:0};
+      area={id:m.sessionId,aoi,window,haloMetres,terrain,vegetation,tiles:0,points:0};
       send({type:'area-ready',sessionId:m.sessionId,...(capacity?{capacity}:{})});return;
     }
     if(type==='area-add') {await addAreaTile(m);return;}

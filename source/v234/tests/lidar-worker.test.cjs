@@ -324,3 +324,237 @@ test('mosaico LAS omite la lectura preliminar aun con más de un archivo',async(
  const area=w.messages.findLast(m=>m.type==='area-finished');
  assert(area&&area.tiles===2);
 });
+
+function vegetationHeightHarness(){
+ const start=workerSource.indexOf('function vegetationBin(');
+ const end=workerSource.indexOf('async function analysis(',start);
+ assert(start>=0&&end>start,'No existe el motor de altura de vegetación');
+ const script=workerSource.slice(start,end)+'\n({vegetationBin,vegetationRows})';
+ const {vegetationBin,vegetationRows}=vm.runInNewContext(script);
+ const grid={cell:.5,cells:new Map(),insert(x,y,make,update){
+  const i=Math.floor(x/this.cell),j=Math.floor(y/this.cell),key=i+','+j;
+  let row=this.cells.get(key);
+  if(!row){row=make(i,j);this.cells.set(key,row)}
+  update(row);
+ }};
+ const point=(i,j,z,cls)=>vegetationBin(grid,(i+.5)*grid.cell,
+  (j+.5)*grid.cell,z,cls);
+ const find=(i,j)=>vegetationRows(grid).find(r=>
+  r.x===(i+.5)*grid.cell&&r.y===(j+.5)*grid.cell);
+ return {point,find,grid,vegetationRows};
+}
+test('copa sin suelo en su celda recibe altura desde suelo vecino consistente (0,5 m)',()=>{
+ const h=vegetationHeightHarness();
+ h.point(0,0,100,2);h.point(0,1,100,2);
+ h.point(1,0,100,2);h.point(2,0,100,2);
+ h.point(1,1,110,5);
+ const r=h.find(1,1);
+ assert.equal(r.ground_min_z,null,'El suelo observado original sigue ausente');
+ assert.equal(r.estimated_ground_z_m,100);
+ assert.equal(r.ground_height_source,'nearby_estimate');
+ assert.equal(r.canopy_max_above_ground_m,10);
+ assert.equal(r.canopy_mean_above_ground_m,10);
+ assert(r.ground_estimation_support_cells>=3);
+ const streamed=[];
+ const result=h.vegetationRows(h.grid,row=>streamed.push(row));
+ assert.equal(result,null,'Feature Map no reserva otro vector de filas');
+ assert.equal(streamed.length,h.grid.cells.size);
+ assert.equal(JSON.stringify(streamed.map(x=>x.x).sort((a,b)=>a-b)),
+  JSON.stringify(h.vegetationRows(h.grid).map(x=>x.x).sort((a,b)=>a-b)));
+});
+test('suelo medido prevalece y nunca se sustituye por interpolación',()=>{
+ const h=vegetationHeightHarness();
+ h.point(0,0,99,2);h.point(0,0,109,5);
+ h.point(1,0,101,2);h.point(0,1,100,2);
+ const r=h.find(0,0);
+ assert.equal(r.ground_min_z,99);
+ assert.equal(r.ground_height_source,'observed');
+ assert.equal(r.estimated_ground_z_m,null);
+ assert.equal(r.canopy_max_above_ground_m,10);
+});
+test('no inventa alturas de vegetación sin suelo cercano o sobre terreno contradictorio',()=>{
+ const isolated=vegetationHeightHarness();
+ isolated.point(7,7,114,5);
+ assert.equal(isolated.find(7,7).canopy_max_above_ground_m,null);
+ assert.equal(isolated.find(7,7).ground_height_source,'unknown');
+ const steep=vegetationHeightHarness();
+ steep.point(0,0,100,2);
+ steep.point(0,1,106,2);
+ steep.point(1,0,111,2);
+ steep.point(1,1,115,5);
+ assert.equal(steep.find(1,1).canopy_max_above_ground_m,null,
+  'No estimar altura en terreno escarpado sin base fiable');
+});
+test('Feature Map comparte alturas de vegetación locales sin modificar LiDAR original',()=>{
+ assert(workerSource.includes('vegetationRows(grid,r=>{'),
+  'Feature Map debe usar la altura de suelo cercano con control de calidad');
+ assert(workerSource.includes('if(r.vegetation_points+r.other_points<=0)return;'));
+ assert(workerSource.includes('feature_min_above_ground_m'),
+  'El Feature Map debe conservar retornos bajos aun cuando exista una copa alta');
+ assert(workerSource.includes("vegetationBin(grid,x,y,z,cls,cloud.meta.minor>=4),'feature-ground'"),
+  'No tratar clase 11 de LAS anterior a 1.4 como carretera');
+ assert(workerSource.includes('measuredGroundCells:measuredCells,estimatedGroundCells:estimatedCells'),
+  'Feature Map debe informar alturas de suelo medido y estimado');
+});
+
+test('CSV LiDAR conserva columna de suelo y distingue alturas estimadas',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ assert(html.includes("k==='ground_z_min'?(r.ground_min_z??'')"),
+  'La columna ground_z_min no debe quedar vacía al exportar');
+ assert(html.includes("'vegetation_return_fraction','ground_height_source','estimated_ground_z_m','ground_estimation_support_cells'"),
+  'Las teselas deben exportar la procedencia de la altura de vegetación');
+ assert(html.includes('row.ground_height_source,row.estimated_ground_z_m,row.ground_estimation_support_cells'),
+  'Los valores de teselas deben coincidir con su cabecera');
+ assert(html.includes('function vegetationHeightQuality(rows)'),
+  'La interfaz debe resumir suelo medido, estimado y desconocido');
+ assert(html.includes('vegetationHeightQuality(vegetationRows)'));
+});
+
+function syntheticPnoa14Format8() {
+  // LAS 1.4 / formato 8 (38 bytes por punto), como las teselas PNOA.
+  // Los puntos son artificiales para validar la decodificación de clase y altura.
+  const originX=384000,originY=4114000,originZ=650,cell=.5;
+  const points=[
+    {i:0,j:0,z:650,cls:2},{i:0,j:1,z:650,cls:2},
+    {i:1,j:0,z:650,cls:2},{i:2,j:0,z:650,cls:2},
+    {i:1,j:1,z:658,cls:5},
+    {i:3,j:0,z:651,cls:6}, // Edificio, nunca copa.
+    {i:3,j:1,z:650,cls:9}, // Agua.
+    {i:3,j:2,z:652,cls:11} // Carretera, clase LAS 1.4.
+  ];
+  const buf=new Uint8Array(375+points.length*38),dv=new DataView(buf.buffer);
+  dv.setUint32(0,0x4653414c,true);
+  dv.setUint8(24,1);dv.setUint8(25,4);
+  dv.setUint16(94,375,true);dv.setUint32(96,375,true);
+  dv.setUint8(104,8);dv.setUint16(105,38,true);
+  dv.setBigUint64(247,BigInt(points.length),true);
+  for(const i of [131,139,147])dv.setFloat64(i,.001,true);
+  dv.setFloat64(155,originX,true);dv.setFloat64(163,originY,true);
+  dv.setFloat64(171,originZ,true);
+  for(const [k,p] of points.entries()) {
+    const at=375+k*38,x=originX+(p.i+.5)*cell,y=originY+(p.j+.5)*cell;
+    dv.setInt32(at,Math.round((x-originX)/.001),true);
+    dv.setInt32(at+4,Math.round((y-originY)/.001),true);
+    dv.setInt32(at+8,Math.round((p.z-originZ)/.001),true);
+    dv.setUint8(at+14,1);
+    dv.setUint8(at+16,p.cls);
+  }
+  dv.setFloat64(179,originX+2,true);
+  dv.setFloat64(187,originX,true);
+  dv.setFloat64(195,originY+2,true);
+  dv.setFloat64(203,originY,true);
+  dv.setFloat64(211,660,true);
+  dv.setFloat64(219,649,true);
+  return buf;
+}
+test('formato 8 PNOA LAS 1.4 calcula el suelo cercano, alturas y Feature Map a 0,5 m',async()=>{
+ const worker=makeWorker(),loaded=await worker.loadBytes(syntheticPnoa14Format8());
+ assert.equal(loaded.version,'1.4');
+ assert.equal(loaded.format,8);
+ assert.equal(loaded.count,8);
+ await worker.send({type:'terrain',jobId:1200,options:{cell:.5,minCount:1}});
+ const terrain=worker.messages.findLast(m=>m.jobId===1200&&(m.type==='terrain'||m.type==='error'));
+ assert.equal(terrain.type,'terrain',JSON.stringify(terrain));
+ assert.equal(terrain.matchingPoints,4);
+ assert.equal(terrain.candidates.length,4);
+ await worker.send({type:'vegetation',jobId:1201,options:{cell:.5}});
+ const veg=worker.messages.findLast(m=>m.jobId===1201&&(m.type==='vegetation'||m.type==='error'));
+ assert.equal(veg.type,'vegetation',JSON.stringify(veg));
+ assert.equal(veg.classifiedPoints,8);
+ assert.match(veg.quality,/estimado/);
+ const cell=veg.rows.find(r=>r.vegetation_points===1);
+ assert(cell,'La copa sin retorno de suelo debe formar una celda');
+ assert.equal(cell.ground_min_z,null,'Suelo original nunca alterado');
+ assert.equal(cell.estimated_ground_z_m,650);
+ assert.equal(cell.ground_height_source,'nearby_estimate');
+ assert.equal(cell.canopy_max_above_ground_m,8);
+ assert(cell.ground_estimation_support_cells>=3);
+ assert.equal(veg.rows.reduce((n,r)=>n+r.building_points,0),1);
+ assert.equal(veg.rows.reduce((n,r)=>n+r.water_points,0),1);
+ assert.equal(veg.rows.reduce((n,r)=>n+r.road_points,0),1);
+ await worker.send({type:'feature-map',jobId:1202,
+   options:{cell:.5,minHeight:1,maxHeight:20}});
+ const feature=worker.messages.findLast(m=>m.jobId===1202&&(m.type==='feature-map'||m.type==='error'));
+ assert.equal(feature.type,'feature-map',JSON.stringify(feature));
+ assert.equal(feature.cells.height.length,3);
+ assert([...feature.cells.height].sort((a,b)=>a-b).every((h,i)=>Math.abs(h-[1,2,8][i])<1e-6),'Alturas originales dentro de la precisión LiDAR');
+ assert.equal(feature.measuredGroundCells,0);
+ assert.equal(feature.estimatedGroundCells,3);
+ assert.equal(feature.cells.i[0],Math.round(cell.x/.5-.5));
+ assert.equal(feature.cells.j[0],Math.round(cell.y/.5-.5));
+});
+
+
+test('halo LiDAR de 2m recupera suelo vecino sin exportar celdas ni puntos duplicados',async()=>{
+ const window={minX:384000.5,maxX:384001,minY:4114000.5,maxY:4114001};
+ const aoi={rings:[[[384000,4114000],[384002,4114000],
+   [384002,4114002],[384000,4114002]]]};
+ async function run(halo,sessionId){
+  const worker=makeWorker();
+  await worker.send({type:'area-start',sessionId,terrainCell:.5,
+    vegetationCell:.5,aoi,window,haloMetres:halo});
+  assert.equal(worker.messages.at(-1).type,'area-ready');
+  const loaded=await worker.loadBytes(syntheticPnoa14Format8(),sessionId);
+  assert.equal(loaded.headerOnly,true);
+  await worker.send({type:'area-add',sessionId,jobId:sessionId+1});
+  const tile=worker.messages.findLast(m=>m.type==='area-tile-done');
+  assert.equal(tile.points,1,'Solo la copa del área principal suma puntos');
+  if(halo)assert(tile.haloPoints>=3,'El vecino ha sido leído sin contarlo como propio');
+  await worker.send({type:'area-finish',sessionId,jobId:sessionId+2});
+  return worker.messages.findLast(m=>m.type==='area-finished');
+ }
+ const isolated=await run(0,1500),withHalo=await run(2,1510);
+ assert.equal(isolated.vegetationCells,1);
+ assert.equal(isolated.vegetationRows[0].canopy_max_above_ground_m,null);
+ assert.equal(withHalo.points,1,'No duplicar retornos de ventanas vecinas');
+ assert.equal(withHalo.vegetationCells,1);
+ assert.equal(withHalo.terrainCells,0,'Suelo vecino no es suelo observado dentro de la ventana');
+ assert.equal(withHalo.vegetationRows[0].canopy_max_above_ground_m,8);
+ assert.equal(withHalo.vegetationRows[0].ground_height_source,'nearby_estimate');
+ assert.equal(withHalo.vegetationRows[0].feature_max_above_ground_m,8);
+});
+
+
+function syntheticPnoaWithUnderstorey(){
+ // Añadir a la misma celda de la copa de 8 m un retorno LAS 1.4 clase 1
+ // a solo 1 m del suelo. No convertirlo en vegetación: sirve al Feature Map.
+ const base=syntheticPnoa14Format8(),bytes=new Uint8Array(base.length+38);
+ bytes.set(base);
+ const dv=new DataView(bytes.buffer),pos=base.length;
+ dv.setBigUint64(247,9n,true);
+ dv.setInt32(pos,750,true);dv.setInt32(pos+4,750,true);
+ dv.setInt32(pos+8,1000,true);
+ dv.setUint8(pos+14,1);dv.setUint8(pos+16,1);
+ return bytes;
+}
+test('Feature Map 0-2m detecta un retorno bajo aun cuando hay copa de 8m en la misma celda',async()=>{
+ const worker=makeWorker();
+ const raw=syntheticPnoaWithUnderstorey();
+ await worker.loadBytes(raw);
+ await worker.send({type:'feature-map',jobId:1801,options:{cell:.5,minHeight:0,maxHeight:2}});
+ const f=worker.messages.findLast(m=>m.jobId===1801);
+ assert.equal(f.type,'feature-map',JSON.stringify(f));
+ const i=Math.round((384000+.75)/.5-.5),j=Math.round((4114000+.75)/.5-.5);
+ const p=f.cells.i.findIndex((x,k)=>x===i&&f.cells.j[k]===j);
+ assert(p>=0,'Una copa alta no debe ocultar un elemento bajo de la misma celda');
+ assert.equal(f.cells.height[p],1);
+});
+test('mosaico LiDAR conserva extremos bajo y alto por separado sin falsear la altura de vegetación',async()=>{
+ const worker=makeWorker(),sessionId=1840;
+ await worker.send({type:'area-start',sessionId,terrainCell:.5,vegetationCell:.5,
+  window:{minX:384000,maxX:384002,minY:4114000,maxY:4114002},
+  haloMetres:0});
+ assert.equal(worker.messages.at(-1).type,'area-ready');
+ await worker.loadBytes(syntheticPnoaWithUnderstorey(),sessionId);
+ await worker.send({type:'area-add',sessionId,jobId:1841});
+ await worker.send({type:'area-finish',sessionId,jobId:1842});
+ const area=worker.messages.findLast(m=>m.jobId===1842);
+ assert.equal(area.type,'area-finished',JSON.stringify(area));
+ const cell=area.vegetationRows.find(r=>r.vegetation_points&&r.other_points);
+ assert(cell);
+ assert.equal(cell.canopy_max_above_ground_m,8,
+  'La altura de vegetación sigue usando exclusivamente retornos de vegetación');
+ assert.equal(cell.feature_max_above_ground_m,8);
+ assert.equal(cell.feature_min_above_ground_m,1);
+ assert.equal(cell.other_points,1);
+});

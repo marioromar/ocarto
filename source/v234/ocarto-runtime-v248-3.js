@@ -257,9 +257,17 @@ function rasterGrid(rows,cell,field='elevation',opts={}){
   cells.set(i+','+j,Number.isFinite(v)?v:null);minI=Math.min(i,minI);maxI=Math.max(i,maxI);minJ=Math.min(j,minJ);maxJ=Math.max(j,maxJ);
  }
  const width=maxI-minI+1,height=maxJ-minJ+1;if(width*height>(opts.maxPixels||MAX_PIXELS))throw Error('Imagen demasiado grande; aumenta el tamaño de celda');
- const valid=[...cells.values()].filter(Number.isFinite);if(!valid.length)throw Error('No hay valores válidos para pintar');
- if(field==='vegetation_density'&&valid.some(v=>v<0||v>1))throw Error('La proporción de retornos de vegetación debe estar entre 0 y 1');
- const min=Number.isFinite(opts.min)?opts.min:Math.min(...valid),max=Number.isFinite(opts.max)?opts.max:Math.max(...valid),rgba=new Uint8ClampedArray(width*height*4);
+ // Nunca expandir cientos de miles de alturas como argumentos de Math.min/max:
+ // supera el límite de pila y duplica memoria en mosaicos LiDAR grandes.
+ let observedMin=Infinity,observedMax=-Infinity,validCount=0;
+ for(const v of cells.values())if(Number.isFinite(v)){
+  if(field==='vegetation_density'&&(v<0||v>1))throw Error('La proporción de retornos de vegetación debe estar entre 0 y 1');
+  if(v<observedMin)observedMin=v;
+  if(v>observedMax)observedMax=v;
+  validCount++;
+ }
+ if(!validCount)throw Error('No hay valores válidos para pintar');
+ const min=Number.isFinite(opts.min)?opts.min:observedMin,max=Number.isFinite(opts.max)?opts.max:observedMax,rgba=new Uint8ClampedArray(width*height*4);
  const heightStops=field==='canopy'?normalizeHeightStops(opts.heightStops):null;
  for(const [key,v] of cells){if(!Number.isFinite(v))continue;const [i,j]=key.split(',').map(Number),col=i-minI,row=maxJ-j,index=(row*width+col)*4,t=max===min?.5:Math.max(0,Math.min(1,(v-min)/(max-min)));
   // Colour ramps are intended for visual interpretation, not official map symbols.

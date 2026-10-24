@@ -106,3 +106,83 @@ test('la interfaz web realmente carga el exportador y valida número de filas an
  assert(html.includes('writtenTerrain!==result.terrainCells'));
  assert(html.includes('writtenVegetation!==result.vegetationCells'));
 });
+
+
+function lidarRasterExports(){
+ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+ const runtime=fs.readFileSync(path.join(__dirname,'../ocarto-runtime-v248-3.js'),'utf8');
+ const start=runtime.indexOf('/* lidar-exports.js */'),end=runtime.indexOf('/* feature-map.js */',start);
+ assert(start>=0&&end>start);
+ const scope={module:{exports:{}}};
+ vm.runInNewContext(runtime.slice(start,end),scope,{timeout:4000});
+ return scope.module.exports;
+}
+test('ráster LiDAR de 200 000 celdas evita desbordamiento de argumentos y conserva PGW',()=>{
+ const {rasterGrid}=lidarRasterExports();
+ const baseX=384000,baseY=4114000,cell=.5;
+ const rows=Array.from({length:200000},(_,i)=>({
+  x:baseX+(i%500+.5)*cell,
+  y:baseY+(Math.floor(i/500)+.5)*cell,
+  canopy_max_above_ground_m:i%51/5,
+ }));
+ const r=rasterGrid(rows,cell,'canopy');
+ assert.equal(r.width,500);
+ assert.equal(r.height,400);
+ assert.equal(r.rgba.length,500*400*4);
+ assert.equal(r.min,0);
+ assert.equal(r.max,10);
+ const pgw=r.worldFile.trim().split('\n').map(Number);
+ assert.equal(pgw[0],.5);
+ assert.equal(pgw[3],-.5);
+ assert.equal(pgw[4],baseX+.25);
+ assert.equal(pgw[5],baseY+200-.25);
+});
+test('canopy LiDAR conserva sin color las celdas sin altura fiable',()=>{
+ const {rasterGrid}=lidarRasterExports();
+ const rows=[
+  {x:384000.25,y:4114000.25,canopy_max_above_ground_m:8},
+  {x:384000.75,y:4114000.25,canopy_max_above_ground_m:null},
+ ];
+ const grid=rasterGrid(rows,.5,'canopy');
+ assert.equal(grid.width,2);
+ assert.equal(grid.rgba[3],255);
+ assert.equal(grid.rgba[7],0,'Sin suelo fiable, el pixel debe ser transparente');
+});
+
+
+test('escribe imagen LiDAR PNG con georreferencia PGW y PRJ, sin TIFF reciclado',async()=>{
+ const dir=folder();
+ const png=new Blob([Uint8Array.from([137,80,78,71,13,10,26,10])],
+  {type:'image/png'});
+ const pgw='0.5\n0\n0\n-0.5\n384000.25\n4114999.75\n';
+ const result=await exportModule.writeRasterTriplet(dir,
+  'tesela_001_002_alturas_lidar',png,pgw,'PROJCS[EPSG:25830]');
+ assert.equal(result.png,'tesela_001_002_alturas_lidar.png');
+ assert.equal(result.pgw,'tesela_001_002_alturas_lidar.pgw');
+ assert.equal(result.prj,'tesela_001_002_alturas_lidar.prj');
+ assert.equal(result.bytes,png.size);
+ assert(dir.files.has(result.png));
+ assert.equal(dir.files.get(result.pgw),pgw);
+ assert(dir.files.get(result.prj).includes('PROJCS[EPSG:25830]'));
+});
+test('impide PGW inválido, nombre inseguro y rechaza un PNG vacío',async()=>{
+ const dir=folder(),png=new Blob([new Uint8Array(10)]);
+ await assert.rejects(exportModule.writeRasterTriplet(dir,'../../falso',
+  png,'0.5\n0\n0\n-0.5\n0\n0\n','PROJCS[EPSG:25830]'),/nombre/i);
+ await assert.rejects(exportModule.writeRasterTriplet(dir,'tesela_1',
+  png,'0.5\n0\n0\n0.5\n0\n0\n','PROJCS[EPSG:25830]'),/incompletos/);
+ await assert.rejects(exportModule.writeRasterTriplet(dir,'tesela_1',
+  new Blob([]),'0.5\n0\n0\n-0.5\n0\n0\n','PROJCS[EPSG:25830]'),/incompletos/);
+ assert.equal(dir.files.size,0);
+});
+test('el mosaico importa alturas desde LAZ y las guarda sin tocar el TIFF anterior',()=>{
+ const html=require('node:fs').readFileSync(require('node:path')
+  .join(__dirname,'../index.html'),'utf8');
+ assert(html.includes('OcartoLidarExports.rasterGrid(result.vegetationRows,'));
+ assert(html.includes("cellVegetation,'canopy',{heightStops}"));
+ assert(html.includes('OcartoLidarTileExport.writeRasterTriplet(folder,'));
+ assert(html.includes("label+'_alturas_lidar',png,grid.worldFile,wkt"));
+ assert(html.includes('heightRaster={...saved,bounds:grid.bounds,width:grid.width'));
+ assert(html.includes('transparentNoData:true'));
+ assert(html.includes('heightRaster,featureRaster});'));
+});
