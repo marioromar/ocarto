@@ -1,12 +1,14 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const api=require('../lidar-feature-bands.js');
-test('reconoce solo las cuatro franjas de retornos LiDAR, no el combinado',()=>{
+test('reconoce franjas independientes, 0–5 cm y el combinado sin confundirlas',()=>{
  for(const b of api.bands){
   assert.equal(api.detect('/Bobadilla_Feature_Map/'+b.stem+'.png')?.id,b.id);
   assert.equal(api.detect(b.stem+'.pgw')?.id,b.id);
  }
- assert.equal(api.detect('feature_00_05_02_00m_05m.png'),null);
+ assert.equal(api.detect('feature_00_05_02_00m_05m.png')?.id,'combined');
+ assert.equal(api.detect('feature_map_banda_0_sin_sombreado.png')?.id,'banda_0');
+ assert.equal(api.detect('feature_map_banda_2_sin_sombreado.png')?.id,'banda_2');
  assert.equal(api.detect('alturas_vegetacion_referencia_05m.png'),null);
  assert.equal(api.detect('feature_sin_clasificar_00_05_02_00m_05m.png'),null);
 });
