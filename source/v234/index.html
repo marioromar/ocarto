@@ -155,7 +155,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <details id="tiledFeatureMapPanel" hidden style="margin:10px 0;padding:8px;border:2px solid #607d78;border-radius:7px">
   <summary style="cursor:pointer;font-weight:800">Feature Map generado · vista previa de la zona completa</summary>
   <p class="small" id="tiledFeatureMapStatus" role="status">Al terminar el análisis se mostrará el Feature Map de los dos LAZ. No equivale a una clasificación de objetos.</p>
-  <img id="tiledFeatureMapPreview" hidden alt="Feature Map calculado desde retornos LiDAR cercanos al suelo en el mosaico completo" style="display:block;width:100%;height:auto;margin:8px 0;background:#eee">
+  <img id="tiledFeatureMapPreview" hidden alt="Feature Map calculado desde retornos LiDAR cercanos al suelo en el mosaico completo" style="width:100%;height:auto;margin:8px 0;background:#eee">
   <p class="small">Se guarda como PNG + PGW + PRJ, junto a las alturas de vegetación, en la carpeta ocarto_teselas_.... Puede importarse como plantilla de referencia; el TIFF original no se modifica.</p>
 </details>
 <p class="small" id="rebuildMdtStatus" aria-live="polite">MDT preliminar: después de procesar el área, elige la carpeta <b>ocarto_teselas_...</b> con su manifest.json. Los bordes utilizan celdas vecinas (halo de 2 celdas); los huecos grandes quedan sin datos. No genera curvas.</p>
