@@ -331,7 +331,7 @@ test('v287: Feature Map se muestra en colores o negro sin cambiar la plantilla o
 test('v288: dibujo solo a la izquierda, símbolos completos a la derecha y Plantillas desplegable',async({page})=>{
  await page.goto('/index.html');
  await expect(page.locator('body')).toHaveClass(/ocarto-v288/);
- await expect(page).toHaveTitle(/Ocarto v290/);
+ await expect(page).toHaveTitle(/Ocarto v291/);
  await expect(page.locator('.layout>.left .tool-grid .tool')).toHaveCount(7);
  const left=await page.locator('.layout>.left').evaluate(e=>[...e.children].map(x=>x.className));
  expect(left).toEqual(['tool-grid']);
@@ -385,9 +385,9 @@ test('v288: dibujo solo a la izquierda, símbolos completos a la derecha y Plant
   await expect(page.locator('#'+id)).toHaveCount(1);
 });
 
-test('v290: gira selección de línea y punto 180° conservando tiradores Bézier',async({page})=>{
+test('v291: gira selección de línea y punto 180° conservando tiradores Bézier',async({page})=>{
  await page.goto('/index.html');
- await expect(page).toHaveTitle(/Ocarto v290/);
+ await expect(page).toHaveTitle(/Ocarto v291/);
  const button=page.locator('#rotateSelection180');
  const drawMenu=page.locator('.oc-menu>details').filter({has:page.locator('summary:text-is("DIBUJO")')});
  await drawMenu.locator('summary').click();

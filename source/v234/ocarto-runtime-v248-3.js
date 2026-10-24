@@ -677,7 +677,16 @@ function followTerrain(line,rows,cell,options={}){
  const reversed=[];for(let s=goal.state;s>=0;s=parent[s]){const p=list[Math.floor(s/9)];reversed.push([p.x,p.y]);if(parent[s]===-1)break}const route=reversed.reverse();route.push(goal.point);
  const same=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])<cell*1e-6;let coords;if(end==='end'){const extra=same(line.at(-1),route[0])?route.slice(1):route;coords=[...line,...extra]}else{const extra=route.reverse();if(same(extra.at(-1),line[0]))extra.pop();coords=[...extra,...line]}return{coordinates:coords,extension_m:+goal.distance.toFixed(3),target_elevation:target,start_elevation:startElevation,end,source:'eje seguido por LiDAR hasta curva 1 m',review_required:true};
 }
-return {extend,followTerrain};
+function validateCandidate(properties,options={}){
+ const minLength=Number(options.minLength===undefined?20:options.minLength),minIncision=Number(options.minIncision===undefined?.6:options.minIncision);
+ if(!Number.isFinite(minLength)||minLength<5||!Number.isFinite(minIncision)||minIncision<=0)throw Error('Umbrales de acentuación no válidos');
+ if(!properties||properties.kind!=='arroyo-canal-surco-candidato'||properties.review_required!==true)throw Error('Selecciona una vaguada detectada por LiDAR y añadida al mapa');
+ const length=Number(properties.length_m),incision=Number(properties.incision_median_m);
+ if(!Number.isFinite(length)||length<minLength)throw Error(`La vaguada mide ${Number.isFinite(length)?length.toFixed(1):'—'} m; el mínimo configurado es ${minLength} m`);
+ if(!Number.isFinite(incision)||incision<minIncision)throw Error(`El encajamiento mediano no alcanza ${minIncision.toFixed(2)} m; no se acentúa una vaguada poco pronunciada`);
+ return {length_m:length,incision_median_m:incision};
+}
+return {extend,followTerrain,validateCandidate};
 });
 
 ;
