@@ -15,6 +15,9 @@ test('Feature Map: cuatro intervalos medidos desde 0 m sin confundir 5 cm con MD
  {x:1.25,y:.25,ground_height_source:'unknown',vegetation_points:1,other_points:0,
   feature_min_above_ground_m:null,feature_max_above_ground_m:null}
  ];
+ const nearGround=feature.render(rows,.5,feature.NEAR_GROUND,mosaic);
+ assert.equal(nearGround.summary.selectedCells,1);
+ assert.equal(nearGround.grid.rgba[3],255);
  const low=feature.render(rows,.5,feature.ranges()[0],mosaic);
  assert.equal(low.summary.selectedCells,1);
  assert.equal(low.grid.width,1);assert.equal(low.grid.height,1);
@@ -46,7 +49,7 @@ test('alturas de vegetación por rangos reutilizan el alfa y la georreferencia',
 
 test('la fusión marca evidencia y conflictos sin cambiar clase candidata',()=>{
  const shape={x0:0,y0:0,width:2,height:1,cell:2};
- const evidence={n:2,pixelTotal:16,coverage:[
+ const evidence={n:2,pixelTotal:16,nearGroundCoverage:Uint32Array.from([0,0]),coverage:[
   Uint32Array.from([1,0]),Uint32Array.from([3,0]),
   Uint32Array.from([5,0]),Uint32Array.from([6,0])]};
  const features=[{type:'Feature',properties:{clase:'amarillo'},
@@ -56,6 +59,8 @@ test('la fusión marca evidencia y conflictos sin cambiar clase candidata',()=>{
  const result=fusion.annotate(features,evidence,shape);
  assert.equal(result.features[0].properties.clase,'amarillo');
  assert.equal(result.features[0].properties.feature_map_evidence.possible_conflict,true);
+ assert.equal(result.features[0].properties.feature_map_evidence.near_ground_0_05m_fraction,0);
+ assert.equal(result.features[0].properties.feature_map_evidence.sparse_near_ground_supports_open_candidate,false);
  assert.equal(result.features[1].properties.clase,'verde_oscuro');
  assert.equal(result.features[1].properties.feature_map_evidence.possible_conflict,false);
  assert.equal(result.summary.conflicts,1);
