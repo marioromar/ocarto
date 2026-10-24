@@ -109,26 +109,36 @@ function buildModel(points,cell,opts={}){
  if(!Number.isFinite(cell)||cell<=0)throw Error('Tamaño de celda inválido');
  if(!Array.isArray(points)||points.length>1000000)throw Error('Rejilla demasiado grande');
  const maxOutput=Number.isInteger(opts.maxOutput)?opts.maxOutput:1000000;
+ const maxGap=Number.isFinite(opts.maxGap)?opts.maxGap:Math.max(cell,Math.min(2.5,cell*5));
+ const minNeighbors=Number.isInteger(opts.minNeighbors)?opts.minNeighbors:4;
+ if(maxGap<cell||minNeighbors<3||minNeighbors>8)throw Error('Parámetros de interpolación no válidos');
  const observed=new Map();let duplicate=0;
  for(const p of points){if(!Array.isArray(p)||p.length<4||![p[0],p[1],p[2],p[3]].every(Number.isFinite)||p[3]<1)throw Error('Celda de suelo inválida');
   const cx=Math.floor(p[0]/cell),cy=Math.floor(p[1]/cell),key=cx+','+cy;
   if(observed.has(key)){duplicate++;const old=observed.get(key);if(p[2]<old.z)old.z=p[2];old.n+=p[3]}
   else observed.set(key,{cx,cy,z:p[2],n:p[3],source:'observado'});
  }
- // Only one-cell enclosed gaps surrounded by four *observed* neighbours.
- // Do not recurse into interpolated cells or extrapolate outside coverage.
- const pending=new Set();for(const p of observed.values()){
-  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const cx=p.cx+dx,cy=p.cy+dy,key=cx+','+cy;if(!observed.has(key))pending.add(key)}
+ // Fill only near observed ground cells. Interpolation uses observed neighbors only,
+ // requires support in all four quadrants, and never extrapolates beyond the local data.
+ const radius=Math.ceil(maxGap/cell),candidates=new Map();
+ for(const p of observed.values())for(let dx=-radius;dx<=radius;dx++)for(let dy=-radius;dy<=radius;dy++){
+  const d=Math.hypot(dx,dy)*cell;if(!dx&&!dy||d>maxGap)continue;
+  const cx=p.cx+dx,cy=p.cy+dy,key=cx+','+cy;if(observed.has(key))continue;
+  let a=candidates.get(key);if(!a)candidates.set(key,a=[]);a.push({p,d,dx,dy});
  }
  const out=[...observed.values()];let filled=0,unfilled=0;
- for(const key of pending){const [cx,cy]=key.split(',').map(Number),neighbors=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>observed.get((cx+dx)+','+(cy+dy)));
-  if(neighbors.every(Boolean)){
-   if(out.length>=maxOutput)throw Error('Demasiadas celdas MDT; aumenta el tamaño de celda');
-   out.push({cx,cy,z:neighbors.reduce((n,p)=>n+p.z,0)/4,n:0,source:'interpolado'});filled++
-  }else unfilled++;
+ for(const [key,near] of candidates){
+  const quadrants=new Set(near.map(q=>(q.dx<0?'W':'E')+(q.dy<0?'S':'N')));
+  if(near.length<minNeighbors||quadrants.size<4){unfilled++;continue}
+  if(out.length>=maxOutput)throw Error('Demasiadas celdas MDT; aumenta el tamaño de celda');
+  const [cx,cy]=key.split(',').map(Number);let m=[[0,0,0,0],[0,0,0,0],[0,0,0,0]],lo=Infinity,hi=-Infinity;
+  for(const q of near){const x=q.dx*cell,y=q.dy*cell,z0=q.p.z,w=1/(q.d*q.d);lo=Math.min(lo,z0);hi=Math.max(hi,z0);const v=[1,x,y];for(let i=0;i<3;i++){m[i][3]+=w*v[i]*z0;for(let j=0;j<3;j++)m[i][j]+=w*v[i]*v[j]}}
+  let singular=false;for(let i=0;i<3;i++){let pivot=i;for(let j=i+1;j<3;j++)if(Math.abs(m[j][i])>Math.abs(m[pivot][i]))pivot=j;if(Math.abs(m[pivot][i])<1e-12){singular=true;break}[m[i],m[pivot]]=[m[pivot],m[i]];const div=m[i][i];for(let j=i;j<4;j++)m[i][j]/=div;for(let k=0;k<3;k++)if(k!==i){const f=m[k][i];for(let j=i;j<4;j++)m[k][j]-=f*m[i][j]}}
+  if(singular) {unfilled++;continue}const z=m[0][3];if(z<lo-.5||z>hi+.5){unfilled++;continue}
+  out.push({cx,cy,z,n:0,source:'interpolado'});filled++
  }
  out.sort((a,b)=>a.cy-b.cy||a.cx-b.cx);
- return{rows:out.map(p=>[(p.cx+.5)*cell,(p.cy+.5)*cell,p.z,p.n,p.source]),observed:observed.size,filled,unfilled,duplicates:duplicate,method:'vecinos cardinales 4, solo huecos internos de una celda; sin extrapolación'};
+ return{rows:out.map(p=>[(p.cx+.5)*cell,(p.cy+.5)*cell,p.z,p.n,p.source]),observed:observed.size,filled,unfilled,duplicates:duplicate,method:'plano local ponderado desde celdas observadas a <= '+maxGap+' m; apoyo en cuatro cuadrantes; sin extrapolación'};
 }
 return{buildModel};
 });
