@@ -1413,6 +1413,12 @@ class _OcartoHomeState extends State<OcartoHome> {
           FilledButton.icon(onPressed: _saveProject, icon: const Icon(Icons.save), label: const Text('Guardar copia')),
           OutlinedButton.icon(onPressed: () => _loadProject(), icon: const Icon(Icons.folder_open), label: const Text('Abrir proyecto')),
           OutlinedButton.icon(onPressed: () => _loadProject(recovery: true), icon: const Icon(Icons.history), label: const Text('Recuperar')),
+          OutlinedButton.icon(
+            onPressed: _recording ? null : () {
+              setState(() { elements.clear(); _draft = null; _selectedElement = null; _selectedVertex = null; });
+              _scheduleAutosave();
+            },
+            icon: const Icon(Icons.delete_outline), label: const Text('Limpiar elementos')),
         ])),
       ]),
     ]),
@@ -1444,23 +1450,6 @@ class _OcartoHomeState extends State<OcartoHome> {
               label: Text('REC GPS'))),
         if (!isMobile)
           IconButton(tooltip: 'Guardar proyecto', icon: const Icon(Icons.save_outlined), onPressed: _saveProject),
-        if (isMobile)
-          PopupMenuButton<String>(
-            tooltip: 'Opciones del proyecto',
-            onSelected: (value) {
-              if (value == 'open') unawaited(_loadProject());
-              if (value == 'recover') unawaited(_loadProject(recovery: true));
-              if (value == 'clear' && !_recording) {
-                setState(() { elements.clear(); _draft = null; _selectedElement = null; _selectedVertex = null; });
-                _scheduleAutosave();
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'open', child: Text('Abrir proyecto')),
-              PopupMenuItem(value: 'recover', child: Text('Recuperar autoguardado')),
-              PopupMenuItem(value: 'clear', child: Text('Limpiar elementos')),
-            ],
-          ),
         const SizedBox(width: 12),
       ],
     ),
