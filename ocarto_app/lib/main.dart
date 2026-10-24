@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 20481)
-Total output lines: 1954
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -1028,7 +1025,52 @@ class _OcartoHomeState extends State<OcartoHome> {
         _gpsLineSymbol = entry.id;
       }
     });
-    unawa…481 tokens truncated…ght: 0,
+    unawaited(_autosave().catchError((Object error) {
+      if (mounted) _snack('Error guardando selección: $error');
+    }));
+  }
+
+  void _toggleFavorite(String id) {
+    setState(() {
+      if (!_favoriteSymbols.add(id)) _favoriteSymbols.remove(id);
+    });
+    unawaited(_autosave().catchError((Object error) {
+      if (mounted) _snack('Error guardando favoritos: $error');
+    }));
+  }
+
+  Widget _catalogTile(OcartoCatalogSymbol entry, double width) {
+    final isFavorite = _favoriteSymbols.contains(entry.id);
+    final isSelected = symbol == entry.id && tool != MapTool.select;
+    return Tooltip(
+      message: '${entry.name} · clic para dibujar; clic derecho o pulsación larga para favoritos',
+      child: SizedBox(
+        width: width,
+        height: 79,
+        child: Material(
+          color: isSelected ? const Color(0xff38544f) : const Color(0xff2a383c),
+          borderRadius: BorderRadius.circular(9),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(9),
+            onTap: () => _chooseCatalogSymbol(entry),
+            onSecondaryTap: () => _toggleFavorite(entry.id),
+            onLongPress: () => _toggleFavorite(entry.id),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(entry.icon, size: 32, color: entry.color),
+                      const SizedBox(height: 4),
+                      Text(entry.name, textAlign: TextAlign.center,
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ),
+                Positioned(
+                  top: 0, right: 0,
                   child: SizedBox(
                     width: 24, height: 24,
                     child: IconButton(
