@@ -316,3 +316,37 @@ test('v287: Feature Map se muestra en colores o negro sin cambiar la plantilla o
  expect(after.shown).toBe(true);
  expect(after.reliefVisible).toBe(false);
 });
+
+
+test('v288: dibujo solo a la izquierda, símbolos completos a la derecha y Plantillas desplegable',async({page})=>{
+ await page.goto('/index.html');
+ await expect(page.locator('body')).toHaveClass(/ocarto-v288/);
+ await expect(page).toHaveTitle(/Ocarto v288/);
+ await expect(page.locator('.layout>.left .tool-grid .tool')).toHaveCount(7);
+ const left=await page.locator('.layout>.left').evaluate(e=>[...e.children].map(x=>x.className));
+ expect(left).toEqual(['tool-grid']);
+ await expect(page.locator('.layout>.right #symbolList')).toHaveCount(1);
+ await expect(page.locator('.layout>.right #symbolSearch')).toHaveCount(1);
+ const count=await page.locator('#symbolList>.symbol-option').count();
+ expect(count).toBeGreaterThan(35);
+ const geometries=await page.locator('#symbolList>.symbol-option').evaluateAll(nodes=>
+  [...new Set(nodes.map(node=>node.dataset.symbolGeometry))]);
+ expect(geometries).toContain('point');
+ expect(geometries).toContain('line');
+ expect(geometries).toContain('area');
+ const summary=page.locator('.oc-menu>details').filter({
+  has:page.locator('summary:text-is("PLANTILLAS")')}).locator('summary');
+ await summary.click();
+ const manage=page.locator('[data-v288-open="templates"]');
+ await expect(manage).toBeVisible();
+ await manage.click();
+ await expect(page.locator('#ocartoV288Drawer')).toBeVisible();
+ await expect(page.locator('#ocartoV288Drawer #templateFile')).toHaveCount(1);
+ await expect(page.locator('#ocartoV288Drawer #templateLayerList')).toHaveCount(1);
+ await page.locator('.v288-drawer-close').click();
+ await expect(page.locator('#ocartoV288Drawer')).toBeHidden();
+ // Only presentation changed: the original controller IDs are available.
+ for(const id of ['tiledAreaBtn','exportContours','heightFeatureBandList',
+  'mapCanvas','copySelected','saveProject','pointFile','templateFile','symbolStatusSelect'])
+  await expect(page.locator('#'+id)).toHaveCount(1);
+});
