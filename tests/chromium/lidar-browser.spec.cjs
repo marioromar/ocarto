@@ -147,7 +147,7 @@ function makeAdjacentLas(x0,vegetated) {
   const d=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
   d.setUint32(0,0x4653414c,true); // LASF
   d.setUint8(24,1);d.setUint8(25,4);
-  d.setUint16(94,375);d.setUint32(96,375);
+  d.setUint16(94,375,true);d.setUint32(96,375,true);
   d.setUint8(104,8);d.setUint16(105,38);
   d.setBigUint64(247,BigInt(points.length),true);
   for(const at of [131,139,147])d.setFloat64(at,.01,true);
