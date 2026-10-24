@@ -10,6 +10,7 @@ on:
       - 'ocarto-v284-bezier-geojson-fix'
       - 'ocarto-v285-vegetacion-capas-seleccionadas'
       - 'ocarto-v286-cultivos-candidatos-revisables'
+      - 'ocarto-v287-curvas-alturas-feature-capas'
   workflow_dispatch:
 
 permissions:
