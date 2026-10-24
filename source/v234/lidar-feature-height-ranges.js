@@ -8,6 +8,7 @@
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
  'use strict';
  const LIMITS=Object.freeze([0,.3,1,2,5]);
+ const NEAR_GROUND=Object.freeze({id:0,min:0,max:.05,label:'0–5 cm · superficie próxima al suelo'});
  function ranges(limits=LIMITS){
   if(!Array.isArray(limits)||limits.length<2||limits.length>10||
    limits.some((v,i)=>!Number.isFinite(v)||v<0||(i&&v<=limits[i-1])))
@@ -40,5 +41,5 @@
     visualization:'Máscara negra sin sombreado; píxeles ausentes transparentes',
     limitations:'Sólo máximos/mínimos observados por celda; no asegura detección de alturas intermedias, especies, piedras ni muros'}};
  }
- return Object.freeze({LIMITS,ranges,render});
+ return Object.freeze({LIMITS,NEAR_GROUND,ranges,render});
 });
