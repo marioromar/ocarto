@@ -261,3 +261,58 @@ test('v286: dos LAS contiguos hasta cuatro GeoJSON y plantillas UTM',async({page
   expect(outputs.layers.every(layer=>layer.crs==='EPSG:25830'&&layer.review)).toBe(true);
   expect(outputs.layers.reduce((n,l)=>n+l.count,0)).toBeGreaterThan(0);
 });
+
+
+test('v287: Feature Map se muestra en colores o negro sin cambiar la plantilla original',async({page})=>{
+ await page.goto('/index.html');
+ const pngB64=await page.evaluate(()=>{
+   const c=document.createElement('canvas');c.width=2;c.height=2;
+   const ctx=c.getContext('2d');
+   const image=ctx.createImageData(2,2);
+   image.data.set([0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0]);
+   ctx.putImageData(image,0,0);
+   return c.toDataURL('image/png').split(',')[1];
+ });
+ const image=Buffer.from(pngB64,'base64'),pgw=Buffer.from('0.5\n0\n0\n-0.5\n385000.25\n4114999.75\n');
+ const files=['feature_map_banda_2_sin_sombreado','altura_vegetacion_banda_1','sombreado_relieve_NW']
+   .flatMap(name=>[
+    {name:name+'.png',mimeType:'image/png',buffer:image},
+    {name:name+'.pgw',mimeType:'text/plain',buffer:pgw}]);
+ await page.locator('#templateFile').setInputFiles(files);
+ await expect.poll(()=>page.evaluate(()=>window.S.templates.length),{timeout:10_000}).toBe(3);
+ const normal=await page.evaluate(()=>{
+   const layer=window.S.templates.find(l=>l.featureMapBand==='banda_2');
+   const im=layer.featureMapColorImage,ctx=im?.getContext('2d');
+   return {feature:layer.featureMapBand,first:ctx?Array.from(ctx.getImageData(0,0,1,1).data):null,
+     transparent:ctx?Array.from(ctx.getImageData(1,0,1,1).data):null,
+     shading:document.getElementById('showTerrainShading').checked,
+     panelHidden:document.getElementById('heightFeatureLayerControls').hidden};
+ });
+ expect(normal.feature).toBe('banda_2');
+ expect(normal.first).toEqual([236,140,67,255]);
+ expect(normal.transparent).toEqual([0,0,0,0]);
+ expect(normal.shading).toBe(true);
+ expect(normal.panelHidden).toBe(false);
+ const after=await page.evaluate(()=>{
+   const black=document.getElementById('featureBlackMode');
+   black.checked=true;black.dispatchEvent(new Event('change',{bubbles:true}));
+   const layer=window.S.templates.find(l=>l.featureMapBand==='banda_2');
+   const rgba=Array.from(layer.featureMapBlackImage.getContext('2d').getImageData(0,0,1,1).data);
+   document.getElementById('heightFeatureNone').click();
+   const hidden=window.S.templates.filter(l=>l.featureMapBand||l.vegetationHeightBand).every(l=>l.visible===false);
+   document.getElementById('heightFeatureAll').click();
+   const shown=window.S.templates.filter(l=>l.featureMapBand||l.vegetationHeightBand).every(l=>l.visible===true);
+   document.getElementById('showTerrainShading').checked=false;
+   document.getElementById('showTerrainShading').dispatchEvent(new Event('change',{bubbles:true}));
+   const relief=window.S.templates.find(l=>l.name==='sombreado_relieve_NW.png');
+   const native=document.createElement('canvas');native.width=2;native.height=2;
+   native.getContext('2d').drawImage(layer.img,0,0);
+   const original=Array.from(native.getContext('2d').getImageData(0,0,1,1).data);
+   return {rgba,hidden,shown,reliefVisible:relief.visible,original};
+ });
+ expect(after.rgba).toEqual([0,0,0,255]);
+ expect(after.original).toEqual([0,0,0,255]);
+ expect(after.hidden).toBe(true);
+ expect(after.shown).toBe(true);
+ expect(after.reliefVisible).toBe(false);
+});
