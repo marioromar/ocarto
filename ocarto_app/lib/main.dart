@@ -216,6 +216,8 @@ class _OcartoHomeState extends State<OcartoHome> {
   int _dragHandleSide = 0; // -1 entrante, +1 saliente, 0 ancla.
   bool _recording = false;
   MapElement? _draft;
+  DateTime? _lastMapTapAt;
+  Offset? _lastMapTapPosition;
 
   @override
   void initState() {
@@ -669,6 +671,26 @@ class _OcartoHomeState extends State<OcartoHome> {
     }
   }
 
+  void _handleMapTap(Offset position, Size size) {
+    final now = DateTime.now();
+    final previousAt = _lastMapTapAt;
+    final previousPosition = _lastMapTapPosition;
+    final isDrawingDoubleTap = tool != MapTool.select &&
+        tool != MapTool.point && _draft != null &&
+        previousAt != null && previousPosition != null &&
+        now.difference(previousAt) <= const Duration(milliseconds: 300) &&
+        (previousPosition - position).distance <= 14;
+    _lastMapTapAt = now;
+    _lastMapTapPosition = position;
+    if (isDrawingDoubleTap) {
+      _lastMapTapAt = null;
+      _lastMapTapPosition = null;
+      _finishDrawing();
+      return;
+    }
+    _onMapTap(position, size);
+  }
+
   /// Doble clic para terminar: el último vértice no se duplica.
   bool _finishDrawing() {
     final draft = _draft;
@@ -700,6 +722,8 @@ class _OcartoHomeState extends State<OcartoHome> {
     if (!_finishDrawing()) return;
     setState(() { tool = value; _selectedElement = null; _selectedVertex = null;
       _dragHandleSide = 0; });
+    _lastMapTapAt = null;
+    _lastMapTapPosition = null;
   }
 
   MapElement? get _selectedEditable {
@@ -1308,8 +1332,7 @@ class _OcartoHomeState extends State<OcartoHome> {
     final size = Size(constraints.maxWidth, constraints.maxHeight);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapUp: (d) => _onMapTap(d.localPosition, size),
-      onDoubleTap: _finishDrawing,
+      onTapUp: (d) => _handleMapTap(d.localPosition, size),
       onPanStart: (d) => _onMapDragStart(d.localPosition, size),
       onPanUpdate: (d) => _onMapDrag(d.localPosition, size),
       onPanEnd: (_) {
