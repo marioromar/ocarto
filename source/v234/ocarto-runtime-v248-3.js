@@ -686,7 +686,20 @@ function validateCandidate(properties,options={}){
  if(!Number.isFinite(incision)||incision<minIncision)throw Error(`El encajamiento mediano no alcanza ${minIncision.toFixed(2)} m; no se acentúa una vaguada poco pronunciada`);
  return {length_m:length,incision_median_m:incision};
 }
-return {extend,followTerrain,validateCandidate};
+function accentuateTerrain(rows,cell,line,properties,options={}){
+ const amount=Number(options.amount===undefined?properties?.incision_median_m:options.amount);
+ const radius=Number(options.radius===undefined?cell*4:options.radius);
+ if(!Number.isFinite(cell)||cell<=0||!Array.isArray(rows)||!Array.isArray(line)||line.length<2||
+    !Number.isFinite(amount)||amount<=0||!Number.isFinite(radius)||radius<=cell)
+  throw Error('Parámetros de acentuación de vaguada no válidos');
+ if(line.some(p=>!Array.isArray(p)||p.length<2||!p.slice(0,2).every(Number.isFinite)))throw Error('Eje de vaguada no válido');
+ const segments=line.slice(1).map((b,i)=>[line[i],b]);
+ const distanceToAxis=(x,y)=>{let best=Infinity;for(const[a,b]of segments){const dx=b[0]-a[0],dy=b[1]-a[1],den=dx*dx+dy*dy;if(!den)continue;const t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/den));best=Math.min(best,Math.hypot(x-(a[0]+t*dx),y-(a[1]+t*dy)))}return best};
+ let changed=0,maxDeepening=0;
+ const adjusted=rows.map(r=>{if(!Array.isArray(r)||r.length<4||!r.slice(0,4).every(Number.isFinite))throw Error('Celda MDT inválida');if(r[4]&&r[4]!=='observado')return r.slice();const d=distanceToAxis(r[0],r[1]);if(d>=radius)return r.slice();const t=1-d/radius,delta=amount*t*t;if(delta<=1e-6)return r.slice();changed++;maxDeepening=Math.max(maxDeepening,delta);const q=r.slice();q[2]=r[2]-delta;return q});
+ return {rows:adjusted,changedCells:changed,maxDeepening_m:+maxDeepening.toFixed(3),method:'copia cartográfica: profundización LiDAR observada con decaimiento cuadrático; MDT original intacto',review_required:true};
+}
+return {extend,followTerrain,validateCandidate ,accentuateTerrain};
 });
 
 ;
