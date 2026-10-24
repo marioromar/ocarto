@@ -113,7 +113,7 @@ test('la interfaz integra vectorización directa de los LAZ de toda la zona',()=
  assert(html.includes('<script src="lidar-mosaic-vector.js"></script>'));
  assert(html.includes('OcartoLidarMosaicVector.exportGeojson('));
  assert(html.includes("manifest.mosaic.outputs.vector="));
- assert(html.includes('heightRaster,featureRaster'));
+ assert(html.includes('heightRaster,vegetationHeightBands,featureRaster,featureGroundRaster,featureBandRasters'));
 });
 
 
