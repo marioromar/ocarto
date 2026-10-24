@@ -146,12 +146,11 @@ El ZIP es un artefacto de prueba de la rama `fix/symbols-v275`, no una versión 
 
 ## Descargar la aplicación
 
-- **[Ocarto v279 — ZIP completo con vectorización de altura LiDAR](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v279-vegetation-height-vector.zip)**
-- **[Código y versiones de Ocarto](source/v234/index.html)**
-- **[Cambios y comprobaciones OCAD v249](source/v234/OCAD-v249.md)**
+- **Ocarto v293 Windows: pendiente de compilación.** Aún no hay un instalador v293 para abrir.
+- [Código actual de Ocarto](source/v234/index.html)
+- [Historial de versiones y pruebas](README.md)
 
-**Para probar LiDAR en Windows:** descarga el ZIP de la rama v279, extráelo completamente y haz doble clic en **`ABRIR-OCARTO.bat`**. El navegador se abrirá en `http://127.0.0.1:8787/`. **No abras `index.html` directamente**: con `file://` el navegador puede bloquear los Web Workers necesarios para LAS/LAZ. La ventana negra de PowerShell debe permanecer abierta. El servidor es local y no sube tus nubes de puntos a Internet. Ver [guía de vectorización de altura de vegetación](VECTOR-ALTURA-VEGETACION-v279.md).
-
+La rama principal ya contiene el código v293. El ZIP v279 era una versión anterior y no incluye estos cambios.
 ## Revisión OCAD 2018
 
 En **Archivo → Revisar símbolos y tintas OCAD…** se puede abrir un archivo de Bobadilla y comprobar en modo **solo lectura** símbolos, colores CMYK y orden provisional de impresión. La auditoría permite descargar un informe JSON, y **no sustituye los símbolos, colores ni las prioridades actuales**. Falta verificar el resultado visualmente contra OCAD 2018 antes de aprobar nuevos predeterminados.
