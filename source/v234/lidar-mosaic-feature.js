@@ -59,7 +59,7 @@
  // Se reciben dependencias del navegador para poder verificar la geometría en Node.
  async function saveWholePng(directory,manifest,{
    planGeometry,decodeImage,createCanvas,writeTriplet,wkt,
-   shouldStop=()=>false,maxPixels=12000000
+   shouldStop=()=>false,maxPixels=12000000,stem='zona_completa_feature_map_lidar'
  }={}){
    if(![planGeometry,decodeImage,createCanvas,writeTriplet]
         .every(fn=>typeof fn==='function')||!wkt)
@@ -90,7 +90,7 @@
      blob?resolve(blob):reject(Error('PNG de Feature Map no disponible')),'image/png'));
    const world=[shape.cell,0,0,-shape.cell,shape.left+shape.cell/2,
      shape.top-shape.cell/2].join('\n')+'\n';
-   const data=await writeTriplet(directory,'zona_completa_feature_map_lidar',png,world,wkt);
+   const data=await writeTriplet(directory,stem,png,world,wkt);
    return {...data,width:shape.width,height:shape.height,cellSize:shape.cell,
      sources:tiles,method:'retornos no suelo LAS/LAZ; una sola imagen georreferenciada'};
  }
