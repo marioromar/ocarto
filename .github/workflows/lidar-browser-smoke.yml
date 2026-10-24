@@ -11,6 +11,7 @@ on:
       - 'ocarto-v285-vegetacion-capas-seleccionadas'
       - 'ocarto-v286-cultivos-candidatos-revisables'
       - 'ocarto-v287-curvas-alturas-feature-capas'
+      - 'ocarto-v288-redisenio-interfaz'
   workflow_dispatch:
 
 permissions:
