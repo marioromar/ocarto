@@ -10,6 +10,12 @@ const COLORS={
   black:'#000000',brown:'#d15c00',blue:'#00a8e8',green:'#3dff17',darkGreen:'#00b324',yellow:'#ffba36',white:'#ffffff',grey:'#999999',purple:'#a626ff'
 };
 const meta={
+  'tree':{code:'417',color:COLORS.green,sizeMm:1.1,mask:COLORS.white},
+  'bush':{code:'418',color:COLORS.green,sizeMm:.6,mask:COLORS.white},
+  'rock':{code:'204',color:COLORS.black,sizeMm:.4},
+  'large-rock':{code:'205',color:COLORS.black,sizeMm:.6},
+  'waterhole':{code:'303',color:COLORS.blue,sizeMm:.8},
+  'spring':{code:'312',color:COLORS.blue,sizeMm:2.5},
   'contour-normal':{code:'101',color:COLORS.brown,lineWidthMm:.14},
   'contour-index':{code:'102',color:COLORS.brown,lineWidthMm:.25},
   'contour-form':{code:'103',color:COLORS.brown,lineWidthMm:.10,pattern:'dashed'},
@@ -55,7 +61,7 @@ const meta={
   'tower':{code:'524',color:COLORS.black,sizeMm:.9},
   'mast':{code:'524',color:COLORS.black,sizeMm:.9},
   'crossing':{code:'519',color:COLORS.black,sizeMm:.8},
-  'boulder-small':{code:'204',color:COLORS.black,sizeMm:.4},
+  'boulder-small':{code:'204',color:COLORS.black,sizeMm:.4,aliasOf:'rock'},
   'building-point':{code:'530',color:COLORS.black,sizeMm:.8},
   'ditch':{code:'107',color:COLORS.brown,lineWidthMm:.18},
   'dry-ditch':{code:'108',color:COLORS.brown,lineWidthMm:.18,pattern:'dotted'},
@@ -142,7 +148,7 @@ const meta={
   'marsh-area':{code:'308',fill:COLORS.white,pattern:'rows',patternColor:COLORS.blue},
   'paved-area':{code:'501',fill:COLORS.grey,fillOpacity:.7},
   'building-area':{code:'521',fill:COLORS.black,fillOpacity:.85},
-  'giant-boulder':{code:'205',color:COLORS.black,sizeMm:1.2},
+  'giant-boulder':{code:'206',fill:COLORS.black,fillOpacity:1,outline:COLORS.black},
   'stream':{code:'304',color:COLORS.blue,lineWidthMm:.30},
   'watercourse':{code:'305',color:COLORS.blue,lineWidthMm:.25},
   'small-watercourse':{code:'306',color:COLORS.blue,lineWidthMm:.18},
@@ -212,6 +218,8 @@ function enrichCatalog(catalog){
    if(item.id==='ruin-area')item.name='Ruina como polígono (personalizado)';
    if(item.id==='contour-index')item.name='Curva de nivel maestra (índice)';
    if(item.id==='contour-normal')item.name='Curva de nivel normal';
+   if(item.id==='rock')item.name='Piedra aislada (204)';
+   if(item.id==='giant-boulder')item.name='Roca gigantesca o pilar rocoso (206)';
    if((!fix || !fix.code)&&!/^\d+(?:\.\d+)?$/.test(String(item.code)))item.code='Personalizado';
  }
  return catalog;
@@ -219,6 +227,7 @@ function enrichCatalog(catalog){
 function specFor(id){return meta[id]||null}
 function colorFor(id,style){return style?.color||style?.fill||meta[id]?.color||meta[id]?.fill||COLORS.black}
 function symbolCode(item,style){return style?.code===null?null:(style?.code||meta[item.id]?.code||item.code)}
+function isPaletteAlias(id){return Boolean(meta[id]?.aliasOf)}
 function drawPoint(ctx,id,r,style,candidate){
  const c=candidate?'#c3653b':colorFor(id,style);const stroke=(width=1.5)=>{ctx.strokeStyle=c;ctx.lineWidth=width;ctx.stroke()};const fill=()=>{ctx.fillStyle=c;ctx.fill()};
  const ring=(radius)=>{ctx.beginPath();ctx.arc(0,0,radius,0,Math.PI*2);ctx.stroke()};
@@ -303,29 +312,30 @@ function decorateLine(ctx,id,pts,unitScale,zoom,style){
 }
 function renderPreview(canvas,id,geometry,style){
  if(!canvas?.getContext)return false;const ctx=canvas.getContext('2d');if(!ctx)return false;
- const w=canvas.width||40,h=canvas.height||32,c=colorFor(id,style),metaStyle=meta[id]||{};
+ const metaStyle=meta[id]||{},resolvedStyle={...metaStyle,...(style||{})};
+ const w=canvas.width||40,h=canvas.height||32,c=colorFor(id,resolvedStyle);let rendered=true;
  ctx.clearRect(0,0,w,h);ctx.save();
- if(geometry==='point'){ctx.translate(w/2,h/2);drawPoint(ctx,id,Math.min(w,h)*.32,style,false)}
+ if(geometry==='point'){ctx.translate(w/2,h/2);rendered=drawPoint(ctx,id,Math.min(w,h)*.32,resolvedStyle,false)}
  else if(geometry==='line'){
-  ctx.strokeStyle=c;ctx.lineWidth=Math.max(1.4,(style?.lineWidthMm||metaStyle.lineWidthMm||.2)*9);ctx.lineCap='round';
-  ctx.setLineDash(style?.pattern==='dashed'?[7,4]:style?.pattern==='dotted'?[1,4]:[]);
+  ctx.strokeStyle=c;ctx.lineWidth=Math.max(1.4,(resolvedStyle.lineWidthMm||.2)*9);ctx.lineCap='round';
+  ctx.setLineDash(resolvedStyle.pattern==='dashed'?[7,4]:resolvedStyle.pattern==='dotted'?[1,4]:[]);
   ctx.beginPath();ctx.moveTo(3,h*.66);ctx.lineTo(w-3,h*.35);ctx.stroke();ctx.setLineDash([]);
-  decorateLine(ctx,id,[{x:3,y:h*.66},{x:w-3,y:h*.35}],null,1,style)
+  decorateLine(ctx,id,[{x:3,y:h*.66},{x:w-3,y:h*.35}],null,1,resolvedStyle)
  }
  else {
   ctx.beginPath();ctx.rect(4,3,w-8,h-6);
-  ctx.fillStyle=style?.fill||metaStyle.fill||COLORS.grey;
-  ctx.globalAlpha=style?.fillOpacity??metaStyle.fillOpacity??1;ctx.fill();ctx.globalAlpha=1;
-  if(style?.outline||metaStyle.outline){ctx.strokeStyle=style?.outline||metaStyle.outline;ctx.lineWidth=1.3;ctx.stroke()}
-  if((style?.pattern||metaStyle.pattern)==='dots'){ctx.fillStyle=style?.patternColor||metaStyle.patternColor||COLORS.white;for(let x=9;x<w-5;x+=9)for(let y=9;y<h-5;y+=9){ctx.beginPath();ctx.arc(x,y,1.5,0,7);ctx.fill()}}
-  if(['rows','orchard','two-lines'].includes(style?.pattern||metaStyle.pattern)){
-   ctx.strokeStyle=style?.patternColor||metaStyle.patternColor||COLORS.white;ctx.lineWidth=1.4;
+  ctx.fillStyle=resolvedStyle.fill||COLORS.grey;
+  ctx.globalAlpha=resolvedStyle.fillOpacity??1;ctx.fill();ctx.globalAlpha=1;
+  if(resolvedStyle.outline){ctx.strokeStyle=resolvedStyle.outline;ctx.lineWidth=1.3;ctx.stroke()}
+  if(resolvedStyle.pattern==='dots'){ctx.fillStyle=resolvedStyle.patternColor||COLORS.white;for(let x=9;x<w-5;x+=9)for(let y=9;y<h-5;y+=9){ctx.beginPath();ctx.arc(x,y,1.5,0,7);ctx.fill()}}
+  if(['rows','orchard','two-lines'].includes(resolvedStyle.pattern)){
+   ctx.strokeStyle=resolvedStyle.patternColor||COLORS.white;ctx.lineWidth=1.4;
    for(let y=9;y<h-4;y+=7){ctx.beginPath();ctx.moveTo(5,y);ctx.lineTo(w-5,y);ctx.stroke()}
   }
  }
- ctx.restore();return true;
+ ctx.restore();return rendered;
 }
-const api={COLORS,meta,extra,enrichCatalog,specFor,symbolCode,colorFor,drawPoint,decorateLine,renderPreview};
+const api={COLORS,meta,extra,enrichCatalog,specFor,symbolCode,isPaletteAlias,colorFor,drawPoint,decorateLine,renderPreview};
 root.OcartoSymbolRenderer=api;
 if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof self!=='undefined'?self:globalThis);

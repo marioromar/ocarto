@@ -1,5 +1,12 @@
 # Ocarto — editor cartográfico de orientación
 
+## v289 PC · Revisión del catálogo de símbolos
+
+- Rama de PC creada sobre v288; la versión de escritorio es **0.289.0**.
+- El catálogo muestra una única entrada para piedra 204 y grupo de piedras 207. El identificador antiguo `boulder-small` se conserva para mapas existentes, pero queda oculto de la paleta.
+- Se corrigen la roca gigantesca o pilar rocoso a **206** y las fichas visuales de árbol, matorral, roca aislada, roca grande, pozo de agua y manantial.
+- Pruebas locales: 219 pruebas Node superadas; Chromium comprobó la interfaz v289, el alias de piedra, la carga de muestras LAS/LAZ y el acceso al WASM. La validación de los LAZ grandes dentro de Ocarto para Windows sigue pendiente.
+
 ## v288 · Rediseño de interfaz
 
 - **[Abrir rama v288](https://github.com/marioromar/ocarto/tree/ocarto-v288-redisenio-interfaz)** · [Descargar código ZIP v288](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v288-redisenio-interfaz.zip).

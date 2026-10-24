@@ -10,7 +10,7 @@ const parsed=vm.runInNewContext(html.slice(start+'const SYMBOL_CATALOG='.length,
 const catalog=SymbolRenderer.enrichCatalog(parsed);
 const byId=id=>catalog.find(x=>x.id===id);
 const drawingLog=[];
-const ctx={save(){},restore(){},translate(){},clearRect(){},beginPath(){},arc(){drawingLog.push('arc')},lineTo(){drawingLog.push('line')},moveTo(){},fill(){drawingLog.push('fill')},stroke(){drawingLog.push('stroke')},closePath(){},rect(){},bezierCurveTo(){},setLineDash(){},quadraticCurveTo(){}};
+const ctx={save(){},restore(){},translate(){},clearRect(){},beginPath(){},arc(){drawingLog.push('arc')},ellipse(){drawingLog.push('ellipse')},lineTo(){drawingLog.push('line')},moveTo(){},fill(){drawingLog.push('fill')},stroke(){drawingLog.push('stroke')},closePath(){},rect(){},bezierCurveTo(){},setLineDash(){},quadraticCurveTo(){}};
 const canvas={width:48,height:36,getContext:()=>ctx};
 
 test('cada ID de símbolo es único y la ampliación no duplica registros',()=>{
@@ -44,6 +44,18 @@ test('ISOM 101/102 y puntos erróneos están corregidos',()=>{
  assert.equal(SymbolRenderer.specFor('small-watercourse').code,'306');
  assert.equal(SymbolRenderer.specFor('passable-wall').code,'513.1');
  assert.equal(SymbolRenderer.specFor('uncrossable-wall').code,'513.3');
+ assert.equal(byId('giant-boulder').code,'206');
+ assert.equal(SymbolRenderer.specFor('giant-boulder').code,'206');
+ assert.equal(byId('boulder-cluster').code,'207');
+});
+test('piedra y grupo de piedras tienen una sola entrada visible por código',()=>{
+ assert.equal(byId('rock').name,'Piedra aislada (204)');
+ assert.equal(SymbolRenderer.isPaletteAlias('boulder-small'),true);
+ assert.equal(SymbolRenderer.specFor('boulder-small').aliasOf,'rock');
+ assert.equal(SymbolRenderer.isPaletteAlias('boulder-cluster'),false);
+ assert.equal(catalog.filter(x=>SymbolRenderer.symbolCode(x,{})==='204'&&!SymbolRenderer.isPaletteAlias(x.id)).length,1);
+ assert.equal(catalog.filter(x=>SymbolRenderer.symbolCode(x,{})==='207').length,1);
+ assert.ok(html.includes('!OcartoSymbolRenderer.isPaletteAlias(item.id)'));
 });
 test('cada símbolo del catálogo tiene especificación visual',()=>{
  for(const item of catalog)assert.ok(SymbolRenderer.specFor(item.id),item.id);
@@ -70,11 +82,13 @@ test('los puntos destacados tienen geometrías diferenciadas, no un punto genér
  }
 });
 test('los símbolos lineales especiales incluyen marcas',()=>{
- for(const id of ['fence','impassable-fence','cliff','earth-bank','earth-wall','retaining-earth-wall','ruined-earth-wall','erosion-gully','trench','railway']){
+ for(const id of ['fence','impassable-fence','cliff','earth-bank','earth-wall','retaining-earth-wall','erosion-gully','trench','railway']){
   drawingLog.length=0;
   assert.equal(SymbolRenderer.decorateLine(ctx,id,[{x:0,y:0},{x:90,y:0}],null,1,SymbolRenderer.specFor(id)),true,id);
   assert.ok(drawingLog.includes('stroke'),id);
  }
+ assert.equal(SymbolRenderer.specFor('ruined-earth-wall').pattern,'dashed');
+ assert.equal(SymbolRenderer.specFor('ruined-earth-wall').decoration,undefined);
 });
 test('la paleta de pantalla sigue los colores IOF del apéndice',()=>{
  assert.equal(SymbolRenderer.COLORS.brown,'#d15c00');
@@ -87,5 +101,5 @@ test('paleta y mapa usan el mismo motor de símbolos',()=>{
  assert.ok(html.includes('<script src="symbol-renderer.js"></script>'));
  assert.ok(html.includes('OcartoSymbolRenderer.renderPreview(preview,x.id,x.geometry,style)'));
  assert.ok(html.includes('OcartoSymbolRenderer.drawPoint(ctx,f.symbol,r,symbolStyle,candidate)'));
- assert.ok(html.includes('OcartoSymbolRenderer.decorateLine(ctx,f.symbol,pts,unitScale,S.zoom,iof)'));
+ assert.ok(/OcartoSymbolRenderer\.decorateLine\(ctx,f\.symbol,pts,unitScale,S\.zoom,iof\|\|OcartoSymbolRenderer\.specFor\(f\.symbol\)\|\|\{\}\)/.test(html));
 });

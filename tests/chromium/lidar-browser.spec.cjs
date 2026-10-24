@@ -331,7 +331,7 @@ test('v287: Feature Map se muestra en colores o negro sin cambiar la plantilla o
 test('v288: dibujo solo a la izquierda, símbolos completos a la derecha y Plantillas desplegable',async({page})=>{
  await page.goto('/index.html');
  await expect(page.locator('body')).toHaveClass(/ocarto-v288/);
- await expect(page).toHaveTitle(/Ocarto v288/);
+ await expect(page).toHaveTitle(/Ocarto v289/);
  await expect(page.locator('.layout>.left .tool-grid .tool')).toHaveCount(7);
  const left=await page.locator('.layout>.left').evaluate(e=>[...e.children].map(x=>x.className));
  expect(left).toEqual(['tool-grid']);
@@ -339,6 +339,8 @@ test('v288: dibujo solo a la izquierda, símbolos completos a la derecha y Plant
  await expect(page.locator('.layout>.right #symbolSearch')).toHaveCount(1);
  const count=await page.locator('#symbolList>.symbol-option').count();
  expect(count).toBeGreaterThan(35);
+ await expect(page.locator('#symbolList [data-symbol-id="rock"]')).toHaveCount(1);
+ await expect(page.locator('#symbolList [data-symbol-id="boulder-small"]')).toHaveCount(0);
  const geometries=await page.locator('#symbolList>.symbol-option').evaluateAll(nodes=>
   [...new Set(nodes.map(node=>node.dataset.symbolGeometry))]);
  expect(geometries).toContain('point');

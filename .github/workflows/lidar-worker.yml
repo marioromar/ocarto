@@ -19,6 +19,7 @@ on:
       - 'ocarto-v286-cultivos-candidatos-revisables'
       - 'ocarto-v287-curvas-alturas-feature-capas'
       - 'ocarto-v288-redisenio-interfaz'
+      - 'ocarto-v289-simbolos-revisados'
   workflow_dispatch:
 
 jobs:
