@@ -34,3 +34,26 @@ test('el negro se aplica sin alterar la imagen original y respeta el canal alfa'
  assert(ops.some(x=>x[0]==='color'&&x[1]==='#000000'));
  assert.equal(input.width,8);assert.equal(input.height,5);
 });
+
+test('Feature Map v287: reconoce nombres reales de teselas y color por altura',()=>{
+ assert.equal(api.detect('tesela_001_001_feature_map_banda_2_sin_sombreado.png')?.id,'banda_2');
+ assert.equal(api.detect('feature_map_banda_0_sin_sombreado.png')?.title,'0–5 cm · diagnóstico de suelo');
+ assert.equal(api.detectVegetation('tesela_002_003_altura_vegetacion_banda_4.png'),4);
+ assert.equal(api.isReliefTemplate({name:'sombreado_relieve_NW.png'}),true);
+ assert.equal(api.isReliefTemplate({name:'alturas_de_vegetación.png'}),false);
+ assert.equal(api.colorForBand('banda_2'),'#ec8c43');
+ assert.equal(api.colorForBand('combined'),null);
+ const ctxLog=[];
+ const ctx={
+  drawImage:(...args)=>ctxLog.push(['drawImage',...args]),
+  fillRect:(...args)=>ctxLog.push(['fillRect',...args]),
+  set globalCompositeOperation(x){ctxLog.push(['mode',x])},
+  set fillStyle(x){ctxLog.push(['color',x])}
+ };
+ const target={getContext:()=>ctx},img={width:4,height:3};
+ assert.equal(api.tint(img,api.colorForBand('banda_2'),()=>target),target);
+ assert.deepEqual(ctxLog.map(x=>x[0]),['drawImage','mode','color','fillRect','mode']);
+ assert.equal(ctxLog.find(x=>x[0]==='color')[1],'#ec8c43');
+ assert.equal(ctxLog.find(x=>x[0]==='mode')[1],'source-in');
+ assert.equal(img.width,4);assert.equal(img.height,3);
+});
