@@ -354,14 +354,29 @@ test('v288: dibujo solo a la izquierda, símbolos completos a la derecha y Plant
  await expect(page.locator('#ocartoV288Drawer')).toBeVisible();
  await expect(page.locator('#ocartoV288Drawer #templateFile')).toHaveCount(1);
  await expect(page.locator('#ocartoV288Drawer #templateLayerList')).toHaveCount(1);
+ await expect(page.locator('#workspaceTabs .workspace-tab[aria-controls="layersWorkspace"]'))
+  .toHaveAttribute('aria-selected','true');
  await page.locator('.v288-drawer-close').click();
  await expect(page.locator('#ocartoV288Drawer')).toBeHidden();
+ await summary.click();
+ await page.locator('.oc-menu [data-v288-open="georef"]').click();
+ await expect(page.locator('#workspaceTabs .workspace-tab[aria-controls="layersWorkspace"]'))
+  .toHaveAttribute('aria-selected','true');
+ await page.locator('.v288-drawer-close').click();
+ const drawMenu=page.locator('.oc-menu>details').filter({
+  has:page.locator('summary:text-is("DIBUJO")')});
+ await drawMenu.locator('summary').click();
+ await drawMenu.locator('[data-v288-open="drawing"]').click();
+ await expect(page.locator('#ocartoV288DrawingOptions')).toBeVisible();
+ await page.locator('.v288-drawer-close').click();
  const lidarMenu=page.locator('.oc-menu>details').filter({
   has:page.locator('summary:text-is("LIDAR")')});
  await lidarMenu.locator('summary').click();
  await lidarMenu.locator('[data-v288-open="lidar"]').click();
  await expect(page.locator('#tiledAreaBtn')).toBeVisible();
  await expect(page.locator('label[for="pointFile"]')).toBeVisible();
+ await expect(page.locator('#workspaceTabs .workspace-tab[aria-controls="lidarWorkspace"]'))
+  .toHaveAttribute('aria-selected','true');
  // Only presentation changed: the original controller IDs are available.
  for(const id of ['tiledAreaBtn','exportContours','heightFeatureBandList',
   'mapCanvas','copySelected','saveProject','pointFile','templateFile','symbolStatusSelect'])
