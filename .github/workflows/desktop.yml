@@ -3,7 +3,7 @@ name: Ocarto Desktop
 on:
   workflow_dispatch:
   push:
-    branches: [fix/symbols-v275, ocarto-v285-vegetacion-capas-seleccionadas, ocarto-v287-curvas-alturas-feature-capas, ocarto-v288-redisenio-interfaz, ocarto-v289-simbolos-revisados, ocarto-v290-giro-seleccion-180, ocarto-v291-acentuacion-vaguadas, ocarto-v292-vaguadas-curvas]
+    branches: [fix/symbols-v275, ocarto-v285-vegetacion-capas-seleccionadas, ocarto-v287-curvas-alturas-feature-capas, ocarto-v288-redisenio-interfaz, ocarto-v289-simbolos-revisados, ocarto-v290-giro-seleccion-180, ocarto-v291-acentuacion-vaguadas, ocarto-v292-vaguadas-curvas, ocarto-v293-vaguadas-continuas]
     paths:
       - 'desktop/**'
       - 'package.json'
