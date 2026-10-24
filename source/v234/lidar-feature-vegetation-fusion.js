@@ -37,17 +37,19 @@
    const x1=Math.min(shape.width-1,Math.floor((Math.max(...xs)-shape.x0)/shape.cell));
    const y0=Math.max(0,Math.floor((Math.min(...ys)-shape.y0)/shape.cell));
    const y1=Math.min(shape.height-1,Math.floor((Math.max(...ys)-shape.y0)/shape.cell));
-   let count=0,low=0,medium=0,tall=0;
+   let count=0,low=0,medium=0,tall=0,nearGround=0;
    for(let j=y0;j<=y1;j++)for(let i=x0;i<=x1;i++){
     const x=shape.x0+(i+.5)*shape.cell,y=shape.y0+(j+.5)*shape.cell;
     if(!polys.some(poly=>poly?.length&&inside(x,y,poly[0])&&
       !poly.slice(1).some(h=>inside(x,y,h))))continue;
     const at=j*shape.width+i;
     count++;low+=evidence.coverage[0][at]+evidence.coverage[1][at];
+    nearGround+=evidence.nearGroundCoverage?.[at]||0;
     medium+=evidence.coverage[2][at];tall+=evidence.coverage[3][at];
    }
    const normalize=n=>count?+(n/(count*evidence.pixelTotal)).toFixed(3):0;
-   const near=normalize(low),mid=normalize(medium),high=normalize(tall);
+   const near=normalize(low),mid=normalize(medium),high=normalize(tall),
+    ground05=evidence.nearGroundCoverage?normalize(nearGround):null;
    const disagreement=f.properties?.clase==='amarillo'&&(mid>.08||high>.04);
    const featureSupport=f.properties?.clase==='rayado'?
      (near>.04||mid>.04):f.properties?.clase==='verde_oscuro'?
@@ -55,7 +57,10 @@
      !disagreement:null;
    if(featureSupport)supported++;if(disagreement)conflicts++;
    return {...f,properties:{...f.properties,
-     feature_map_evidence:{low_0_1m_fraction:near,medium_1_2m_fraction:mid,
+     feature_map_evidence:{low_0_1m_fraction:near,near_ground_0_05m_fraction:ground05,
+       sparse_near_ground_supports_open_candidate:f.properties?.clase==='amarillo'&&
+         ground05!==null&&ground05<.04&&!disagreement,
+       medium_1_2m_fraction:mid,
        tall_2_5m_fraction:high,reviewed_cells:count,
        suggests_consistency:featureSupport,possible_conflict:disagreement,
        caveat:'Cobertura de extremos observados del Feature Map; puede contener hierba, objetos y ruido; no confirma transitabilidad'},
@@ -76,7 +81,8 @@
   const width=Math.ceil(extent.maxX/rasterCell)-Math.floor(extent.minX/rasterCell),
     height=Math.ceil(extent.maxY/rasterCell)-Math.floor(extent.minY/rasterCell);
   if(width*height>maxPixels)return null; // Never risk OOM for large areas.
-  const n=shape.width*shape.height,coverage=Array.from({length:4},()=>new Uint32Array(n));
+  const n=shape.width*shape.height,coverage=Array.from({length:4},()=>new Uint32Array(n)),
+    nearGroundCoverage=manifest.mosaic.outputs.featureNearGround?.png?new Uint32Array(n):null;
   const xIndex=new Int32Array(width),yIndex=new Int32Array(height);
   for(let x=0;x<width;x++)xIndex[x]=Math.floor((minX+(x+.5)*rasterCell-shape.x0)/shape.cell+1e-8);
   for(let y=0;y<height;y++)yIndex[y]=Math.floor((top-(y+.5)*rasterCell-shape.y0)/shape.cell+1e-8);
@@ -106,9 +112,31 @@
     available++;
    }finally{bitmap.close?.();}
   }
+  if(nearGroundCoverage){
+   const descriptor=manifest.mosaic.outputs.featureNearGround;
+   if(signal?.aborted)throw Object.assign(Error('Fusión LiDAR cancelada'),{name:'AbortError'});
+   const file=await(await directory.getFileHandle(descriptor.png)).getFile();
+   const bitmap=await decodeImage(file);
+   try{
+    if(bitmap.width!==width||bitmap.height!==height)
+      throw Error('Máscara Feature Map 0–5 cm desalineada');
+    const canvas=createCanvas(width,height),ctx=canvas.getContext('2d',{willReadFrequently:true});
+    if(!ctx)throw Error('No se puede inspeccionar Feature Map 0–5 cm');
+    ctx.drawImage(bitmap,0,0);
+    const rgba=ctx.getImageData(0,0,width,height).data;
+    for(let y=0;y<height;y++){
+     const j=yIndex[y];if(j<0||j>=shape.height)continue;
+     for(let x=0;x<width;x++){
+      if(rgba[(y*width+x)*4+3]<128)continue;
+      const i=xIndex[x];if(i>=0&&i<shape.width)
+       nearGroundCoverage[j*shape.width+i]++;
+     }
+    }
+   }finally{bitmap.close?.();}
+  }
   if(!available)return null;
   const pixelTotal=Math.max(1,Math.round((shape.cell/rasterCell)**2));
-  return {coverage,n,pixelTotal,bandsAvailable:available,cell_m:shape.cell,
+  return {coverage,n,pixelTotal,nearGroundCoverage,bandsAvailable:available,cell_m:shape.cell,
     interpretation:'evidencia de retornos LiDAR cercanos al suelo; solo revisión, nunca etiquetar automáticamente como verde impasable'};
  }
  return Object.freeze({statsAt,annotate,load});
