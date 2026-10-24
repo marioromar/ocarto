@@ -361,7 +361,7 @@
    summary.features=features.length;
    return {features,summary};
  }
- async function exportGeojson(directory,manifest,{signal,onProgress,maxPixels=12000000,targetCell=2}={}){
+ async function exportGeojson(directory,manifest,{signal,onProgress,maxPixels=12000000,targetCell=2,fusion=null}={}){
    if(manifest?.state!=='complete'||manifest.mosaic?.state!=='building'&&
      manifest.mosaic?.state!=='complete')
      throw Error('Primero termina el procesamiento conjunto de todos los LAZ');
@@ -369,7 +369,16 @@
    const shape=aggregationGeometry(manifest,{maxPixels,targetCell});
    const file=await (await directory.getFileHandle('zona_completa_vegetacion_lidar.csv')).getFile();
    const loaded=await loadAggregatedMask(file,shape,{signal,onProgress});
-   const {features,summary}=vectorizeMask(loaded.mask,shape,{signal,onProgress});
+   let {features,summary}=vectorizeMask(loaded.mask,shape,{signal,onProgress});
+   if(fusion){
+     // Sólo anotar contraste Feature Map con polígonos ya candidatos.
+     // NO reemplaza las clases ni confirma penetrabilidad/cultivos.
+     const evidence=await fusion({directory,manifest,shape,features,signal});
+     if(evidence?.features){
+       features=evidence.features;
+       summary.feature_map_evidence=evidence.summary||null;
+     }
+   }
    const name='zona_completa_vegetacion_candidata_lidar.geojson';
    const fc={
      type:'FeatureCollection',
