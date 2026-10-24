@@ -110,6 +110,13 @@
      kind==='drawing'?'Herramientas de dibujo':'Plantillas y capas';
    drawer.hidden=false;
    const element=targets[kind];
+   // The source controls live inside legacy workspace tabs. Opening the
+   // drawer alone can leave the requested panel hidden behind “Símbolos”.
+   const workspace=element?.closest('.workspace-panel');
+   if(workspace){
+    const tab=document.querySelector('#workspaceTabs .workspace-tab[aria-controls="'+workspace.id+'"]');
+    tab?.click();
+   }
    if(element){element.scrollIntoView({block:'start',behavior:'instant'});}
    if(kind==='heightFeature'&&element?.hidden)
     document.getElementById('heightFeatureStatus')?.scrollIntoView({block:'start'});

@@ -356,6 +356,12 @@ test('v288: dibujo solo a la izquierda, símbolos completos a la derecha y Plant
  await expect(page.locator('#ocartoV288Drawer #templateLayerList')).toHaveCount(1);
  await page.locator('.v288-drawer-close').click();
  await expect(page.locator('#ocartoV288Drawer')).toBeHidden();
+ const lidarMenu=page.locator('.oc-menu>details').filter({
+  has:page.locator('summary:text-is("LIDAR")')});
+ await lidarMenu.locator('summary').click();
+ await lidarMenu.locator('[data-v288-open="lidar"]').click();
+ await expect(page.locator('#tiledAreaBtn')).toBeVisible();
+ await expect(page.locator('label[for="pointFile"]')).toBeVisible();
  // Only presentation changed: the original controller IDs are available.
  for(const id of ['tiledAreaBtn','exportContours','heightFeatureBandList',
   'mapCanvas','copySelected','saveProject','pointFile','templateFile','symbolStatusSelect'])
