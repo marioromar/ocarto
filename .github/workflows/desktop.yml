@@ -20,6 +20,30 @@ jobs:
         with: { node-version: 20 }
       - run: npm install
       - run: npm run dist -- --publish never
+      - name: Verify Ocarto editor, offline LAZ, and local server in unpacked Windows build
+        shell: pwsh
+        run: |
+          $folders = Get-ChildItem dist -Directory | Where-Object { $_.Name -like '*unpacked*' }
+          if (!$folders) { throw 'No Windows unpacked build found to verify resources' }
+          $valid = $false
+          foreach ($folder in $folders) {
+            $base = Join-Path $folder.FullName 'resources'
+            $needed = @(
+              'index.html',
+              'source/v234/index.html',
+              'source/v234/lidar-worker.js',
+              'source/v234/vendor/laz-perf.wasm',
+              'servidor-ocarto.ps1'
+            )
+            $missing = @($needed | Where-Object { -not (Test-Path (Join-Path $base $_)) })
+            if ($missing.Count -eq 0) {
+              Write-Host "PASS: Ocarto Windows v287 includes editor, LAS/LAZ and local server"
+              $valid = $true
+              break
+            }
+            Write-Host ("Incomplete package in " + $base + ": " + ($missing -join ', '))
+          }
+          if (!$valid) { throw 'Windows package is missing required offline LiDAR resources' }
       - uses: actions/upload-artifact@v4
         with:
           name: Ocarto-Desktop-Windows
