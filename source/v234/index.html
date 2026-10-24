@@ -147,6 +147,10 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
     <button id="heightFeatureNone" type="button" class="action">Ocultar todas</button>
   </div>
   <label class="field">Opacidad conjunta de franjas (%)<input id="heightFeatureOpacity" type="range" min="0" max="100" value="65" step="5"></label>
+  <label class="field" style="display:flex;align-items:center;gap:8px">
+    <input id="showTerrainShading" type="checkbox" checked> Mostrar sombreado del MDT (desmarcar para ver solo features y curvas)
+  </label>
+  <p class="small">El sombreado se controla independientemente de las curvas, del Feature Map sin sombreado y de la vegetación.</p>
   <label class="field" style="display:flex;gap:8px;align-items:center">
     <input id="featureBlackMode" type="checkbox"> Feature Map en negro (fondo transparente)
   </label>
@@ -172,6 +176,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <details id="tiledFeatureMapPanel" hidden style="margin:10px 0;padding:8px;border:2px solid #607d78;border-radius:7px">
   <summary style="cursor:pointer;font-weight:800">Feature Map generado · vista previa de la zona completa</summary>
   <p class="small" id="tiledFeatureMapStatus" role="status">Al terminar el análisis se mostrará el Feature Map de los dos LAZ. No equivale a una clasificación de objetos.</p>
+  <p class="small">El mosaico también guarda franjas negras sin sombreado, transparentes fuera de las celdas con retornos LiDAR válidos. Pueden cargarse junto a las alturas de vegetación en «Plantillas de referencia».</p>
   <img id="tiledFeatureMapPreview" hidden alt="Feature Map calculado desde retornos LiDAR cercanos al suelo en el mosaico completo" style="width:100%;height:auto;margin:8px 0;background:#eee">
   <p class="small">Se guarda como PNG + PGW + PRJ, junto a las alturas de vegetación, en la carpeta ocarto_teselas_.... Puede importarse como plantilla de referencia; el TIFF original no se modifica.</p>
 </details>
@@ -228,6 +233,8 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <script src="lidar-tile-export.js"></script>
 <script src="lidar-mosaic-export.js"></script>
 <script src="lidar-mosaic-feature.js"></script>
+<script src="lidar-mosaic-height-bands.js"></script>
+<script src="lidar-feature-height-ranges.js"></script>
 <script src="lidar-feature-bands.js"></script>
 <script src="lidar-contour-profiles-v287.js"></script>
 <script src="lidar-mosaic-vector.js"></script>
@@ -560,7 +567,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
   function heightFeatureLayers(){return S.templates.filter(l=>l.featureMapBand||l.vegetationHeightBand)}
   function renderHeightFeatureLayerControls(){
     const layers=heightFeatureLayers(),host=$('heightFeatureBandList');
-    $('heightFeatureLayerControls').hidden=!layers.length;host.replaceChildren();
+    host.replaceChildren();
     for(const layer of layers){
       const line=document.createElement('label');line.className='layer';
       line.style.cssText='display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12px';
@@ -572,14 +579,31 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
         'Vegetación · franja '+layer.vegetationHeightBand;
       title.textContent=label;line.append(check,title);host.append(line);
     }
-    $('heightFeatureStatus').textContent=layers.length+
-      ' capas georreferenciadas disponibles · Feature Map debajo de vegetación.';
+    const curves=S.vectorLayers.filter(l=>/curvas|curvado|contornos? de nivel/i.test(String(l.name||'')));
+    for(const layer of curves){
+      const line=document.createElement('label');line.className='layer';
+      line.style.cssText='display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12px';
+      const check=document.createElement('input');check.type='checkbox';check.checked=layer.visible;
+      check.onchange=()=>{layer.visible=check.checked;renderVectorLayers();draw()};
+      const title=document.createElement('span');title.textContent='Curvado · '+layer.name.replace(/^Plantilla · /,'');
+      line.append(check,title);host.append(line);
+    }
+    $('heightFeatureLayerControls').hidden=!layers.length&&!curves.length;
+    $('heightFeatureStatus').textContent=layers.length+' capas ráster y '+curves.length+
+      ' capas de curvado · Feature Map debajo de vegetación.';
+    $('showTerrainShading').checked=S.templates.filter(OcartoFeatureBandLayers.isReliefTemplate).every(l=>l.visible);
   }
   $('heightFeatureAll').onclick=()=>{for(const layer of heightFeatureLayers())layer.visible=true;renderTemplateLayers();draw()};
   $('heightFeatureNone').onclick=()=>{for(const layer of heightFeatureLayers())layer.visible=false;renderTemplateLayers();draw()};
   $('heightFeatureOpacity').oninput=()=>{
     const opacity=Number($('heightFeatureOpacity').value)/100;
     for(const layer of heightFeatureLayers())layer.opacity=opacity;
+    renderTemplateLayers();draw();
+  };
+  $('showTerrainShading').onchange=()=>{
+    for(const layer of S.templates.filter(OcartoFeatureBandLayers.isReliefTemplate)){
+      layer.visible=$('showTerrainShading').checked;
+    }
     renderTemplateLayers();draw();
   };
   $('featureBlackMode').onchange=()=>{
