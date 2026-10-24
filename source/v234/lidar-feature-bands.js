@@ -16,10 +16,10 @@
   const basename=String(name||'').split(/[\\/]/).pop().replace(/\.[^.]+$/,'').toLowerCase();
   const band=bands.find(b=>basename===b.stem||basename.endsWith('_'+b.stem));
   if(band)return band;
-  const generated=basename.match(/^(?:zona_completa_)?feature_map_banda_([1-4])(?:_sin_sombreado)?$/);
+  const generated=basename.match(/^(?:zona_completa_|tesela_\\d{3}_\\d{3}_)?feature_map_banda_([0-4])(?:_sin_sombreado)?$/);
   if(generated){
-   const index=Number(generated[1])-1;
-   return{id:'banda_'+generated[1],title:['0–0,3 m','0,3–1 m','1–2 m','2–5 m'][index],
+   const index=Number(generated[1]);
+   return{id:'banda_'+generated[1],title:['0–5 cm · diagnóstico de suelo','0–0,3 m','0,3–1 m','1–2 m','2–5 m'][index],
      stem:basename};
   }
   if(/^(?:zona_completa_feature_map_lidar(?:_real_0_2m)?|feature_00_05_02_00m_05m)$/.test(basename))
