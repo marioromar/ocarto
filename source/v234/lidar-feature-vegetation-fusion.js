@@ -37,33 +37,37 @@
    const x1=Math.min(shape.width-1,Math.floor((Math.max(...xs)-shape.x0)/shape.cell));
    const y0=Math.max(0,Math.floor((Math.min(...ys)-shape.y0)/shape.cell));
    const y1=Math.min(shape.height-1,Math.floor((Math.max(...ys)-shape.y0)/shape.cell));
-   let count=0,low=0,medium=0,tall=0,nearGround=0;
+   let count=0,low=0,stripedBand=0,medium=0,tall=0,nearGround=0;
    for(let j=y0;j<=y1;j++)for(let i=x0;i<=x1;i++){
     const x=shape.x0+(i+.5)*shape.cell,y=shape.y0+(j+.5)*shape.cell;
     if(!polys.some(poly=>poly?.length&&inside(x,y,poly[0])&&
       !poly.slice(1).some(h=>inside(x,y,h))))continue;
     const at=j*shape.width+i;
     count++;low+=evidence.coverage[0][at]+evidence.coverage[1][at];
+    stripedBand+=evidence.coverage[1][at];
     nearGround+=evidence.nearGroundCoverage?.[at]||0;
     medium+=evidence.coverage[2][at];tall+=evidence.coverage[3][at];
    }
    const normalize=n=>count?+(n/(count*evidence.pixelTotal)).toFixed(3):0;
-   const near=normalize(low),mid=normalize(medium),high=normalize(tall),
+   const near=normalize(low),rayado30_100=normalize(stripedBand),mid=normalize(medium),high=normalize(tall),
     ground05=evidence.nearGroundCoverage?normalize(nearGround):null;
    const disagreement=f.properties?.clase==='amarillo'&&(mid>.08||high>.04);
    const featureSupport=f.properties?.clase==='rayado'?
-     (near>.04||mid>.04):f.properties?.clase==='verde_oscuro'?
+     (rayado30_100>.04||mid>.04):f.properties?.clase==='verde_oscuro'?
      high>.08:f.properties?.clase==='amarillo'?
      !disagreement:null;
    if(featureSupport)supported++;if(disagreement)conflicts++;
    return {...f,properties:{...f.properties,
-     feature_map_evidence:{low_0_1m_fraction:near,near_ground_0_05m_fraction:ground05,
+     feature_map_evidence:{low_0_1m_fraction:near,
+       striped_0_3_1m_fraction:rayado30_100,
+       rayado_support_30cm_1m:f.properties?.clase==='rayado'&&rayado30_100>.04,
+       near_ground_0_05m_fraction:ground05,
        sparse_near_ground_supports_open_candidate:f.properties?.clase==='amarillo'&&
          ground05!==null&&ground05<.04&&!disagreement,
        medium_1_2m_fraction:mid,
        tall_2_5m_fraction:high,reviewed_cells:count,
        suggests_consistency:featureSupport,possible_conflict:disagreement,
-       caveat:'Cobertura de extremos observados del Feature Map; puede contener hierba, objetos y ruido; no confirma transitabilidad'},
+       caveat:'La franja 30 cm–1 m ayuda a proponer rayado, pero no confirma penetrabilidad ni sustituye revisión; puede contener hierba y otros objetos.'},
      review_required:true}};
   });
   return {features:output,summary:{supported,conflicts,method:'superposición UTM de máscaras negras transparentes del Feature Map; no cambia clasificación ni símbolos automáticamente'}};
