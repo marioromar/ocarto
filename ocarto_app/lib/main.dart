@@ -1442,7 +1442,8 @@ class _OcartoHomeState extends State<OcartoHome> {
           const Padding(padding: EdgeInsets.symmetric(horizontal: 9),
             child: Chip(avatar: Icon(Icons.fiber_manual_record, color: Color(0xffef7164), size: 18),
               label: Text('REC GPS'))),
-        IconButton(tooltip: 'Guardar proyecto', icon: const Icon(Icons.save_outlined), onPressed: _saveProject),
+        if (!isMobile)
+          IconButton(tooltip: 'Guardar proyecto', icon: const Icon(Icons.save_outlined), onPressed: _saveProject),
         if (isMobile)
           PopupMenuButton<String>(
             tooltip: 'Opciones del proyecto',
