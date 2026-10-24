@@ -42,7 +42,13 @@ for (const extension of ['las', 'laz']) {
     await expect(page.locator('#lidarStatus')).toHaveText('Carga completa', { timeout:75_000 });
     // The old #lidarNav remains in the DOM for compatibility, but is hidden
     // by the redesigned layout. The visible workspace tab is the real control.
-    const lidarTab=page.locator('#workspaceTabs .workspace-tab[aria-controls="lidarWorkspace"]');
+    // v288: el panel LiDAR ya no ocupa la barra lateral, se abre desde el menú.
+    await expect(page.locator('body')).toHaveClass(/ocarto-v288/);
+    await page.evaluate(()=>document.querySelector('[data-v288-open="lidar"]').click());
+    // v288: conservar la prueba completa entrando por el menú LiDAR desplegable.
+  await expect(page.locator('body')).toHaveClass(/ocarto-v288/);
+  await page.evaluate(()=>document.querySelector('[data-v288-open="lidar"]').click());
+  const lidarTab=page.locator('#workspaceTabs .workspace-tab[aria-controls="lidarWorkspace"]');
     await expect(lidarTab).toBeVisible();
     await lidarTab.click();
     await expect(page.locator('#lidarWorkspace')).toBeVisible();
