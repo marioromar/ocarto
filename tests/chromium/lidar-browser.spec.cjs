@@ -223,8 +223,12 @@ test('v286: dos LAS contiguos hasta cuatro GeoJSON y plantillas UTM',async({page
     }
     document.getElementById('tiledAreaConfirmCrs').checked=true;
   });
-  const lidarTab=page.locator('#workspaceTabs .workspace-tab[aria-controls="lidarWorkspace"]');
-  await lidarTab.click();
+  // v288: la navegación se realiza desde el menú superior, no desde
+  // la antigua pestaña de trabajo que ahora se conserva oculta.
+  await page.locator('.oc-menu>details').filter({
+    has:page.locator('summary:text-is("LIDAR")')}).locator('summary').click();
+  await page.locator('.oc-menu [data-v288-open="lidar"]').click();
+  await expect(page.locator('#ocartoV288Drawer')).toBeVisible();
   await expect(page.locator('#tiledAreaBtn')).toBeVisible();
   await page.locator('#tiledPointFile').setInputFiles([
     {name:'BOBADILLA_PRUEBA_384.las',mimeType:'application/octet-stream',
@@ -343,7 +347,8 @@ test('v288: dibujo solo a la izquierda, símbolos completos a la derecha y Plant
  const summary=page.locator('.oc-menu>details').filter({
   has:page.locator('summary:text-is("PLANTILLAS")')}).locator('summary');
  await summary.click();
- const manage=page.locator('[data-v288-open="templates"]');
+ const manage=page.locator('.oc-menu>details').filter({
+  has:page.locator('summary:text-is("PLANTILLAS")')}).locator('[data-v288-open="templates"]');
  await expect(manage).toBeVisible();
  await manage.click();
  await expect(page.locator('#ocartoV288Drawer')).toBeVisible();
