@@ -1,5 +1,12 @@
 # Ocarto — editor cartográfico de orientación
 
+## v288 · Rediseño de interfaz
+
+- **[Abrir rama v288](https://github.com/marioromar/ocarto/tree/ocarto-v288-redisenio-interfaz)** · [Descargar código ZIP v288](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v288-redisenio-interfaz.zip).
+- Menú superior reorganizado, herramientas de dibujo en una columna izquierda, paleta de símbolos con búsqueda a la derecha y paneles de LiDAR, plantillas y edición avanzada en un cajón accesible desde los menús.
+- La interfaz recoloca los controles originales y conserva sus nodos y manejadores. Los nombres de los símbolos se muestran bajo sus muestras; los siete botones de dibujo incluyen etiquetas accesibles y ayuda al pasar el cursor.
+- **Validación de interfaz:** prueba de Chromium v288 superada. La aplicación web de esta rama es de desarrollo; no es un instalador Windows validado ni una confirmación de procesamiento de los LAZ grandes del usuario.
+
 ## v286 · Zonas amarillas y posibles cultivos (rama experimental)
 
 - **[Abrir rama v286](https://github.com/marioromar/ocarto/tree/ocarto-v286-cultivos-candidatos-revisables)** · [Descargar código ZIP v286](https://github.com/marioromar/ocarto/archive/refs/heads/ocarto-v286-cultivos-candidatos-revisables.zip).

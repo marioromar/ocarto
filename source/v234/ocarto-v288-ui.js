@@ -14,6 +14,10 @@
   const search=document.getElementById('symbolSearch');
   const typeFilter=document.getElementById('symbolTypeFilter');
   if(!left||!right||!toolGrid||!list||!search||!typeFilter||!menu)return;
+  toolGrid.querySelectorAll('.tool').forEach(button=>{
+   const label=button.querySelector('span')?.textContent.trim();
+   if(label){button.title=label;button.setAttribute('aria-label',label)}
+  });
   // Keep every existing DOM node and its event listeners. This drawer
   // contains the former large side panels, accessible from top menus.
   const drawer=document.createElement('section');
