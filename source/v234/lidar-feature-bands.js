@@ -14,7 +14,20 @@
  ]);
  function detect(name){
   const basename=String(name||'').split(/[\\/]/).pop().replace(/\.[^.]+$/,'').toLowerCase();
-  return bands.find(b=>basename===b.stem)||null;
+  const band=bands.find(b=>basename===b.stem||basename.endsWith('_'+b.stem));
+  if(band)return band;
+  if(/^(?:zona_completa_feature_map_lidar(?:_real_0_2m)?|feature_00_05_02_00m_05m)$/.test(basename))
+   return {id:'combined',title:'Feature Map combinado (revisar intervalo)',stem:basename};
+  return null;
+ }
+ function detectContour(name){
+  const base=String(name||'').split(/[\\/]/).pop().replace(/\.[^.]+$/,'').toLowerCase();
+  const m=base.match(/^zona_completa_curvas_(5m_suave|3m_suave_ligero|1m_original|1m_suave_ligero|0_5m_original|0_5m_suave_minimo)$/);
+  return m?.[1]||null;
+ }
+ function isReliefTemplate(layer){
+  const s=String(layer?.name||'').toLowerCase();
+  return /(?:^|[_\\s-])(?:relieve|sombreado|hillshade)(?:[_\\s.-]|$)|(?:^|[_\\s-])mdt[_\\s-]/.test(s);
  }
  function detectVegetation(name){
   const stem=String(name||'').split(/[\\/]/).pop().replace(/\.[^.]+$/,'').toLowerCase();
@@ -40,5 +53,5 @@
   ctx.globalCompositeOperation='source-over';
   return canvas;
  }
- return Object.freeze({bands,detect,detectVegetation,isHeightTemplate,displayOrder,blackTint});
+ return Object.freeze({bands,detect,detectVegetation,detectContour,isReliefTemplate,isHeightTemplate,displayOrder,blackTint});
 });
