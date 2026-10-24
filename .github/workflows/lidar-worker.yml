@@ -64,6 +64,8 @@ jobs:
         run: node --test source/v234/tests/lidar-mosaic-contours.test.cjs
       - name: Height/Feature Map layer controls and six contour profiles
         run: node --test source/v234/tests/lidar-feature-bands.test.cjs source/v234/tests/lidar-contour-profiles-v287.test.cjs
+      - name: v287 Feature Map masks, vegetation ranges and cartographic evidence
+        run: node --test source/v234/tests/lidar-v287-feature-masks.test.cjs
       - name: LAS/LAZ reader fallback and truncation tests
         run: node --test source/v234/tests/lidar-stream-fallback.test.cjs
       - name: Vectorize PNG vegetation height raster tests
