@@ -152,7 +152,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
   </label>
   <p class="small">El sombreado se controla independientemente de las curvas, del Feature Map sin sombreado y de la vegetación.</p>
   <label class="field" style="display:flex;gap:8px;align-items:center">
-    <input id="featureBlackMode" type="checkbox"> Feature Map en negro (fondo transparente)
+    <input id="featureBlackMode" type="checkbox"> Feature Map en negro · desmarcado = colores por altura u originales
   </label>
   <p class="small" id="heightFeatureStatus" aria-live="polite">Las franjas del Feature Map se muestran debajo de las alturas de vegetación.</p>
 </div>
@@ -308,7 +308,12 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
   const W=()=>wrap.clientWidth,H=()=>wrap.clientHeight;
   function drawVegetationPreview(){const preview=S.vegetationPreview;if(!preview)return;ctx.save();ctx.lineWidth=1.7/S.zoom;for(const f of preview.features){const passed=f.filtering?.passed===true;ctx.beginPath();for(const ring of [f.points,...(f.holes||[])]){if(!ring?.length)continue;ctx.moveTo(ring[0].x,ring[0].y);for(let i=1;i<ring.length;i++)ctx.lineTo(ring[i].x,ring[i].y);ctx.closePath()}const reason=f.filtering?.exclusionReason,selected=$('multiPreviewSelect').checked?(preview.selectedKeys||[]).includes(f.previewKey):f.previewKey===preview.features[preview.selectedIndex]?.previewKey,categoryColor=f.category==='uncertain'?'#888':['clear_open','amarillo'].includes(f.category)?'#f2dc72':['tall_forest','blanco'].includes(f.category)?'#fff':null;ctx.fillStyle=reason==='manual_remove'?'rgba(220,45,55,.24)':reason==='minimum_area'?'rgba(245,166,35,.20)':reason==='minimum_width'?'rgba(190,65,210,.20)':categoryColor?(f.category==='uncertain'?'rgba(130,130,130,.20)':['clear_open','amarillo'].includes(f.category)?'rgba(242,220,114,.42)':'rgba(255,255,255,.72)'):'rgba(20,190,95,.22)';ctx.strokeStyle=selected?'#fff000':reason==='manual_remove'?'#d42b38':reason==='minimum_area'?'#e39a00':reason==='minimum_width'?'#a82cba':categoryColor?(f.category==='uncertain'?'#777':['clear_open','amarillo'].includes(f.category)?'#b58d00':'#526152'):'#08a553';ctx.lineWidth=(selected?3:1.7)/S.zoom;ctx.setLineDash(passed?[]:[5/S.zoom,3/S.zoom]);ctx.fill('evenodd');ctx.stroke()}ctx.restore()}
   function draw(){if(!ctx)return;const w=W(),h=H(),d=window.devicePixelRatio||1;ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(w/2+S.panX,h/2+S.panY);ctx.scale(S.zoom,S.zoom);
-    const active=activeTemplate(),geoLayers=S.templates.filter(layer=>layer.georef&&!layer.georef.localMap&&layer.img&&(layer.source==='wms'?layer.wms.crs===$('mapCrs').value.trim().toUpperCase():!layer.crs||!$('mapCrs').value.trim()||layer.crs===$('mapCrs').value.trim().toUpperCase()));let sharedGeo=null;if(geoLayers.length){const bounds=geoLayers.map(layer=>imageWorldBounds(layer.img,layer.georef)),minX=Math.min(...bounds.map(b=>b.minX)),maxX=Math.max(...bounds.map(b=>b.maxX)),minY=Math.min(...bounds.map(b=>b.minY)),maxY=Math.max(...bounds.map(b=>b.maxY)),dx=maxX-minX||1,dy=maxY-minY||1;sharedGeo={cx:(minX+maxX)/2,cy:(minY+maxY)/2,scale:Math.min(w*.72/dx,h*.72/dy)}}S.renderGeo=sharedGeo;for(const layer of OcartoFeatureBandLayers.displayOrder(S.templates)){if(!layer.visible||(layer.source==='wms'&&layer.wms.crs!==$('mapCrs').value.trim().toUpperCase())||(layer.crs&&$('mapCrs').value.trim()&&layer.crs!==$('mapCrs').value.trim().toUpperCase()))continue;ctx.save();ctx.globalAlpha=layer.displayMode==='opaque'?1:Math.max(0,Math.min(1,layer.opacity));const im=layer.featureMapBlack?(layer.featureMapBlackImage||(layer.featureMapBlackImage=OcartoFeatureBandLayers.blackTint(layer.img))):layer.img;if(!im){ctx.restore();continue}if(layer.georef?.localMap){ctx.transform(layer.georef.a,layer.georef.d,layer.georef.b,layer.georef.e,layer.georef.c,layer.georef.f);ctx.drawImage(im,0,0,im.width,im.height)}else if(layer.georef){const v=sharedGeo;if(layer===active)S.renderGeo=v;ctx.transform(layer.georef.a*v.scale,-layer.georef.d*v.scale,layer.georef.b*v.scale,-layer.georef.e*v.scale,(layer.georef.c-v.cx)*v.scale,-(layer.georef.f-v.cy)*v.scale);ctx.drawImage(im,0,0,im.width,im.height)}else{const maxW=w*.72,maxH=h*.72,k=Math.min(maxW/im.width,maxH/im.height);if(layer===active)S.templateDisplayScale=k;ctx.drawImage(im,-im.width*k/2,-im.height*k/2,im.width*k,im.height*k)}ctx.restore()}
+    const active=activeTemplate(),geoLayers=S.templates.filter(layer=>layer.georef&&!layer.georef.localMap&&layer.img&&(layer.source==='wms'?layer.wms.crs===$('mapCrs').value.trim().toUpperCase():!layer.crs||!$('mapCrs').value.trim()||layer.crs===$('mapCrs').value.trim().toUpperCase()));let sharedGeo=null;if(geoLayers.length){const bounds=geoLayers.map(layer=>imageWorldBounds(layer.img,layer.georef)),minX=Math.min(...bounds.map(b=>b.minX)),maxX=Math.max(...bounds.map(b=>b.maxX)),minY=Math.min(...bounds.map(b=>b.minY)),maxY=Math.max(...bounds.map(b=>b.maxY)),dx=maxX-minX||1,dy=maxY-minY||1;sharedGeo={cx:(minX+maxX)/2,cy:(minY+maxY)/2,scale:Math.min(w*.72/dx,h*.72/dy)}}S.renderGeo=sharedGeo;for(const layer of OcartoFeatureBandLayers.displayOrder(S.templates)){if(!layer.visible||(layer.source==='wms'&&layer.wms.crs!==$('mapCrs').value.trim().toUpperCase())||(layer.crs&&$('mapCrs').value.trim()&&layer.crs!==$('mapCrs').value.trim().toUpperCase()))continue;ctx.save();ctx.globalAlpha=layer.displayMode==='opaque'?1:Math.max(0,Math.min(1,layer.opacity));const bandColor=!layer.featureMapBlack&&layer.featureMapBand?
+      OcartoFeatureBandLayers.colorForBand(layer.featureMapBand):null;
+    const im=layer.featureMapBlack?
+      (layer.featureMapBlackImage||(layer.featureMapBlackImage=OcartoFeatureBandLayers.blackTint(layer.img))):
+      bandColor?
+      (layer.featureMapColorImage||(layer.featureMapColorImage=OcartoFeatureBandLayers.tint(layer.img,bandColor))):layer.img;if(!im){ctx.restore();continue}if(layer.georef?.localMap){ctx.transform(layer.georef.a,layer.georef.d,layer.georef.b,layer.georef.e,layer.georef.c,layer.georef.f);ctx.drawImage(im,0,0,im.width,im.height)}else if(layer.georef){const v=sharedGeo;if(layer===active)S.renderGeo=v;ctx.transform(layer.georef.a*v.scale,-layer.georef.d*v.scale,layer.georef.b*v.scale,-layer.georef.e*v.scale,(layer.georef.c-v.cx)*v.scale,-(layer.georef.f-v.cy)*v.scale);ctx.drawImage(im,0,0,im.width,im.height)}else{const maxW=w*.72,maxH=h*.72,k=Math.min(maxW/im.width,maxH/im.height);if(layer===active)S.templateDisplayScale=k;ctx.drawImage(im,-im.width*k/2,-im.height*k/2,im.width*k,im.height*k)}ctx.restore()}
     S.template=activeTemplate();S.georef=S.template?.georef?.localMap?null:(S.template?.georef||null);S.templateOpacity=S.template?.opacity??.65;
     // faint local grid in the drawing plane
     ctx.strokeStyle='#b9c5b8';ctx.lineWidth=1/S.zoom;ctx.globalAlpha=.38;for(let x=-2000;x<=2000;x+=100){ctx.beginPath();ctx.moveTo(x,-2000);ctx.lineTo(x,2000);ctx.stroke()}for(let y=-2000;y<=2000;y+=100){ctx.beginPath();ctx.moveTo(-2000,y);ctx.lineTo(2000,y);ctx.stroke()}ctx.globalAlpha=1;
@@ -576,9 +581,17 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       check.onchange=()=>{layer.visible=check.checked;renderTemplateLayers();draw()};
       const title=document.createElement('span');
       const label=layer.featureMapBand?
-        OcartoFeatureBandLayers.bands.find(b=>b.id===layer.featureMapBand)?.title||layer.name:
+        OcartoFeatureBandLayers.detect(layer.name)?.title||layer.name:
         'Vegetación · franja '+layer.vegetationHeightBand;
-      title.textContent=label;line.append(check,title);host.append(line);
+      title.textContent=label;
+      if(layer.featureMapBand){
+        const swatch=document.createElement('span');
+        swatch.style.cssText='width:14px;height:14px;border-radius:3px;border:1.5px solid #53645f;display:inline-block;flex-shrink:0';
+        swatch.style.background=$('featureBlackMode').checked?'#000000':
+          OcartoFeatureBandLayers.colorForBand(layer.featureMapBand)||'#ffffff';
+        line.append(check,swatch,title);
+      }else line.append(check,title);
+      host.append(line);
     }
     const curves=S.vectorLayers.filter(l=>/curvas|curvado|contornos? de nivel/i.test(String(l.name||'')));
     for(const layer of curves){
@@ -613,7 +626,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
       layer.featureMapBlack=enabled;
       if(!enabled)layer.featureMapBlackImage=null;
     }
-    draw();
+    renderHeightFeatureLayerControls();draw();
   };
   function syncLegacyTemplateControls(){const layer=activeTemplate();if(!layer)return;S.templateOpacity=layer.opacity;const wms=layer.source==='wms';$('worldFile').previousElementSibling.hidden=wms;$('armControlPoint').hidden=wms;$('clearGeoref').hidden=wms;if($('opacity'))$('opacity').value=Math.round(layer.opacity*100);if($('opacityValue'))$('opacityValue').textContent=Math.round(layer.opacity*100)+' %'}
   function selectTemplate(id){S.activeTemplateId=id;S.template=activeTemplate();S.georef=S.template.georef||null;S.controlPoints=S.template.controlPoints||[];S.awaitingControlPoint=!!S.template&&!S.template.georef;S.pendingPixel=null;renderTemplateLayers();syncLegacyTemplateControls();draw()}
