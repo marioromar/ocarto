@@ -13,6 +13,7 @@ on:
       - 'ocarto-v287-curvas-alturas-feature-capas'
       - 'ocarto-v288-redisenio-interfaz'
       - 'ocarto-v289-simbolos-revisados'
+      - 'ocarto-v290-giro-seleccion-180'
   workflow_dispatch:
 
 permissions:

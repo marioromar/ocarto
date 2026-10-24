@@ -331,7 +331,7 @@ test('v287: Feature Map se muestra en colores o negro sin cambiar la plantilla o
 test('v288: dibujo solo a la izquierda, símbolos completos a la derecha y Plantillas desplegable',async({page})=>{
  await page.goto('/index.html');
  await expect(page.locator('body')).toHaveClass(/ocarto-v288/);
- await expect(page).toHaveTitle(/Ocarto v289/);
+ await expect(page).toHaveTitle(/Ocarto v290/);
  await expect(page.locator('.layout>.left .tool-grid .tool')).toHaveCount(7);
  const left=await page.locator('.layout>.left').evaluate(e=>[...e.children].map(x=>x.className));
  expect(left).toEqual(['tool-grid']);
@@ -383,4 +383,37 @@ test('v288: dibujo solo a la izquierda, símbolos completos a la derecha y Plant
  for(const id of ['tiledAreaBtn','exportContours','heightFeatureBandList',
   'mapCanvas','copySelected','saveProject','pointFile','templateFile','symbolStatusSelect'])
   await expect(page.locator('#'+id)).toHaveCount(1);
+});
+
+test('v290: gira selección de línea y punto 180° conservando tiradores Bézier',async({page})=>{
+ await page.goto('/index.html');
+ await expect(page).toHaveTitle(/Ocarto v290/);
+ const button=page.locator('#rotateSelection180');
+ const drawMenu=page.locator('.oc-menu>details').filter({has:page.locator('summary:text-is("DIBUJO")')});
+ await drawMenu.locator('summary').click();
+ await expect(button).toBeVisible();
+ await button.scrollIntoViewIfNeeded();
+ await expect(button).toBeVisible();
+ await page.evaluate(()=>{
+  const layer=window.S.activeLayerId;
+  window.S.features=[
+   {id:'rotate-line',type:'line',symbol:'path',layerId:layer,points:[
+    {x:0,y:0,tangent:{x:1,y:2}},{x:4,y:0}
+   ],holes:[[{x:1,y:1}]]},
+   {id:'rotate-point',type:'point',symbol:'tree',layerId:layer,x:10,y:0}
+  ];
+  window.S.candidates=[];
+  window.S.multiSelection=[{collection:'feature',index:0},{collection:'feature',index:1}];
+  window.S.selection=null;
+ });
+ await button.click();
+ const result=await page.evaluate(()=>({
+  points:window.S.features[0].points,holes:window.S.features[0].holes,
+  point:{x:window.S.features[1].x,y:window.S.features[1].y},
+  selected:window.S.multiSelection.length
+ }));
+ expect(result.points).toEqual([{x:10,y:1,tangent:{x:-1,y:-2}},{x:6,y:1}]);
+ expect(result.holes).toEqual([[{x:9,y:0}]]);
+ expect(result.point).toEqual({x:0,y:1});
+ expect(result.selected).toBe(2);
 });

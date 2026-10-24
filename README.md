@@ -1,5 +1,11 @@
 # Ocarto — editor cartográfico de orientación
 
+## v290 PC · Edición de selección
+
+- Añade **Girar selección 180°** al menú Dibujo. Gira puntos, líneas y áreas alrededor del centro común de la selección, conservando huecos y tiradores Bézier; actualiza coordenadas geográficas cuando el mapa está georreferenciado.
+- Validación: 3 pruebas del transformador y prueba Chromium de interacción real superadas.
+- Se conserva la interfaz v288 y la rama PC v289.
+
 ## v289 PC · Revisión del catálogo de símbolos
 
 - Rama de PC creada sobre v288; la versión de escritorio es **0.289.0**.
