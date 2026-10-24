@@ -148,7 +148,7 @@ function makeAdjacentLas(x0,vegetated) {
   d.setUint32(0,0x4653414c,true); // LASF
   d.setUint8(24,1);d.setUint8(25,4);
   d.setUint16(94,375,true);d.setUint32(96,375,true);
-  d.setUint8(104,8);d.setUint16(105,38);
+  d.setUint8(104,8);d.setUint16(105,38,true);
   d.setBigUint64(247,BigInt(points.length),true);
   for(const at of [131,139,147])d.setFloat64(at,.01,true);
   d.setFloat64(179,x0+10,true);d.setFloat64(187,x0,true);
