@@ -14,6 +14,7 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Móvil v289'), findsOneWidget);
     expect(find.byKey(const ValueKey('drawing-0')), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     await tester.tap(find.byIcon(Icons.draw_rounded));
     await tester.pumpAndSettle();
@@ -21,11 +22,13 @@ void main() {
     expect(find.text('Punto'), findsOneWidget);
     expect(find.text('Línea'), findsOneWidget);
     expect(find.text('Área'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     await tester.tap(find.byIcon(Icons.grid_view_rounded));
     await tester.pumpAndSettle();
     expect(find.text('Símbolos favoritos'), findsOneWidget);
     expect(find.text('Piedra'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     await tester.tap(find.byIcon(Icons.layers));
     await tester.pumpAndSettle();
