@@ -17,6 +17,7 @@ on:
       - 'ocarto-v284-bezier-geojson-fix'
       - 'ocarto-v285-vegetacion-capas-seleccionadas'
       - 'ocarto-v286-cultivos-candidatos-revisables'
+      - 'ocarto-v287-curvas-alturas-feature-capas'
   workflow_dispatch:
 
 jobs:
@@ -39,6 +40,9 @@ jobs:
           node --check source/v234/lidar-mosaic-contours.js
           node --check source/v234/lidar-feature-bands.js
           node --check source/v234/lidar-contour-profiles-v287.js
+          node --check source/v234/lidar-mosaic-height-bands.js
+          node --check source/v234/lidar-feature-height-ranges.js
+          node --check source/v234/lidar-feature-vegetation-fusion.js
           node --check source/v234/lidar-source-index.js
           node --check source/v234/lidar-tile-seams.js
           node --check source/v234/lidar-mdt-audit.js
