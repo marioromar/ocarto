@@ -1,6 +1,6 @@
 # Ocarto Flutter · Windows y móvil
 
-Esta carpeta contiene la aplicación Flutter de Ocarto para Windows, Android e iOS. La primera adaptación móvil mantiene las herramientas de selección, dibujo de puntos, líneas y áreas, edición de vértices Bézier, catálogo de símbolos y visibilidad de capas, usando navegación inferior para pantallas táctiles.
+Esta carpeta contiene la aplicación Flutter de Ocarto para Windows, Android e iOS. En móvil, la pantalla de mapa muestra una barra vertical de herramientas de selección y dibujo a la izquierda. El botón de símbolos abre una caja desplegable junto a esa barra. Las capas, la georreferenciación, los proyectos y el GPS siguen accesibles desde la pestaña inferior.
 
 En móviles, los proyectos se autoguardan en el dispositivo. **Abrir proyecto** usa el selector del teléfono, que puede mostrar OneDrive si está instalado; **Guardar copia** abre el menú de compartir del sistema para elegir OneDrive u otro destino. Es una transferencia manual; la sincronización automática de fondo aún no está conectada. LiDAR se procesa en Windows y se importan al móvil sus PNG georreferenciados con el PGW correspondiente; el PGW se guarda con la referencia espacial del proyecto.
 

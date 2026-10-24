@@ -188,6 +188,7 @@ class _OcartoHomeState extends State<OcartoHome> {
   final Set<String> _favoriteSymbols = <String>{};
   double opacity = 1;
   int _mobileSection = 0;
+  bool _mobileSymbolsOpen = false;
 
   List<String> _ports = [];
   String? _selectedPort;
@@ -1015,6 +1016,7 @@ class _OcartoHomeState extends State<OcartoHome> {
       _dragHandleSide = 0;
       _selectedElement = null;
       _selectedVertex = null;
+      _mobileSymbolsOpen = false;
       symbol = entry.id;
       tool = switch (entry.tool) {
         CatalogTool.point => MapTool.point,
@@ -1341,57 +1343,6 @@ class _OcartoHomeState extends State<OcartoHome> {
     );
   });
 
-  Widget _mobileToolsPanel() => Material(
-    color: const Color(0xff202b2f),
-    child: ListView(padding: const EdgeInsets.fromLTRB(14, 10, 14, 20), children: [
-      Text(projectName, maxLines: 1, overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.titleMedium),
-      const SizedBox(height: 8),
-      _toolButton(MapTool.select, Icons.touch_app, 'Seleccionar y editar'),
-      _toolButton(MapTool.point, Icons.place, 'Punto'),
-      _toolButton(MapTool.line, Icons.polyline, 'Línea'),
-      _toolButton(MapTool.area, Icons.pentagon_outlined, 'Área'),
-      if (_draft != null) ...[
-        Text('Trazado: ${_draft!.vertices.length} vértices',
-          style: const TextStyle(color: Color(0xffe6c879))),
-        Row(children: [
-          Expanded(child: FilledButton.icon(onPressed: _finishDrawing,
-            icon: const Icon(Icons.done), label: const Text('Terminar'))),
-          const SizedBox(width: 8),
-          IconButton(tooltip: 'Cancelar trazado', onPressed: _cancelDrawing,
-            icon: const Icon(Icons.close)),
-        ]),
-      ],
-      if (_selectedEditable != null && _selectedVertex != null)
-        _section('Editar vértice Bézier', Icons.tune, [
-          FilledButton.tonalIcon(key: const ValueKey('enable-bezier-handles'),
-            onPressed: _enableBezierHandles, icon: const Icon(Icons.tune),
-            label: const Text('Editar tiradores')),
-          OutlinedButton.icon(key: const ValueKey('bezier-corner'),
-            onPressed: () => _changeBezierMode(corner: true),
-            icon: const Icon(Icons.change_history), label: const Text('Vértice de esquina')),
-          TextButton.icon(key: const ValueKey('bezier-auto'),
-            onPressed: () => _changeBezierMode(corner: false),
-            icon: const Icon(Icons.auto_fix_high), label: const Text('Suavizado automático')),
-          Wrap(spacing: 6, children: [
-            for (final mode in BezierHandleMode.values)
-              ChoiceChip(key: ValueKey('bezier-mode-${mode.name}'),
-                label: Text(switch (mode) {
-                  BezierHandleMode.mirrored => 'Simétricos',
-                  BezierHandleMode.aligned => 'Alineados',
-                  BezierHandleMode.free => 'Libres',
-                }),
-                selected: (_selectedEditable!.bezier[_selectedVertex!]?.mode ??
-                    BezierHandleMode.mirrored) == mode,
-                onSelected: (_) => _setHandleMode(mode)),
-          ]),
-        ]),
-      const SizedBox(height: 10),
-      const Text('Elige un símbolo en la pestaña Símbolos. Toca el mapa para dibujar; mantén pulsado y arrastra para mover un vértice.',
-        style: TextStyle(color: Color(0xffb6c8c4))),
-    ]),
-  );
-
   Widget _mobileLayersPanel() => Material(
     color: const Color(0xff202b2f),
     child: ListView(padding: const EdgeInsets.only(bottom: 20), children: [
@@ -1424,15 +1375,162 @@ class _OcartoHomeState extends State<OcartoHome> {
     ]),
   );
 
+  Widget _mobileToolIcon(MapTool value, IconData icon, String label) {
+    final selected = tool == value;
+    return Tooltip(
+      message: label,
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: IconButton(
+          key: ValueKey('mobile-tool-${value.name}'),
+          tooltip: label,
+          onPressed: () => _changeTool(value),
+          style: IconButton.styleFrom(
+            backgroundColor: selected ? const Color(0xff2d6f60) : Colors.transparent,
+            foregroundColor: selected ? const Color(0xfff3fff9) : const Color(0xffd1dedb),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          icon: Icon(icon, size: 27),
+        ),
+      ),
+    );
+  }
+
+  Widget _mobileMapView() {
+    final panelWidth = math.min(280.0, math.max(0.0, MediaQuery.sizeOf(context).width - 76));
+    return Stack(fit: StackFit.expand, children: [
+      _mapCanvas(),
+      Positioned(
+        left: 8,
+        top: 8,
+        bottom: 8,
+        child: Material(
+          color: const Color(0xee202b2f),
+          elevation: 5,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 3),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              _mobileToolIcon(MapTool.select, Icons.touch_app, 'Seleccionar / editar'),
+              _mobileToolIcon(MapTool.point, Icons.place, 'Punto'),
+              _mobileToolIcon(MapTool.line, Icons.polyline, 'Línea'),
+              _mobileToolIcon(MapTool.area, Icons.pentagon_outlined, 'Área'),
+              const SizedBox(height: 4),
+              const Divider(height: 1, indent: 5, endIndent: 5),
+              const SizedBox(height: 4),
+              IconButton(
+                key: const ValueKey('mobile-symbols-toggle'),
+                tooltip: _mobileSymbolsOpen ? 'Cerrar caja de símbolos' : 'Abrir caja de símbolos',
+                onPressed: () => setState(() => _mobileSymbolsOpen = !_mobileSymbolsOpen),
+                style: IconButton.styleFrom(
+                  backgroundColor: _mobileSymbolsOpen ? const Color(0xff725c25) : Colors.transparent,
+                  foregroundColor: const Color(0xffffd56b),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.grid_view_rounded, size: 27),
+              ),
+              if (_draft != null) ...[
+                const SizedBox(height: 4),
+                IconButton(
+                  key: const ValueKey('mobile-finish-drawing'),
+                  tooltip: 'Terminar trazado',
+                  onPressed: _finishDrawing,
+                  icon: const Icon(Icons.done_rounded),
+                  color: const Color(0xff91e1bd),
+                ),
+                IconButton(
+                  key: const ValueKey('mobile-cancel-drawing'),
+                  tooltip: 'Cancelar trazado',
+                  onPressed: _cancelDrawing,
+                  icon: const Icon(Icons.close_rounded),
+                  color: const Color(0xffefaaa2),
+                ),
+              ],
+              if (_selectedEditable != null && _selectedVertex != null)
+                IconButton(
+                  key: const ValueKey('mobile-bezier-controls'),
+                  tooltip: 'Editar vértice Bézier',
+                  onPressed: _showMobileBezierControls,
+                  icon: const Icon(Icons.tune_rounded),
+                ),
+            ]),
+          ),
+        ),
+      ),
+      if (_mobileSymbolsOpen)
+        Positioned(
+          left: 66,
+          top: 8,
+          bottom: 8,
+          width: panelWidth,
+          child: Material(
+            color: const Color(0xee202b2f),
+            elevation: 8,
+            borderRadius: BorderRadius.circular(14),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(children: [
+              Positioned.fill(child: _symbolDock()),
+              Positioned(
+                top: 3,
+                right: 3,
+                child: IconButton(
+                  key: const ValueKey('mobile-symbols-close'),
+                  tooltip: 'Cerrar caja de símbolos',
+                  onPressed: () => setState(() => _mobileSymbolsOpen = false),
+                  icon: const Icon(Icons.close_rounded),
+                  style: IconButton.styleFrom(backgroundColor: const Color(0xff344548)),
+                ),
+              ),
+            ]),
+          ),
+        ),
+    ]);
+  }
+
+  Future<void> _showMobileBezierControls() async {
+    if (_selectedEditable == null || _selectedVertex == null) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xff202b2f),
+      builder: (sheetContext) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('Editar vértice ${_selectedVertex! + 1} · Bézier',
+              style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 10),
+            FilledButton.tonalIcon(onPressed: _enableBezierHandles,
+              icon: const Icon(Icons.tune), label: const Text('Editar tiradores')),
+            OutlinedButton.icon(onPressed: () => _changeBezierMode(corner: true),
+              icon: const Icon(Icons.change_history), label: const Text('Vértice de esquina')),
+            TextButton.icon(onPressed: () => _changeBezierMode(corner: false),
+              icon: const Icon(Icons.auto_fix_high), label: const Text('Suavizado automático')),
+            Wrap(spacing: 6, children: [
+              for (final mode in BezierHandleMode.values)
+                ChoiceChip(
+                  key: ValueKey('mobile-bezier-mode-${mode.name}'),
+                  label: Text(switch (mode) {
+                    BezierHandleMode.mirrored => 'Simétricos',
+                    BezierHandleMode.aligned => 'Alineados',
+                    BezierHandleMode.free => 'Libres',
+                  }),
+                  selected: (_selectedEditable!.bezier[_selectedVertex!]?.mode ??
+                      BezierHandleMode.mirrored) == mode,
+                  onSelected: (_) => _setHandleMode(mode),
+                ),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.sizeOf(context).width < 700;
-    final mobilePages = <Widget>[
-      _mapCanvas(),
-      _mobileToolsPanel(),
-      _symbolDock(),
-      _mobileLayersPanel(),
-    ];
+    final mobilePages = <Widget>[_mobileMapView(), _mobileLayersPanel()];
     return Scaffold(
     appBar: AppBar(
       title: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1440,7 +1538,7 @@ class _OcartoHomeState extends State<OcartoHome> {
         const SizedBox(width: 10),
         const Text('Ocarto'),
         const SizedBox(width: 10),
-        Text(isMobile ? 'Móvil v289' : 'v257',
+        Text(isMobile ? 'Móvil v290' : 'v257',
           style: const TextStyle(color: Color(0xff9bb9b2), fontSize: 13)),
       ]),
       actions: [
@@ -1584,8 +1682,6 @@ class _OcartoHomeState extends State<OcartoHome> {
       onDestinationSelected: (index) => setState(() => _mobileSection = index),
       destinations: const [
         NavigationDestination(icon: Icon(Icons.map), label: 'Mapa'),
-        NavigationDestination(icon: Icon(Icons.draw_rounded), label: 'Dibujo'),
-        NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'Símbolos'),
         NavigationDestination(icon: Icon(Icons.layers), label: 'Capas'),
       ],
     ) : null,
