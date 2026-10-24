@@ -98,7 +98,7 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
 <div class="menu-note">Datos y terreno</div>
 <button type="button" data-menu-target="lidarNav">Flujo de trabajo LiDAR</button>
 <button type="button" data-menu-target="lidarImportBtn">1 · Importar archivos LAS/LAZ</button>
-<button type="button" data-menu-target="lidarProcessBtn">3 · Procesar archivos seleccionados</button>
+<button type="button" data-menu-target="lidarProcessBtn">5 · Procesar archivos seleccionados</button>
 <button type="button" data-menu-target="terrainBtn">Preparar MDT</button>
 <button type="button" data-menu-target="rebuildMdtBtn">Unir bordes del MDT preliminar</button>
 <hr>
@@ -180,18 +180,18 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,sy
   <div class="lidar-quick-heading">Procesamiento LAS/LAZ</div>
   <div class="lidar-quick-steps">
     <button class="lidar-quick-button" id="lidarImportBtn" type="button">1 · Importar archivos LAS/LAZ</button>
-    <button class="lidar-quick-button primary" id="lidarProcessBtn" type="button" disabled>3 · Procesar</button>
+    <button class="lidar-quick-button primary" id="lidarProcessBtn" type="button" disabled>5 · Procesar</button>
   </div>
   <div id="lidarSelectedFilesPanel" hidden style="margin-top:12px;padding:10px;border:1px solid #b9cbbf;border-radius:9px;background:#fff">
     <b>Archivos que se van a procesar</b><ul id="lidarSelectedFilesList" class="small" style="max-height:120px;overflow:auto;margin:6px 0;padding-left:20px"></ul>
     <label class="field" style="display:block">2 · Nombre de la carpeta de resultados<input id="lidarOutputName" type="text" value="" maxlength="64" autocomplete="off" placeholder="Ej.: Bobadilla zona norte" style="width:100%;margin-top:4px;padding:9px;border:1px solid #b7c7bd;border-radius:7px"></label>
     <p class="small" style="margin:5px 0 0">Ocarto creará esta carpeta dentro de la carpeta que elijas al procesar. Dentro guardará las capas con nombres descriptivos.</p>
   </div>
-  <label class="field lidar-quick-resolution">Tamaño de celda
+  <label class="field lidar-quick-resolution">3 · Tamaño de celda
     <select id="lidarQuickCellSize"><option value="0.5" selected>0,5 m · más detalle</option><option value="1">1 m</option><option value="2">2 m</option></select>
   </label>
   <p class="small">Esta resolución se aplica al MDT, las alturas de vegetación y el Feature Map.</p>
-  <label class="lidar-quick-confirm"><input id="lidarQuickConfirmCrs" type="checkbox"> He comprobado que el EPSG del mapa coincide con el de los archivos LAS/LAZ</label>
+  <label class="lidar-quick-confirm"><input id="lidarQuickConfirmCrs" type="checkbox"> 4 · He comprobado que el EPSG del mapa coincide con el de los archivos LAS/LAZ</label>
   <p class="small lidar-quick-status" id="lidarWorkflowStatus" role="status" aria-live="polite">Importa uno o varios LAS/LAZ. Después selecciona el tamaño de celda, confirma el EPSG y pulsa «Procesar».</p>
   <input class="hidden-input" type="file" id="tiledPointFile" multiple accept=".las,.laz">
 </div>
@@ -1355,7 +1355,7 @@ function refreshLidarQuickWorkflow(message){
   const confirmed=$('lidarQuickConfirmCrs')?.checked;
   $('lidarImportBtn').disabled=tiledAreaBusy||lidarOperation!=='idle';
   $('lidarProcessBtn').disabled=!count||!$('lidarOutputName')?.value.trim()||!confirmed||tiledAreaBusy||lidarOperation!=='idle';
-  $('lidarProcessBtn').textContent=count?'3 · Procesar '+count+' archivo'+(count===1?'':'s'):'3 · Procesar';
+  $('lidarProcessBtn').textContent=count?'5 · Procesar '+count+' archivo'+(count===1?'':'s'):'5 · Procesar';
   const selectedPanel=$('lidarSelectedFilesPanel');if(selectedPanel)selectedPanel.hidden=!count;
   const status=$('lidarWorkflowStatus');
   if(message)status.textContent=message;
@@ -1369,6 +1369,7 @@ $('lidarImportBtn').onclick=()=>{
   refreshLidarQuickWorkflow('Selecciona uno o varios archivos LAS/LAZ.');
   $('tiledPointFile').click();
 };
+$('lidarOutputName').addEventListener('input',()=>refreshLidarQuickWorkflow());
 $('lidarQuickCellSize').addEventListener('change',()=>{
   try{applyLidarQuickCellSize();refreshLidarQuickWorkflow('Tamaño de celda: '+$('lidarQuickCellSize').selectedOptions[0].textContent+'.')}
   catch(err){refreshLidarQuickWorkflow(err.message)}
