@@ -29,7 +29,7 @@
    const profile=profiles[i],name='zona_completa_curvas_'+profile.id+'.geojson';
    onProgress?.({i:i+1,total:profiles.length,profile,stage:'start'});
    const stat=await api.exportGeojson(directory,manifest,name,profile.interval,{
-    signal,connect,smooth:options(profile,manifest.cellTerrain),
+    signal,connect,smooth:options(profile,manifest.cellTerrain),smoothFn:smooth,
     onProgress:p=>onProgress?.({i:i+1,total:profiles.length,profile,stage:'tile',...p})
    });
    out.push({...stat,profile:profile.label,smoothed:profile.smoothed,
